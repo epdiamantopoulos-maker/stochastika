@@ -3,7 +3,7 @@ title: "Privacy policy"
 toc: false
 ---
 
-*Last updated: [DATE]*
+*Last updated: 24 November 2026*
 
 Stochastika (stochastika.com) respects your privacy. This page explains what data is processed when you visit the site.
 
@@ -22,4 +22,4 @@ If advertising or analytics are added, this page will be updated and your consen
 
 ## Contact
 
-For any question about your personal data: [CONTACT EMAIL]
+For any question about your personal data: [info@stochastika.com](mailto:info@stochastika.com)
