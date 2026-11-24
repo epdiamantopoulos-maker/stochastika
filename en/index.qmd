@@ -1,0 +1,15 @@
+---
+title: "Stochastika"
+subtitle: "Probability and Statistics with R, step by step, with interactive examples"
+listing:
+  contents: posts
+  sort: "date desc"
+  type: default
+  categories: true
+  sort-ui: false
+  filter-ui: true
+  feed: true
+page-layout: full
+title-block-banner: false
+toc: false
+---

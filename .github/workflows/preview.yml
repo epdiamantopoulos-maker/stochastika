@@ -1,0 +1,63 @@
+# Προεπισκόπηση για κάθε Pull Request.
+# Δείχνει ΟΛΑ τα άρθρα, και τα μελλοντικά, ώστε να ελέγχονται πριν δημοσιευθούν.
+# Ο σύνδεσμος της προεπισκόπησης γράφεται ως σχόλιο στο Pull Request.
+name: Preview
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::knitr
+            any::rmarkdown
+
+      - uses: quarto-dev/quarto-actions/setup@v2
+        with:
+          version: 1.6.42
+
+      - name: Render
+        run: quarto render
+
+      - name: Deploy προεπισκόπησης στη Netlify
+        id: deploy
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: |
+          npx --yes netlify-cli@17 deploy --dir=_site \
+            --alias="pr-${{ github.event.pull_request.number }}" \
+            --site="$NETLIFY_SITE_ID" --auth="$NETLIFY_AUTH_TOKEN" \
+            --message="Preview PR #${{ github.event.pull_request.number }}" --json > deploy.json
+          url=$(python3 -c "import json; print(json.load(open('deploy.json'))['deploy_url'])")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "### Προεπισκόπηση: $url" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Σχόλιο με τον σύνδεσμο
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `🔍 Προεπισκόπηση: ${{ steps.deploy.outputs.url }}\n\nΠεριλαμβάνει και τα άρθρα με μελλοντική ημερομηνία.`
+            });

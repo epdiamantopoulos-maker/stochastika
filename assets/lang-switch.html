@@ -1,0 +1,20 @@
+<script>
+// Εναλλαγή γλώσσας: τα άρθρα έχουν το ίδιο όνομα φακέλου στα el/ και en/,
+// οπότε οι σύνδεσμοι γλώσσας της μπάρας οδηγούν στο αντίστοιχο άρθρο.
+(function () {
+  var path = window.location.pathname;
+  var m = path.match(/^(.*\/)(el|en)(\/.*)$/);
+  if (!m) return;
+  var other = m[2] === "el" ? "en" : "el";
+  var target = m[1] + other + m[3];
+  document.querySelectorAll("a.nav-link").forEach(function (a) {
+    var href = a.getAttribute("href") || "";
+    if (new RegExp("(^|/)" + other + "/index\\.html$").test(href)) {
+      a.setAttribute("href", target);
+    }
+  });
+  var alt = document.createElement("link");
+  alt.rel = "alternate"; alt.hreflang = other; alt.href = target;
+  document.head.appendChild(alt);
+})();
+</script>

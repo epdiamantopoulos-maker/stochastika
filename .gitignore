@@ -1,0 +1,8 @@
+/_site/
+/.quarto/
+*_files/
+*.html
+!assets/*.html
+deploy.json
+.Rhistory
+.DS_Store

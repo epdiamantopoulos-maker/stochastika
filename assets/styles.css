@@ -1,0 +1,36 @@
+/* ---------- Αρχική σελίδα ---------- */
+.st-hero { text-align: center; padding: 1.5rem 0 1rem; }
+.st-hero img { margin-bottom: 0.6rem; }
+.st-hero p { margin-bottom: 0.6rem; }
+.st-hero .btn { margin: 0.4rem 0.3rem 0; }
+
+/* ---------- Διαδραστικά πλαίσια (κοινά σε όλα τα άρθρα) ---------- */
+.ix-panel { border: 1px solid #d8dde3; border-radius: 10px; padding: 14px 16px; margin: 1.2em 0; background: #fafbfc; }
+.ix-title { font-weight: 600; margin-bottom: 6px; }
+.ix-row { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; }
+.ix-row > div { flex: 1 1 280px; min-width: 0; }
+.ix-note { font-size: 0.92em; color: #444; margin-top: 6px; }
+.ix-omega { font-family: var(--bs-font-monospace, monospace); font-size: 0.92em; margin: 8px 0; }
+.ix-groups { display: flex; flex-wrap: wrap; gap: 8px; }
+.ix-group { border: 1px solid #c9d1da; border-radius: 8px; background: #fff; padding: 4px 6px; }
+.ix-group-h { font-size: 0.8em; font-weight: 600; color: #4e79a7; }
+.ix-card { display: inline-block; font-size: 0.78em; padding: 1px 3px; margin: 1px; border: 1px solid #ddd; border-radius: 3px; background: #fff; }
+.ix-red { color: #c0392b; }
+.ix-black { color: #222; }
+.ix-ok { color: #2e7d32; font-weight: 600; }
+.ix-no, .ix-warn { color: #c62828; font-weight: 600; }
+.ix-chips { line-height: 1.9; margin: 6px 0; }
+.ix-chip { display: inline-block; width: 20px; text-align: center; font-size: 0.8em; border-radius: 4px; margin: 1px; color: #fff; }
+.ix-h { background: #4e79a7; }
+.ix-t { background: #f28e2b; }
+.ix-tbl { border-collapse: collapse; font-size: 0.92em; margin-top: 6px; }
+.ix-tbl th, .ix-tbl td { border-bottom: 1px solid #e3e6ea; padding: 4px 10px; text-align: right; }
+.ix-tbl th:first-child, .ix-tbl td:first-child { text-align: left; }
+
+/* ---------- Κινητά: οι πλατιοί πίνακες κυλούν οριζόντια μέσα στο πλάτος τους ---------- */
+@media (max-width: 640px) {
+  main table { display: block; max-width: 100%; overflow-x: auto; }
+}
+
+/* Πλατιές εξισώσεις: κύλιση μέσα στο πλάτος της σελίδας αντί για οριζόντια κύλιση όλης της σελίδας */
+mjx-container[display="true"] { display: block; max-width: 100%; overflow-x: auto; overflow-y: hidden; }

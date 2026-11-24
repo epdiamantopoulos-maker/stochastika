@@ -1,0 +1,25 @@
+---
+title: "Privacy policy"
+toc: false
+---
+
+*Last updated: [DATE]*
+
+Stochastika (stochastika.com) respects your privacy. This page explains what data is processed when you visit the site.
+
+## Cookies and tracking
+
+The site currently **uses no cookies, no analytics and no advertising**. All interactive elements run entirely in your browser; nothing you type into them is sent anywhere.
+
+## Hosting and external libraries
+
+- The site is hosted by **Netlify**, which logs technical data (such as IP addresses) for security and service operation.
+- Some libraries (for mathematical formulas and interactive charts) are loaded from the **jsDelivr** and **cdnjs** (Cloudflare) content delivery networks, which also receive your IP address when they load.
+
+## Future changes
+
+If advertising or analytics are added, this page will be updated and your consent will be requested before any non-essential cookies are used.
+
+## Contact
+
+For any question about your personal data: [CONTACT EMAIL]

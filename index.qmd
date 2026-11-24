@@ -1,0 +1,41 @@
+---
+title: "Stochastika"
+lang: el
+toc: false
+page-layout: article
+title-block-banner: false
+listing:
+  - id: latest-el
+    contents: el/posts
+    sort: "date desc"
+    type: grid
+    max-items: 3
+    fields: [title, date, description]
+  - id: latest-en
+    contents: en/posts
+    sort: "date desc"
+    type: grid
+    max-items: 3
+    fields: [title, date, description]
+---
+
+::: {.st-hero}
+<img src="assets/logo.svg" alt="" width="72" height="72">
+
+**Στοχάζομαι:** στοχεύω, εικάζω. Από εδώ προέρχεται η λέξη *stochastic*.
+Πιθανότητες και Στατιστική με R και διαδραστικά παραδείγματα.
+
+*Probability and Statistics with R and interactive examples.*
+
+[Ελληνικά](el/index.qmd){.btn .btn-primary .btn-lg} [English](en/index.qmd){.btn .btn-outline-primary .btn-lg}
+:::
+
+## Νέα άρθρα
+
+::: {#latest-el}
+:::
+
+## Latest posts
+
+::: {#latest-en}
+:::

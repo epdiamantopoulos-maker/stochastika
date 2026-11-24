@@ -1,0 +1,378 @@
+---
+title: "Δειγματικός χώρος και ενδεχόμενα: η γλώσσα των συνόλων στις πιθανότητες"
+description: "Τι είναι ο δειγματικός χώρος και τα ενδεχόμενα, πώς οι πράξεις των συνόλων γίνονται λογικές προτάσεις για ένα πείραμα τύχης, με διαδραστικά διαγράμματα και παραδείγματα σε R."
+date: 2026-12-09
+categories: [Πιθανότητες, Θεμέλια, R, Διαδραστικό]
+keywords: [δειγματικός χώρος, δειγματοχώρος, ενδεχόμενα, πράξεις ενδεχομένων, διάγραμμα Venn, ξένα ενδεχόμενα, συμμετρική διαφορά]
+execute:
+  echo: true
+  warning: false
+---
+
+Στο [προηγούμενο άρθρο](../random-experiments/index.qmd) είδαμε ότι ένα πείραμα τύχης έχει γνωστά εκ των προτέρων δυνατά αποτελέσματα. Σήμερα δίνουμε σε αυτά τα αποτελέσματα μαθηματική μορφή. Η γλώσσα που θα χρησιμοποιήσουμε είναι η γλώσσα των συνόλων, και όπως θα δούμε, κάθε πράξη συνόλων μεταφράζεται σε μια φυσική πρόταση για το πείραμα.
+
+## Δειγματικός χώρος
+
+Κάθε δυνατό αποτέλεσμα ενός πειράματος τύχης λέγεται **απλό ενδεχόμενο** και συμβολίζεται με $\omega$. Το σύνολο όλων των απλών ενδεχομένων λέγεται **δειγματικός χώρος** ή **δειγματοχώρος** (sample space) και συμβολίζεται με $\Omega$:
+
+$$\Omega = \{\omega_1, \omega_2, \ldots\}.$$
+
+Για παράδειγμα, στη ρίψη ενός ζαριού είναι $\Omega = \{1, 2, 3, 4, 5, 6\}$.
+
+**Ο δειγματικός χώρος δεν είναι μοναδικός.** Εξαρτάται από το τι επιλέγουμε να καταγράψουμε. Τραβάμε ένα χαρτί από μια τράπουλα 52 φύλλων. Αλλάξτε παρακάτω τι καταγράφουμε και δείτε πώς τα ίδια 52 φύλλα ομαδοποιούνται σε διαφορετικά στοιχεία του $\Omega$:
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+viewof recordCard = Inputs.radio(["Αξία", "Χρώμα", "Σειρά"], {label: "Καταγράφουμε:", value: "Χρώμα"})
+```
+
+```{ojs}
+//| echo: false
+cardSpace = {
+  const ranks = ["2","3","4","5","6","7","8","9","10","J","Q","K","A"];
+  const suits = [["♠","Μαύρο"],["♣","Μαύρο"],["♦","Κόκκινο"],["♥","Κόκκινο"]];
+  const cards = suits.flatMap(([s, c]) => ranks.map(r => ({r, s, c})));
+  const key = d => recordCard === "Αξία" ? d.r : recordCard === "Χρώμα" ? d.c : d.s;
+  const groups = d3.groups(cards, key);
+  const box = html`<div></div>`;
+  box.innerHTML =
+    `<div class="ix-omega">Ω = {${groups.map(g => g[0]).join(", ")}},&nbsp;&nbsp; πλήθος στοιχείων: ${groups.length}</div>` +
+    `<div class="ix-groups">` +
+    groups.map(([k, cs]) =>
+      `<div class="ix-group"><div class="ix-group-h">${k} (${cs.length} φύλλα)</div>` +
+      cs.map(d => `<span class="ix-card ${d.c === "Κόκκινο" ? "ix-red" : "ix-black"}">${d.r}${d.s}</span>`).join("") +
+      `</div>`).join("") +
+    `</div>`;
+  return box;
+}
+```
+:::
+
+Το πείραμα είναι το ίδιο, αλλά το μοντέλο αλλάζει. Η επιλογή του σωστού $\Omega$ είναι το πρώτο και συχνά το πιο κρίσιμο βήμα σε κάθε πρόβλημα πιθανοτήτων.
+
+## Είδη δειγματικών χώρων
+
+Ανάλογα με το πλήθος των στοιχείων του, ο δειγματικός χώρος είναι:
+
+| Είδος | Παράδειγμα | $\Omega$ |
+|---|---|---|
+| **Πεπερασμένος** | Άθροισμα δύο ζαριών | $\{2, 3, \ldots, 12\}$ |
+| **Άπειρος αριθμήσιμος** | Πλήθος αφίξεων σε ένα ταμείο μέσα σε μία ώρα | $\{0, 1, 2, \ldots\}$ |
+| **Άπειρος μη αριθμήσιμος** | Χρονική στιγμή άφιξης του πρώτου πελάτη | $(0, +\infty)$ |
+
+Η διάκριση αυτή θα αποκτήσει μεγάλη σημασία αργότερα, όταν θα μιλήσουμε για διακριτές και συνεχείς τυχαίες μεταβλητές.
+
+## Ενδεχόμενα
+
+**Ενδεχόμενο** λέγεται κάθε υποσύνολο $A \subseteq \Omega$. Λέμε ότι το ενδεχόμενο $A$ **πραγματοποιείται** όταν το αποτέλεσμα του πειράματος ανήκει στο $A$. Δύο ειδικές περιπτώσεις είναι το **βέβαιο ενδεχόμενο** $\Omega$, που πραγματοποιείται πάντα, και το **αδύνατο ενδεχόμενο** $\varnothing$, που δεν πραγματοποιείται ποτέ.
+
+Στην R ένας πεπερασμένος δειγματικός χώρος αναπαρίσταται φυσικά ως πίνακας δεδομένων, και ένα ενδεχόμενο ως λογικό διάνυσμα (`TRUE`/`FALSE`) πάνω του. Για δύο ρίψεις ζαριού:
+
+```{r}
+#| label: omega-dice
+# Όλα τα διατεταγμένα ζεύγη (1η ρίψη, 2η ρίψη)
+omega <- expand.grid(d1 = 1:6, d2 = 1:6)
+nrow(omega)
+
+# A: η 1η ρίψη φέρνει 6,  B: το άθροισμα είναι τουλάχιστον 10
+A <- omega$d1 == 6
+B <- omega$d1 + omega$d2 >= 10
+
+# Τα αποτελέσματα όπου πραγματοποιούνται και τα δύο
+omega[A & B, ]
+```
+
+## Πράξεις με ενδεχόμενα
+
+Αφού τα ενδεχόμενα είναι σύνολα, μπορούμε να τα συνδυάσουμε με τις γνωστές πράξεις. Το ενδιαφέρον είναι ότι κάθε πράξη έχει μια φυσική ερμηνεία:
+
+| Πράξη | Ορισμός | Ερμηνεία | R |
+|---|---|---|---|
+| Συμπλήρωμα $A'$ | $\{\omega \in \Omega : \omega \notin A\}$ | Δεν συμβαίνει το $A$ | `!A` |
+| Ένωση $A \cup B$ | $\{\omega : \omega \in A \text{ ή } \omega \in B\}$ | Συμβαίνει τουλάχιστον ένα από τα $A$, $B$ | <code>A &#124; B</code> |
+| Τομή $A \cap B$ | $\{\omega : \omega \in A \text{ και } \omega \in B\}$ | Συμβαίνουν και τα δύο | `A & B` |
+| Διαφορά $A - B$ | $A \cap B'$ | Συμβαίνει το $A$ αλλά όχι το $B$ | `A & !B` |
+| Συμμετρική διαφορά $A \,\Delta\, B$ | $(A - B) \cup (B - A)$ | Συμβαίνει ακριβώς ένα από τα δύο | `xor(A, B)` |
+
+Ο καλύτερος τρόπος να καταλάβει κανείς αυτές τις πράξεις είναι να τις δει να δουλεύουν. Στον παρακάτω εξερευνητή διαλέξτε δύο ενδεχόμενα για τη ρίψη δύο ζαριών και μια πράξη. Τα 36 αποτελέσματα του $\Omega$ που ανήκουν στο ενδεχόμενο που προκύπτει χρωματίζονται στο πλέγμα, και ταυτόχρονα σκιάζεται η αντίστοιχη περιοχή στο **διάγραμμα Venn**. Οι αριθμοί στο διάγραμμα δείχνουν πόσα αποτελέσματα πέφτουν σε κάθε περιοχή.
+
+::: {.ix-panel}
+::: {.ix-title}
+Εξερευνητής πράξεων: δύο ρίψεις ζαριού
+:::
+
+```{ojs}
+//| echo: false
+eventsEl = ({
+  "Η 1η ρίψη φέρνει 6": (a, b) => a === 6,
+  "Το άθροισμα είναι τουλάχιστον 10": (a, b) => a + b >= 10,
+  "Το άθροισμα είναι άρτιο": (a, b) => (a + b) % 2 === 0,
+  "Το άθροισμα είναι περιττό": (a, b) => (a + b) % 2 === 1,
+  "Το άθροισμα είναι πολλαπλάσιο του 4": (a, b) => (a + b) % 4 === 0,
+  "Διπλές (ίδια ένδειξη)": (a, b) => a === b,
+  "Η 2η ρίψη είναι μεγαλύτερη από την 1η": (a, b) => b > a
+})
+opsEl = ({
+  "A":     [(a, b) => a,        "Συμβαίνει το A"],
+  "B":     [(a, b) => b,        "Συμβαίνει το B"],
+  "A'":    [(a, b) => !a,       "Δεν συμβαίνει το A"],
+  "A ∪ B": [(a, b) => a || b,   "Συμβαίνει τουλάχιστον ένα από τα A, B"],
+  "A ∩ B": [(a, b) => a && b,   "Συμβαίνουν και τα δύο"],
+  "A − B": [(a, b) => a && !b,  "Συμβαίνει το A αλλά όχι το B"],
+  "B − A": [(a, b) => b && !a,  "Συμβαίνει το B αλλά όχι το A"],
+  "A Δ B": [(a, b) => a !== b,  "Συμβαίνει ακριβώς ένα από τα A, B"]
+})
+viewof evA = Inputs.select(Object.keys(eventsEl), {label: "Ενδεχόμενο A", value: "Η 1η ρίψη φέρνει 6", width: 320})
+viewof evB = Inputs.select(Object.keys(eventsEl), {label: "Ενδεχόμενο B", value: "Το άθροισμα είναι τουλάχιστον 10", width: 320})
+viewof opEl = Inputs.radio(Object.keys(opsEl), {label: "Πράξη", value: "A ∩ B"})
+```
+
+```{ojs}
+//| echo: false
+diceView = {
+  const fA = eventsEl[evA], fB = eventsEl[evB], [op, meaning] = opsEl[opEl];
+  const out = [];
+  for (let i = 1; i <= 6; i++) for (let j = 1; j <= 6; j++) {
+    const a = fA(i, j), b = fB(i, j);
+    out.push({i, j, a, b, r: op(a, b)});
+  }
+  const n = f => out.filter(f).length;
+  const cnt = {aOnly: n(d => d.a && !d.b), both: n(d => d.a && d.b),
+               bOnly: n(d => !d.a && d.b), none: n(d => !d.a && !d.b), res: n(d => d.r)};
+  const blue = "#4e79a7", light = "#eef0f3", orange = "#f28e2b", green = "#59a14f";
+
+  // Πλέγμα των 36 αποτελεσμάτων
+  const c = 44, p = 40;
+  let g = `<svg viewBox="0 0 ${p + 6 * c + 4} ${p + 6 * c + 4}" style="width:100%;max-width:330px">`;
+  g += `<text x="${p + 3 * c}" y="12" text-anchor="middle" font-size="11">2η ρίψη</text>`;
+  g += `<text x="9" y="${p + 3 * c}" text-anchor="middle" font-size="11" transform="rotate(-90 9 ${p + 3 * c})">1η ρίψη</text>`;
+  for (let k = 1; k <= 6; k++) {
+    g += `<text x="${p + (k - 0.5) * c}" y="32" text-anchor="middle" font-size="12" font-weight="600">${k}</text>`;
+    g += `<text x="28" y="${p + (k - 0.5) * c + 4}" text-anchor="middle" font-size="12" font-weight="600">${k}</text>`;
+  }
+  for (const d of out) {
+    const x = p + (d.j - 1) * c, y = p + (d.i - 1) * c;
+    g += `<rect x="${x + 1}" y="${y + 1}" width="${c - 2}" height="${c - 2}" rx="4" fill="${d.r ? blue : light}"/>`;
+    g += `<text x="${x + c / 2}" y="${y + c / 2 + 5}" text-anchor="middle" font-size="11" fill="${d.r ? "#fff" : "#333"}">${d.i},${d.j}</text>`;
+    if (d.a) g += `<circle cx="${x + 9}" cy="${y + 9}" r="4" fill="${orange}"/>`;
+    if (d.b) g += `<rect x="${x + c - 13}" y="${y + 5}" width="8" height="8" fill="${green}"/>`;
+  }
+  g += `</svg>`;
+
+  // Διάγραμμα Venn με σκίαση της πράξης
+  const reg = {aOnly: op(true, false), both: op(true, true), bOnly: op(false, true), none: op(false, false)};
+  const col = on => on ? "#9ecae1" : "#fff";
+  let v = `<svg viewBox="0 0 320 210" style="width:100%;max-width:330px">
+    <defs><clipPath id="clipA2"><circle cx="125" cy="105" r="70"/></clipPath></defs>
+    <rect x="2" y="2" width="316" height="206" fill="${col(reg.none)}" stroke="#333"/>
+    <circle cx="125" cy="105" r="70" fill="${col(reg.aOnly)}"/>
+    <circle cx="195" cy="105" r="70" fill="${col(reg.bOnly)}"/>
+    <circle cx="195" cy="105" r="70" fill="${col(reg.both)}" clip-path="url(#clipA2)"/>
+    <circle cx="125" cy="105" r="70" fill="none" stroke="${orange}" stroke-width="2.5"/>
+    <circle cx="195" cy="105" r="70" fill="none" stroke="${green}" stroke-width="2.5"/>
+    <text x="16" y="22" font-size="14">Ω</text>
+    <text x="58" y="42" font-size="14" fill="${orange}" font-weight="600">A</text>
+    <text x="254" y="42" font-size="14" fill="${green}" font-weight="600">B</text>
+    <text x="95" y="110" text-anchor="middle" font-size="16">${cnt.aOnly}</text>
+    <text x="160" y="110" text-anchor="middle" font-size="16">${cnt.both}</text>
+    <text x="225" y="110" text-anchor="middle" font-size="16">${cnt.bOnly}</text>
+    <text x="295" y="195" text-anchor="middle" font-size="16">${cnt.none}</text>
+  </svg>`;
+
+  const disj = cnt.both === 0
+    ? `Τα A και B είναι <b>ξένα</b>: A ∩ B = ∅.`
+    : `Τα A και B <b>δεν</b> είναι ξένα: έχουν ${cnt.both} ${cnt.both === 1 ? "κοινό αποτέλεσμα" : "κοινά αποτελέσματα"}.`;
+  const box = html`<div></div>`;
+  box.innerHTML = `<div class="ix-row"><div>${g}</div><div>${v}</div></div>
+    <div class="ix-note"><b>${opEl}</b>: ${meaning}. Το ενδεχόμενο περιέχει <b>${cnt.res}</b> από τα 36 αποτελέσματα.<br>${disj}
+    <br><span style="color:${orange}">●</span> ανήκει στο A &nbsp; <span style="color:${green}">■</span> ανήκει στο B</div>`;
+  return box;
+}
+```
+:::
+
+Δοκιμάστε την ένωση και θα δείτε ότι η σκιασμένη περιοχή χωρίζεται σε κομμάτια που δεν επικαλύπτονται:
+
+$$A \cup B = (A - B) \cup (A \cap B) \cup (B - A) = (A \,\Delta\, B) \cup (A \cap B).$$
+
+Η διάσπαση αυτή θα είναι το κλειδί για τους κανόνες λογισμού πιθανοτήτων στο επόμενο άρθρο. Στο διάγραμμα φαίνεται αμέσως: το πλήθος της ένωσης είναι το άθροισμα των τριών αριθμών μέσα στους κύκλους. Το ίδιο σε R:
+
+```{r}
+#| label: decomposition
+c(`A ∪ B` = sum(A | B), `A Δ B` = sum(xor(A, B)), `A ∩ B` = sum(A & B))
+```
+
+## Ξένα ενδεχόμενα
+
+Δύο ενδεχόμενα λέγονται **ξένα** ή **ασυμβίβαστα** (disjoint, mutually exclusive) όταν δεν μπορούν να πραγματοποιηθούν ταυτόχρονα:
+
+$$A, B \text{ ξένα} \iff A \cap B = \varnothing.$$
+
+Στον εξερευνητή, επιλέξτε A = «το άθροισμα είναι πολλαπλάσιο του 4» και B = «το άθροισμα είναι περιττό». Η κεντρική περιοχή του διαγράμματος Venn θα δείξει 0. Το ίδιο ελέγχεται σε R:
+
+```{r}
+#| label: disjoint
+s <- omega$d1 + omega$d2
+any(s %% 4 == 0 & s %% 2 == 1)   # FALSE: δεν υπάρχει κοινό αποτέλεσμα
+```
+
+**Μια συνηθισμένη παγίδα.** Αν τα $A$, $B$ είναι ξένα, τα συμπληρώματά τους δεν είναι εν γένει ξένα. Επειδή $A' \cap B' = (A \cup B)'$, τα $A'$ και $B'$ είναι ξένα **ακριβώς όταν** $A \cup B = \Omega$. Στη ρίψη κέρματος, τα $A = \{\text{Κ}\}$ και $B = \{\text{Γ}\}$ είναι ξένα και, επειδή καλύπτουν όλο το $\Omega$, ξένα είναι και τα συμπληρώματά τους. Στο ζάρι όμως, τα $A = \{1\}$ και $B = \{2\}$ είναι ξένα, ενώ τα $A'$ και $B'$ έχουν κοινά τα $3, 4, 5, 6$. Στον εξερευνητή, η περιοχή έξω από τους δύο κύκλους είναι ακριβώς το $A' \cap B'$: τα συμπληρώματα είναι ξένα μόνο όταν ο αριθμός εκεί είναι 0.
+
+## Παράδειγμα: τρία μαθήματα, εκατό φοιτητές
+
+Από 100 φοιτητές, 60 παρακολουθούν Στατιστική ($A$), 50 Πιθανότητες ($B$) και 40 Γραμμική Άλγεβρα ($\Gamma$). Επίσης $N(A \cap B) = 30$, $N(A \cap \Gamma) = 20$, $N(B \cap \Gamma) = 15$ και $N(A \cap B \cap \Gamma) = 10$. Πόσοι παρακολουθούν μόνο Στατιστική; Πόσοι ακριβώς δύο μαθήματα; Πόσοι κανένα;
+
+Το κόλπο στο διάγραμμα Venn είναι να ξεκινάμε **από το κέντρο** και να προχωράμε προς τα έξω, αφαιρώντας κάθε φορά ό,τι έχουμε ήδη μετρήσει. Μετακινήστε τον δείκτη για να δείτε τη συμπλήρωση βήμα-βήμα. Μπορείτε επίσης να αλλάξετε τα δεδομένα και να λύσετε δικές σας παραλλαγές.
+
+::: {.ix-panel}
+::: {.ix-title}
+Συμπλήρωση διαγράμματος Venn τριών συνόλων
+:::
+
+```{ojs}
+//| echo: false
+viewof vennData = Inputs.form({
+  N:   Inputs.number({label: "Σύνολο", value: 100, step: 1}),
+  A:   Inputs.number({label: "N(A)", value: 60, step: 1}),
+  B:   Inputs.number({label: "N(B)", value: 50, step: 1}),
+  G:   Inputs.number({label: "N(Γ)", value: 40, step: 1}),
+  AB:  Inputs.number({label: "N(A∩B)", value: 30, step: 1}),
+  AG:  Inputs.number({label: "N(A∩Γ)", value: 20, step: 1}),
+  BG:  Inputs.number({label: "N(B∩Γ)", value: 15, step: 1}),
+  ABG: Inputs.number({label: "N(A∩B∩Γ)", value: 10, step: 1})
+})
+viewof vennStep = Inputs.range([1, 4], {label: "Βήμα", step: 1, value: 1})
+```
+
+```{ojs}
+//| echo: false
+venn3 = {
+  const d = vennData;
+  const abg = d.ABG, ab = d.AB - abg, ag = d.AG - abg, bg = d.BG - abg;
+  const a = d.A - ab - ag - abg, b = d.B - ab - bg - abg, gg = d.G - ag - bg - abg;
+  const none = d.N - (a + b + gg + ab + ag + bg + abg);
+  const vals = [abg, ab, ag, bg, a, b, gg, none];
+  const bad = vals.some(x => !Number.isFinite(x) || x < 0);
+  const show = (x, s) => vennStep >= s ? x : "?";
+  const steps = [
+    "Βήμα 1: το κέντρο A∩B∩Γ δίνεται απευθείας.",
+    "Βήμα 2: από κάθε τομή ανά δύο αφαιρούμε το κέντρο, π.χ. N(A∩B) − N(A∩B∩Γ) = " + d.AB + " − " + abg + " = " + ab + ".",
+    "Βήμα 3: από κάθε σύνολο αφαιρούμε όσα έχουμε ήδη μετρήσει μέσα του, π.χ. μόνο A: " + d.A + " − " + ab + " − " + ag + " − " + abg + " = " + a + ".",
+    "Βήμα 4: όσοι περισσεύουν έξω από τους κύκλους: " + d.N + " − " + (d.N - none) + " = " + none + "."
+  ];
+  const svg = `<svg viewBox="0 0 390 340" style="width:100%;max-width:420px">
+    <rect x="2" y="2" width="386" height="336" fill="#fff" stroke="#333"/>
+    <circle cx="150" cy="140" r="85" fill="#4e79a7" fill-opacity="0.22" stroke="#4e79a7" stroke-width="2"/>
+    <circle cx="240" cy="140" r="85" fill="#f28e2b" fill-opacity="0.22" stroke="#f28e2b" stroke-width="2"/>
+    <circle cx="195" cy="215" r="85" fill="#59a14f" fill-opacity="0.22" stroke="#59a14f" stroke-width="2"/>
+    <text x="14" y="22" font-size="14">Ω</text>
+    <text x="40" y="44" font-size="13" fill="#4e79a7" font-weight="600">A: Στατιστική</text>
+    <text x="350" y="44" font-size="13" text-anchor="end" fill="#d9771f" font-weight="600">B: Πιθανότητες</text>
+    <text x="195" y="328" font-size="13" text-anchor="middle" fill="#3d7a36" font-weight="600">Γ: Γραμμική Άλγεβρα</text>
+    <g font-size="17" text-anchor="middle" font-weight="600">
+      <text x="195" y="170">${show(abg, 1)}</text>
+      <text x="195" y="113">${show(ab, 2)}</text>
+      <text x="146" y="205">${show(ag, 2)}</text>
+      <text x="244" y="205">${show(bg, 2)}</text>
+      <text x="110" y="125">${show(a, 3)}</text>
+      <text x="280" y="125">${show(b, 3)}</text>
+      <text x="195" y="273">${show(gg, 3)}</text>
+      <text x="360" y="300">${show(none, 4)}</text>
+    </g>
+  </svg>`;
+  const box = html`<div></div>`;
+  box.innerHTML = bad
+    ? `<div class="ix-warn">Τα δεδομένα δεν είναι συνεπή: κάποια περιοχή βγαίνει αρνητική. Ελέγξτε τις τιμές.</div>`
+    : `<div class="ix-row"><div>${svg}</div><div class="ix-note">${steps.slice(0, vennStep).join("<br>")}` +
+      (vennStep === 4 ? `<br><br><b>Απαντήσεις:</b> μόνο Στατιστική: ${a}, ακριβώς δύο μαθήματα: ${ab + ag + bg}, τουλάχιστον ένα: ${d.N - none}, κανένα: ${none}.` : "") +
+      `</div></div>`;
+  return box;
+}
+```
+:::
+
+Ο τύπος που δίνει το «τουλάχιστον ένα» απευθείας είναι η **αρχή εγκλεισμού–αποκλεισμού**, την οποία θα ξαναδούμε σύντομα για πιθανότητες:
+
+$$\begin{aligned}
+N(A \cup B \cup \Gamma) = {} & N(A) + N(B) + N(\Gamma) \\
+ & - N(A \cap B) - N(A \cap \Gamma) - N(B \cap \Gamma) \\
+ & + N(A \cap B \cap \Gamma).
+\end{aligned}$$
+
+Σε R ο ίδιος υπολογισμός είναι μερικές γραμμές:
+
+```{r}
+#| label: venn-students
+N_A <- 60; N_B <- 50; N_G <- 40
+N_AB <- 30; N_AG <- 20; N_BG <- 15; N_ABG <- 10
+
+only_A       <- N_A - N_AB - N_AG + N_ABG
+exactly_two  <- (N_AB - N_ABG) + (N_AG - N_ABG) + (N_BG - N_ABG)
+at_least_one <- N_A + N_B + N_G - N_AB - N_AG - N_BG + N_ABG
+
+c("μόνο Στατιστική" = only_A, "ακριβώς δύο" = exactly_two,
+  "τουλάχιστον ένα" = at_least_one, "κανένα" = 100 - at_least_one)
+```
+
+## Σύνοψη
+
+- Ο **δειγματικός χώρος** $\Omega$ είναι το σύνολο όλων των δυνατών αποτελεσμάτων και εξαρτάται από το τι καταγράφουμε.
+- Ένα **ενδεχόμενο** είναι υποσύνολο του $\Omega$. Πραγματοποιείται όταν το αποτέλεσμα ανήκει σε αυτό.
+- Οι πράξεις συνόλων αντιστοιχούν στα «όχι», «ή», «και», «αλλά όχι» και «ακριβώς ένα από».
+- **Ξένα** είναι τα ενδεχόμενα χωρίς κοινά στοιχεία. Τα συμπληρώματα ξένων ενδεχομένων είναι ξένα μόνο όταν η ένωσή τους είναι όλο το $\Omega$.
+
+## Ερωτήσεις εμπέδωσης
+
+**1. Τι είδους δειγματικός χώρος;** Επιλέξτε για κάθε πείραμα και θα δείτε αμέσως αν απαντήσατε σωστά.
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+classifyItems = [
+  ["Η ένδειξη ενός ζαριού", "Πεπερασμένος"],
+  ["Το πλήθος των e-mail που λαμβάνετε σε μία ημέρα", "Άπειρος αριθμήσιμος"],
+  ["Ο χρόνος ζωής ενός λαμπτήρα σε ώρες", "Άπειρος μη αριθμήσιμος"],
+  ["Το πλήθος των ελαττωματικών σε ένα δείγμα 20 εξαρτημάτων", "Πεπερασμένος"],
+  ["Η τάση στην έξοδο ενός αισθητήρα", "Άπειρος μη αριθμήσιμος"]
+]
+classifyQuiz = {
+  const opts = ["Πεπερασμένος", "Άπειρος αριθμήσιμος", "Άπειρος μη αριθμήσιμος"];
+  const root = html`<div></div>`;
+  const score = html`<div class="ix-note"></div>`;
+  const sels = classifyItems.map(([q, ans], k) => {
+    const sel = html`<select style="margin-top:4px;max-width:100%"><option>—</option>${opts.map(o => html`<option>${o}</option>`)}</select>`;
+    const mark = html`<span style="margin-left:10px"></span>`;
+    sel.onchange = () => {
+      mark.innerHTML = sel.value === "—" ? "" : sel.value === ans
+        ? `<span class="ix-ok">✓ Σωστό</span>` : `<span class="ix-no">✗ Ξαναδοκιμάστε</span>`;
+      update();
+    };
+    root.append(html`<div style="margin:10px 0"><div>${k + 1}. ${q}</div>${sel}${mark}</div>`);
+    return sel;
+  });
+  function update() {
+    const done = sels.filter(s => s.value !== "—").length;
+    const right = sels.filter((s, k) => s.value === classifyItems[k][1]).length;
+    score.innerHTML = done ? `<b>Σωστές: ${right} από ${classifyItems.length}</b>` : "";
+  }
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** Ρίχνουμε ταυτόχρονα τρία νομίσματα και καταγράφουμε τις όψεις τους. Πόσα στοιχεία έχει ο δειγματικός χώρος;
+
+**3.** Ένα κουτί έχει μία μαύρη, μία άσπρη και μία κόκκινη σφαίρα. Βγάζουμε διαδοχικά δύο σφαίρες και καταγράφουμε τα χρώματα με τη σειρά. Πόσα στοιχεία έχει ο $\Omega$ (α) χωρίς επανατοποθέτηση και (β) με επανατοποθέτηση;
+
+::: {.callout-tip collapse="true"}
+## Απαντήσεις
+
+2. **8**: Ω = {ΚΚΚ, ΚΚΓ, ΚΓΚ, ΓΚΚ, ΚΓΓ, ΓΚΓ, ΓΓΚ, ΓΓΓ}. Δοκιμάστε `expand.grid(rep(list(c("Κ","Γ")), 3))`.
+3. (α) **6** διατεταγμένα ζεύγη διαφορετικών χρωμάτων, (β) **9**, γιατί επιτρέπονται και τα ζεύγη ίδιου χρώματος.
+:::
+
+---
+
+**Επόμενο άρθρο:** *Ορισμός της πιθανότητας: από τη στατιστική ομαλότητα στις βασικές ιδιότητες.*

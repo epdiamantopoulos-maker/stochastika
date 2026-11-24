@@ -1,0 +1,237 @@
+---
+title: "Random experiments: what does \"random\" really mean?"
+description: "What makes an experiment random, why randomness is a property of the model rather than the world, and three common misconceptions debunked with R simulations."
+date: 2026-12-07
+categories: [Probability, Foundations, R, Interactive]
+keywords: [random experiment, randomness, deterministic experiment, pseudo-random numbers, gambler's fallacy, R simulation]
+execute:
+  echo: true
+  warning: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 0) paste0(fmt(100 * x, d), "%")
+```
+
+Before every football match the referee flips a coin, and everyone accepts the outcome as "random". Yet a coin obeys Newton's laws. If we knew its initial velocity and spin precisely, we could compute how it will land. So what do we actually mean by "random"?
+
+## What is a random experiment?
+
+A **random experiment** satisfies three conditions:
+
+1. **All possible outcomes** are known in advance.
+2. The outcome of a single run **cannot be predicted**.
+3. The experiment can, at least in principle, be **repeated under the same conditions**.
+
+If an experiment is not random, it is **deterministic**, and its conditions fully determine the result: 10 V across a 5 Ω resistor always gives 2 A. By contrast, the number of packets arriving at a router, the lifetime of a capacitor, or the noise at an amplifier's output are random experiments.
+
+## Randomness is a property of the model
+
+Back to the coin-flip experiment. Statistician and former magician Persi Diaconis and his colleagues showed that physics creates a slight bias: a coin tends to land on the side it started on. An experiment with 350,757 flips confirmed it, with the starting side coming up about 50.8% of the time ([Bartoš et al., 2023](https://arxiv.org/abs/2310.04153)).
+
+"Random", then, is **a description of our model**, not an intrinsic property of the phenomenon. We treat something as random when the factors behind it are too many to measure and what we care about is its behaviour over many repetitions.
+
+Your computer's "random" numbers are the perfect example. They come from a deterministic algorithm, which is why `set.seed()` reproduces exactly the same sequence:
+
+```{r}
+#| label: pseudo-random
+set.seed(1); sample(1:6, 5, replace = TRUE)
+set.seed(1); sample(1:6, 5, replace = TRUE)  # same seed, same result
+```
+
+These numbers are fully predictable to anyone who knows the seed, yet they behave "like random" so well that all of simulation is built on them.
+
+```{r}
+#| label: reset-seed
+#| include: false
+set.seed(2026)
+```
+
+## Three misconceptions about randomness
+
+### 1. "After that many heads, tails is due"
+
+This is the **gambler's fallacy**. In a million flips, let's look at what follows every run of five heads:
+
+```{r}
+#| label: gamblers-fallacy
+flips <- rbinom(1e6, 1, 0.5)
+last5 <- stats::filter(flips, rep(1, 5), sides = 1)  # sum of the last 5 flips
+after <- which(last5 == 5) + 1
+after <- after[after <= length(flips)]
+mean(flips[after])   # proportion of heads on the next flip
+```
+
+Across `r format(length(after), big.mark = ",")` such cases, the next flip was heads `r pct(mean(flips[after]), 1)` of the time. Coins have no memory.
+
+::: {.ix-panel}
+::: {.ix-title}
+Try it: does the coin have a memory?
+:::
+
+```{ojs}
+//| echo: false
+viewof gfN = Inputs.select([1000, 10000, 100000], {label: "Number of flips", value: 10000, format: x => x.toLocaleString("en-GB")})
+viewof gfRun = Inputs.button("New simulation")
+```
+
+```{ojs}
+//| echo: false
+gfView = {
+  gfRun;
+  const n = gfN;
+  const s = Uint8Array.from({length: n}, () => Math.random() < 0.5 ? 1 : 0);
+  const rows = [];
+  for (let k = 1; k <= 6; k++) {
+    let cur = 1, cases = 0, cont = 0;
+    for (let i = 1; i < n; i++) {
+      // cur = length of the streak ending at flip i-1
+      if (cur >= k) { cases++; if (s[i] === s[i - 1]) cont++; }
+      cur = s[i] === s[i - 1] ? cur + 1 : 1;
+    }
+    rows.push({k, cases, p: cases ? cont / cases : NaN});
+  }
+  const fmtP = p => Number.isFinite(p) ? (100 * p).toLocaleString("en-GB", {maximumFractionDigits: 1}) + "%" : "—";
+  const chips = Array.from(s.slice(0, 60), x => `<span class="ix-chip ${x ? "ix-h" : "ix-t"}">${x ? "H" : "T"}</span>`).join("");
+  const box = html`<div></div>`;
+  box.innerHTML = `<div class="ix-note">The first 60 flips:</div><div class="ix-chips">${chips}</div>
+    <table class="ix-tbl"><tr><th>After a streak of at least</th><th>Cases</th><th>Next flip continues the streak</th></tr>
+    ${rows.map(r => `<tr><td>${r.k} ${r.k === 1 ? "flip" : "flips"}</td><td>${r.cases.toLocaleString("en-GB")}</td><td><b>${fmtP(r.p)}</b></td></tr>`).join("")}
+    </table>
+    <div class="ix-note">If the gambler's fallacy were true, the last column would fall as the streak grows. Press "New simulation" a few times: it stays around 50%, wobbling more where there are few cases.</div>`;
+  return box;
+}
+```
+:::
+
+### 2. "A random sequence doesn't have long streaks"
+
+When people write down "random" flips, they avoid long streaks. So how long is the longest streak in 100 real flips, typically?
+
+```{r}
+#| label: longest-run
+longest_run <- function(n) max(rle(rbinom(n, 1, 0.5))$lengths)
+runs <- replicate(10000, longest_run(100))
+mean(runs)
+```
+
+About `r fmt(mean(runs), 1)` on average, and `r pct(mean(runs >= 5))` of sequences contain a streak of at least 5. A sequence with **suspiciously few** streaks was probably made up by a human.
+
+But can you fool the statistics? Type a sequence of H and T below that "looks random", without flipping a real coin. The page will compare it with 5,000 genuinely random sequences of the same length.
+
+::: {.ix-panel}
+::: {.ix-title}
+Are you a good random number generator?
+:::
+
+```{ojs}
+//| echo: false
+viewof humanSeq = Inputs.textarea({label: "Your flips (H/T)", placeholder: "e.g. HTTHTHHTTH…", rows: 3, width: 520})
+viewof fillReal = Inputs.button("Fill with 100 real flips")
+```
+
+```{ojs}
+//| echo: false
+{
+  if (fillReal > 0) {
+    const el = viewof humanSeq;
+    el.value = Array.from({length: 100}, () => Math.random() < 0.5 ? "H" : "T").join("");
+    el.dispatchEvent(new Event("input", {bubbles: true}));
+  }
+  return html``;
+}
+```
+
+```{ojs}
+//| echo: false
+humanAnalysis = {
+  const seq = [...(humanSeq || "")].map(ch => "ΚKHκkh".includes(ch) ? 1 : "ΓGTγgt".includes(ch) ? 0 : null).filter(x => x !== null);
+  const n = seq.length;
+  if (n < 20) return html`<div class="ix-note">Type at least 20 flips (you have ${n}).</div>`;
+  const stats = s => {
+    let longest = 1, cur = 1, sw = 0;
+    for (let i = 1; i < s.length; i++) {
+      if (s[i] === s[i - 1]) { cur++; if (cur > longest) longest = cur; } else { cur = 1; sw++; }
+    }
+    return {longest, sw};
+  };
+  const u = stats(seq);
+  const R = 5000, L = new Array(R), S = new Array(R);
+  for (let r = 0; r < R; r++) {
+    const s = Array.from({length: n}, () => Math.random() < 0.5 ? 1 : 0);
+    const st = stats(s); L[r] = st.longest; S[r] = st.sw;
+  }
+  const q = (a, p) => d3.quantile([...a].sort((x, y) => x - y), p);
+  const pShort = L.filter(x => x <= u.longest).length / R;
+  const pMany = S.filter(x => x >= u.sw).length / R;
+  const suspicious = pShort < 0.05 || pMany < 0.05;
+  const counts = d3.rollups(L, v => v.length / R, d => d);
+  if (!counts.some(d => d[0] === u.longest)) counts.push([u.longest, 0]);
+  counts.sort((a, b) => a[0] - b[0]);
+  const chart = Plot.plot({
+    height: 220, marginLeft: 50,
+    x: {label: "Longest streak in random sequences"},
+    y: {label: "Proportion", grid: true},
+    marks: [
+      Plot.barY(counts, {x: d => d[0], y: d => d[1], fill: d => d[0] === u.longest ? "#c62828" : "#9ecae1"}),
+      Plot.text([u.longest], {x: d => d, y: d => counts.find(c => c[0] === d)[1], text: () => "▼ you", dy: -10, fill: "#c62828", fontWeight: 600}),
+      Plot.ruleY([0])
+    ]
+  });
+  const pc = x => x === 0 ? "none (0 in 5,000)" : (100 * x).toLocaleString("en-GB", {maximumFractionDigits: 1}) + "%";
+  return html`<div>
+    <table class="ix-tbl">
+      <tr><th></th><th>Your sequence</th><th>Random sequences (90% lie between)</th></tr>
+      <tr><td>Longest streak</td><td><b>${u.longest}</b></td><td>${q(L, 0.05)} – ${q(L, 0.95)}</td></tr>
+      <tr><td>Switches H↔T</td><td><b>${u.sw}</b></td><td>${q(S, 0.05)} – ${q(S, 0.95)}</td></tr>
+    </table>
+    ${chart}
+    <div class="ix-note">The red bar is the longest streak in your sequence. Of the random sequences, ${pc(pShort)} have a longest streak this short or shorter, and ${pc(pMany)} have this many switches or more. If either is below 5%, your sequence stands out.</div>
+    <div style="margin-top:6px">${suspicious
+      ? html`<span class="ix-no">Verdict: probably written by a human.</span> People switch sides more often than chance does and avoid long streaks.`
+      : html`<span class="ix-ok">Verdict: passes as a random sequence.</span>`}</div>
+  </div>`;
+}
+```
+:::
+
+### 3. "In the long run, heads and tails even out"
+
+The **ratio** of heads to total flips does approach 1/2, which we will meet in a later post as the law of large numbers. The **difference** does not: the gap between the number of heads and n/2 actually *grows*:
+
+```{r}
+#| label: abs-deviation
+abs_dev <- function(n) abs(sum(rbinom(n, 1, 0.5)) - n / 2)
+dev_100   <- mean(replicate(2000, abs_dev(100)))
+dev_10000 <- mean(replicate(2000, abs_dev(10000)))
+c(n_100 = dev_100, n_10000 = dev_10000)
+```
+
+With 100 flips we are on average about `r fmt(dev_100, 1)` heads away from 50; with 10,000, about `r fmt(dev_10000, 0)` away from 5,000. Because we divide by n, though, the ratio still approaches 0.5. Chance does not *correct* deviations; it *dilutes* them.
+
+## Key takeaways
+
+- A **random experiment** has known possible outcomes, an unpredictable individual outcome, and can be repeated.
+- Randomness is a **modelling choice**, not a property of the world.
+
+## Review questions
+
+1. Is computing how long a ball takes to fall 20 m in a vacuum a random experiment?
+2. A roulette wheel has landed on red 8 times in a row. Is black more likely on the next spin?
+3. A student shows you 200 "coin flips" with no streak longer than 3. What do you suspect?
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+1. **No.** The outcome is fully determined by h = ½gt².
+2. **No.** Spins are independent. Believing otherwise is the gambler's fallacy.
+3. That the sequence **did not come from real flips**: in 200 fair flips, a streak longer than 3 is virtually certain.
+:::
+
+---
+
+**Next post:** *Sample spaces and events: the set-theory language of probability.*

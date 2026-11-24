@@ -1,0 +1,378 @@
+---
+title: "Sample spaces and events: the set-theory language of probability"
+description: "What sample spaces and events are and how set operations become logical statements about a random experiment, with interactive diagrams and R examples."
+date: 2026-12-09
+categories: [Probability, Foundations, R, Interactive]
+keywords: [sample space, events, set operations, Venn diagram, mutually exclusive events, disjoint events, symmetric difference]
+execute:
+  echo: true
+  warning: false
+---
+
+In the [previous post](../random-experiments/index.qmd) we saw that a random experiment has possible outcomes known in advance. Today we give those outcomes a mathematical form. The language we use is set theory, and as we will see, every set operation translates into a natural statement about the experiment.
+
+## The sample space
+
+Each possible outcome of a random experiment is called an **elementary outcome** and is written $\omega$. The set of all outcomes is the **sample space**, written $\Omega$:
+
+$$\Omega = \{\omega_1, \omega_2, \ldots\}.$$
+
+For a single die roll, $\Omega = \{1, 2, 3, 4, 5, 6\}$.
+
+**The sample space is not unique.** It depends on what we choose to record. We draw a card from a 52-card deck. Change what we record below and watch the same 52 cards group into different elements of $\Omega$:
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+viewof recordCard = Inputs.radio(["Rank", "Colour", "Suit"], {label: "We record:", value: "Colour"})
+```
+
+```{ojs}
+//| echo: false
+cardSpace = {
+  const ranks = ["2","3","4","5","6","7","8","9","10","J","Q","K","A"];
+  const suits = [["♠","Black"],["♣","Black"],["♦","Red"],["♥","Red"]];
+  const cards = suits.flatMap(([s, c]) => ranks.map(r => ({r, s, c})));
+  const key = d => recordCard === "Rank" ? d.r : recordCard === "Colour" ? d.c : d.s;
+  const groups = d3.groups(cards, key);
+  const box = html`<div></div>`;
+  box.innerHTML =
+    `<div class="ix-omega">Ω = {${groups.map(g => g[0]).join(", ")}},&nbsp;&nbsp; number of elements: ${groups.length}</div>` +
+    `<div class="ix-groups">` +
+    groups.map(([k, cs]) =>
+      `<div class="ix-group"><div class="ix-group-h">${k} (${cs.length} cards)</div>` +
+      cs.map(d => `<span class="ix-card ${d.c === "Red" ? "ix-red" : "ix-black"}">${d.r}${d.s}</span>`).join("") +
+      `</div>`).join("") +
+    `</div>`;
+  return box;
+}
+```
+:::
+
+Same experiment, different model. Choosing the right $\Omega$ is the first, and often the most important, step in any probability problem.
+
+## Types of sample space
+
+Depending on how many elements it has, a sample space is:
+
+| Type | Example | $\Omega$ |
+|---|---|---|
+| **Finite** | Sum of two dice | $\{2, 3, \ldots, 12\}$ |
+| **Countably infinite** | Customers arriving at a checkout in one hour | $\{0, 1, 2, \ldots\}$ |
+| **Uncountable** | Arrival time of the first customer | $(0, +\infty)$ |
+
+This distinction becomes crucial later, when we meet discrete and continuous random variables.
+
+## Events
+
+An **event** is any subset $A \subseteq \Omega$. We say that $A$ **occurs** when the outcome of the experiment belongs to $A$. Two special cases are the **certain event** $\Omega$, which always occurs, and the **impossible event** $\varnothing$, which never does.
+
+In R, a finite sample space is naturally a data frame, and an event is a logical (`TRUE`/`FALSE`) vector over it. For two dice rolls:
+
+```{r}
+#| label: omega-dice
+# All ordered pairs (first roll, second roll)
+omega <- expand.grid(d1 = 1:6, d2 = 1:6)
+nrow(omega)
+
+# A: the first roll is a 6,  B: the sum is at least 10
+A <- omega$d1 == 6
+B <- omega$d1 + omega$d2 >= 10
+
+# Outcomes where both occur
+omega[A & B, ]
+```
+
+## Operations on events
+
+Since events are sets, we can combine them with the familiar set operations. The nice part is that each operation has a natural meaning:
+
+| Operation | Definition | Meaning | R |
+|---|---|---|---|
+| Complement $A'$ | $\{\omega \in \Omega : \omega \notin A\}$ | $A$ does not occur | `!A` |
+| Union $A \cup B$ | $\{\omega : \omega \in A \text{ or } \omega \in B\}$ | At least one of $A$, $B$ occurs | <code>A &#124; B</code> |
+| Intersection $A \cap B$ | $\{\omega : \omega \in A \text{ and } \omega \in B\}$ | Both occur | `A & B` |
+| Difference $A - B$ | $A \cap B'$ | $A$ occurs but $B$ does not | `A & !B` |
+| Symmetric difference $A \,\Delta\, B$ | $(A - B) \cup (B - A)$ | Exactly one of the two occurs | `xor(A, B)` |
+
+The best way to understand these operations is to see them at work. In the explorer below, pick two events for a pair of dice rolls and an operation. The outcomes of $\Omega$ that belong to the resulting event are highlighted on the grid, and the matching region of the **Venn diagram** is shaded at the same time. The numbers on the diagram show how many outcomes fall in each region.
+
+::: {.ix-panel}
+::: {.ix-title}
+Operations explorer: two dice rolls
+:::
+
+```{ojs}
+//| echo: false
+eventsEl = ({
+  "First roll is a 6": (a, b) => a === 6,
+  "Sum is at least 10": (a, b) => a + b >= 10,
+  "Sum is even": (a, b) => (a + b) % 2 === 0,
+  "Sum is odd": (a, b) => (a + b) % 2 === 1,
+  "Sum is a multiple of 4": (a, b) => (a + b) % 4 === 0,
+  "Doubles (same face)": (a, b) => a === b,
+  "Second roll beats the first": (a, b) => b > a
+})
+opsEl = ({
+  "A":     [(a, b) => a,        "A occurs"],
+  "B":     [(a, b) => b,        "B occurs"],
+  "A'":    [(a, b) => !a,       "A does not occur"],
+  "A ∪ B": [(a, b) => a || b,   "At least one of A, B occurs"],
+  "A ∩ B": [(a, b) => a && b,   "Both occur"],
+  "A − B": [(a, b) => a && !b,  "A occurs but B does not"],
+  "B − A": [(a, b) => b && !a,  "B occurs but A does not"],
+  "A Δ B": [(a, b) => a !== b,  "Exactly one of A, B occurs"]
+})
+viewof evA = Inputs.select(Object.keys(eventsEl), {label: "Event A", value: "First roll is a 6", width: 320})
+viewof evB = Inputs.select(Object.keys(eventsEl), {label: "Event B", value: "Sum is at least 10", width: 320})
+viewof opEl = Inputs.radio(Object.keys(opsEl), {label: "Operation", value: "A ∩ B"})
+```
+
+```{ojs}
+//| echo: false
+diceView = {
+  const fA = eventsEl[evA], fB = eventsEl[evB], [op, meaning] = opsEl[opEl];
+  const out = [];
+  for (let i = 1; i <= 6; i++) for (let j = 1; j <= 6; j++) {
+    const a = fA(i, j), b = fB(i, j);
+    out.push({i, j, a, b, r: op(a, b)});
+  }
+  const n = f => out.filter(f).length;
+  const cnt = {aOnly: n(d => d.a && !d.b), both: n(d => d.a && d.b),
+               bOnly: n(d => !d.a && d.b), none: n(d => !d.a && !d.b), res: n(d => d.r)};
+  const blue = "#4e79a7", light = "#eef0f3", orange = "#f28e2b", green = "#59a14f";
+
+  // Grid of the 36 outcomes
+  const c = 44, p = 40;
+  let g = `<svg viewBox="0 0 ${p + 6 * c + 4} ${p + 6 * c + 4}" style="width:100%;max-width:330px">`;
+  g += `<text x="${p + 3 * c}" y="12" text-anchor="middle" font-size="11">Second roll</text>`;
+  g += `<text x="9" y="${p + 3 * c}" text-anchor="middle" font-size="11" transform="rotate(-90 9 ${p + 3 * c})">First roll</text>`;
+  for (let k = 1; k <= 6; k++) {
+    g += `<text x="${p + (k - 0.5) * c}" y="32" text-anchor="middle" font-size="12" font-weight="600">${k}</text>`;
+    g += `<text x="28" y="${p + (k - 0.5) * c + 4}" text-anchor="middle" font-size="12" font-weight="600">${k}</text>`;
+  }
+  for (const d of out) {
+    const x = p + (d.j - 1) * c, y = p + (d.i - 1) * c;
+    g += `<rect x="${x + 1}" y="${y + 1}" width="${c - 2}" height="${c - 2}" rx="4" fill="${d.r ? blue : light}"/>`;
+    g += `<text x="${x + c / 2}" y="${y + c / 2 + 5}" text-anchor="middle" font-size="11" fill="${d.r ? "#fff" : "#333"}">${d.i},${d.j}</text>`;
+    if (d.a) g += `<circle cx="${x + 9}" cy="${y + 9}" r="4" fill="${orange}"/>`;
+    if (d.b) g += `<rect x="${x + c - 13}" y="${y + 5}" width="8" height="8" fill="${green}"/>`;
+  }
+  g += `</svg>`;
+
+  // Venn diagram shaded for the operation
+  const reg = {aOnly: op(true, false), both: op(true, true), bOnly: op(false, true), none: op(false, false)};
+  const col = on => on ? "#9ecae1" : "#fff";
+  let v = `<svg viewBox="0 0 320 210" style="width:100%;max-width:330px">
+    <defs><clipPath id="clipA2"><circle cx="125" cy="105" r="70"/></clipPath></defs>
+    <rect x="2" y="2" width="316" height="206" fill="${col(reg.none)}" stroke="#333"/>
+    <circle cx="125" cy="105" r="70" fill="${col(reg.aOnly)}"/>
+    <circle cx="195" cy="105" r="70" fill="${col(reg.bOnly)}"/>
+    <circle cx="195" cy="105" r="70" fill="${col(reg.both)}" clip-path="url(#clipA2)"/>
+    <circle cx="125" cy="105" r="70" fill="none" stroke="${orange}" stroke-width="2.5"/>
+    <circle cx="195" cy="105" r="70" fill="none" stroke="${green}" stroke-width="2.5"/>
+    <text x="16" y="22" font-size="14">Ω</text>
+    <text x="58" y="42" font-size="14" fill="${orange}" font-weight="600">A</text>
+    <text x="254" y="42" font-size="14" fill="${green}" font-weight="600">B</text>
+    <text x="95" y="110" text-anchor="middle" font-size="16">${cnt.aOnly}</text>
+    <text x="160" y="110" text-anchor="middle" font-size="16">${cnt.both}</text>
+    <text x="225" y="110" text-anchor="middle" font-size="16">${cnt.bOnly}</text>
+    <text x="295" y="195" text-anchor="middle" font-size="16">${cnt.none}</text>
+  </svg>`;
+
+  const disj = cnt.both === 0
+    ? `A and B are <b>disjoint</b>: A ∩ B = ∅.`
+    : `A and B are <b>not</b> disjoint: they share ${cnt.both} ${cnt.both === 1 ? "outcome" : "outcomes"}.`;
+  const box = html`<div></div>`;
+  box.innerHTML = `<div class="ix-row"><div>${g}</div><div>${v}</div></div>
+    <div class="ix-note"><b>${opEl}</b>: ${meaning}. The event contains <b>${cnt.res}</b> of the 36 outcomes.<br>${disj}
+    <br><span style="color:${orange}">●</span> in A &nbsp; <span style="color:${green}">■</span> in B</div>`;
+  return box;
+}
+```
+:::
+
+Try the union and you will see the shaded region split into non-overlapping pieces:
+
+$$A \cup B = (A - B) \cup (A \cap B) \cup (B - A) = (A \,\Delta\, B) \cup (A \cap B).$$
+
+This decomposition is the key to the probability rules in the next post. The diagram shows it at a glance: the size of the union is the sum of the three numbers inside the circles. The same in R:
+
+```{r}
+#| label: decomposition
+c(`A ∪ B` = sum(A | B), `A Δ B` = sum(xor(A, B)), `A ∩ B` = sum(A & B))
+```
+
+## Mutually exclusive events
+
+Two events are **mutually exclusive** (or **disjoint**) when they cannot occur together:
+
+$$A, B \text{ disjoint} \iff A \cap B = \varnothing.$$
+
+In the explorer, choose A = "sum is a multiple of 4" and B = "sum is odd". The central region of the Venn diagram will show 0. The same check in R:
+
+```{r}
+#| label: disjoint
+s <- omega$d1 + omega$d2
+any(s %% 4 == 0 & s %% 2 == 1)   # FALSE: no outcome in common
+```
+
+**A common trap.** If $A$ and $B$ are disjoint, their complements are generally *not*. Since $A' \cap B' = (A \cup B)'$, the complements are disjoint **exactly when** $A \cup B = \Omega$. For a coin, $A = \{\text{H}\}$ and $B = \{\text{T}\}$ are disjoint and cover all of $\Omega$, so their complements are disjoint too. For a die, $A = \{1\}$ and $B = \{2\}$ are disjoint, but $A'$ and $B'$ share 3, 4, 5 and 6. In the explorer, the region outside both circles is exactly $A' \cap B'$: the complements are disjoint only when the number there is 0.
+
+## Example: three courses, one hundred students
+
+Of 100 students, 60 take Statistics ($A$), 50 take Probability ($B$) and 40 take Linear Algebra ($C$). Also $N(A \cap B) = 30$, $N(A \cap C) = 20$, $N(B \cap C) = 15$ and $N(A \cap B \cap C) = 10$. How many take Statistics only? How many take exactly two courses? How many take none?
+
+The trick with a Venn diagram is to start **from the centre** and work outwards, subtracting whatever has already been counted. Move the slider to fill in the diagram step by step. You can also change the data and solve your own variations.
+
+::: {.ix-panel}
+::: {.ix-title}
+Filling in a three-set Venn diagram
+:::
+
+```{ojs}
+//| echo: false
+viewof vennData = Inputs.form({
+  N:   Inputs.number({label: "Total", value: 100, step: 1}),
+  A:   Inputs.number({label: "N(A)", value: 60, step: 1}),
+  B:   Inputs.number({label: "N(B)", value: 50, step: 1}),
+  G:   Inputs.number({label: "N(C)", value: 40, step: 1}),
+  AB:  Inputs.number({label: "N(A∩B)", value: 30, step: 1}),
+  AG:  Inputs.number({label: "N(A∩C)", value: 20, step: 1}),
+  BG:  Inputs.number({label: "N(B∩C)", value: 15, step: 1}),
+  ABG: Inputs.number({label: "N(A∩B∩C)", value: 10, step: 1})
+})
+viewof vennStep = Inputs.range([1, 4], {label: "Step", step: 1, value: 1})
+```
+
+```{ojs}
+//| echo: false
+venn3 = {
+  const d = vennData;
+  const abg = d.ABG, ab = d.AB - abg, ag = d.AG - abg, bg = d.BG - abg;
+  const a = d.A - ab - ag - abg, b = d.B - ab - bg - abg, gg = d.G - ag - bg - abg;
+  const none = d.N - (a + b + gg + ab + ag + bg + abg);
+  const vals = [abg, ab, ag, bg, a, b, gg, none];
+  const bad = vals.some(x => !Number.isFinite(x) || x < 0);
+  const show = (x, s) => vennStep >= s ? x : "?";
+  const steps = [
+    "Step 1: the centre A∩B∩C is given directly.",
+    "Step 2: subtract the centre from each pairwise intersection, e.g. N(A∩B) − N(A∩B∩C) = " + d.AB + " − " + abg + " = " + ab + ".",
+    "Step 3: from each set subtract what has already been counted inside it, e.g. A only: " + d.A + " − " + ab + " − " + ag + " − " + abg + " = " + a + ".",
+    "Step 4: whoever is left lies outside all circles: " + d.N + " − " + (d.N - none) + " = " + none + "."
+  ];
+  const svg = `<svg viewBox="0 0 390 340" style="width:100%;max-width:420px">
+    <rect x="2" y="2" width="386" height="336" fill="#fff" stroke="#333"/>
+    <circle cx="150" cy="140" r="85" fill="#4e79a7" fill-opacity="0.22" stroke="#4e79a7" stroke-width="2"/>
+    <circle cx="240" cy="140" r="85" fill="#f28e2b" fill-opacity="0.22" stroke="#f28e2b" stroke-width="2"/>
+    <circle cx="195" cy="215" r="85" fill="#59a14f" fill-opacity="0.22" stroke="#59a14f" stroke-width="2"/>
+    <text x="14" y="22" font-size="14">Ω</text>
+    <text x="40" y="44" font-size="13" fill="#4e79a7" font-weight="600">A: Statistics</text>
+    <text x="350" y="44" font-size="13" text-anchor="end" fill="#d9771f" font-weight="600">B: Probability</text>
+    <text x="195" y="328" font-size="13" text-anchor="middle" fill="#3d7a36" font-weight="600">C: Linear Algebra</text>
+    <g font-size="17" text-anchor="middle" font-weight="600">
+      <text x="195" y="170">${show(abg, 1)}</text>
+      <text x="195" y="113">${show(ab, 2)}</text>
+      <text x="146" y="205">${show(ag, 2)}</text>
+      <text x="244" y="205">${show(bg, 2)}</text>
+      <text x="110" y="125">${show(a, 3)}</text>
+      <text x="280" y="125">${show(b, 3)}</text>
+      <text x="195" y="273">${show(gg, 3)}</text>
+      <text x="360" y="300">${show(none, 4)}</text>
+    </g>
+  </svg>`;
+  const box = html`<div></div>`;
+  box.innerHTML = bad
+    ? `<div class="ix-warn">The data are inconsistent: some region comes out negative. Check the values.</div>`
+    : `<div class="ix-row"><div>${svg}</div><div class="ix-note">${steps.slice(0, vennStep).join("<br>")}` +
+      (vennStep === 4 ? `<br><br><b>Answers:</b> Statistics only: ${a}, exactly two courses: ${ab + ag + bg}, at least one: ${d.N - none}, none: ${none}.` : "") +
+      `</div></div>`;
+  return box;
+}
+```
+:::
+
+The formula that gives "at least one" directly is the **inclusion–exclusion principle**, which we will soon meet again for probabilities:
+
+$$\begin{aligned}
+N(A \cup B \cup C) = {} & N(A) + N(B) + N(C) \\
+ & - N(A \cap B) - N(A \cap C) - N(B \cap C) \\
+ & + N(A \cap B \cap C).
+\end{aligned}$$
+
+In R the same calculation takes a few lines:
+
+```{r}
+#| label: venn-students
+N_A <- 60; N_B <- 50; N_C <- 40
+N_AB <- 30; N_AC <- 20; N_BC <- 15; N_ABC <- 10
+
+only_A       <- N_A - N_AB - N_AC + N_ABC
+exactly_two  <- (N_AB - N_ABC) + (N_AC - N_ABC) + (N_BC - N_ABC)
+at_least_one <- N_A + N_B + N_C - N_AB - N_AC - N_BC + N_ABC
+
+c("only Statistics" = only_A, "exactly two" = exactly_two,
+  "at least one" = at_least_one, "none" = 100 - at_least_one)
+```
+
+## Key takeaways
+
+- The **sample space** $\Omega$ is the set of all possible outcomes, and it depends on what we record.
+- An **event** is a subset of $\Omega$; it occurs when the outcome lies in it.
+- Set operations correspond to "not", "or", "and", "but not" and "exactly one of".
+- **Disjoint** events share no outcomes. Complements of disjoint events are disjoint only when the events cover all of $\Omega$.
+
+## Review questions
+
+**1. What kind of sample space?** Choose for each experiment and you will see right away whether you are correct.
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+classifyItems = [
+  ["The face shown by a die", "Finite"],
+  ["The number of e-mails you receive in a day", "Countably infinite"],
+  ["The lifetime of a light bulb in hours", "Uncountable"],
+  ["The number of defective parts in a sample of 20", "Finite"],
+  ["The voltage at a sensor's output", "Uncountable"]
+]
+classifyQuiz = {
+  const opts = ["Finite", "Countably infinite", "Uncountable"];
+  const root = html`<div></div>`;
+  const score = html`<div class="ix-note"></div>`;
+  const sels = classifyItems.map(([q, ans], k) => {
+    const sel = html`<select style="margin-top:4px;max-width:100%"><option>—</option>${opts.map(o => html`<option>${o}</option>`)}</select>`;
+    const mark = html`<span style="margin-left:10px"></span>`;
+    sel.onchange = () => {
+      mark.innerHTML = sel.value === "—" ? "" : sel.value === ans
+        ? `<span class="ix-ok">✓ Correct</span>` : `<span class="ix-no">✗ Try again</span>`;
+      update();
+    };
+    root.append(html`<div style="margin:10px 0"><div>${k + 1}. ${q}</div>${sel}${mark}</div>`);
+    return sel;
+  });
+  function update() {
+    const done = sels.filter(s => s.value !== "—").length;
+    const right = sels.filter((s, k) => s.value === classifyItems[k][1]).length;
+    score.innerHTML = done ? `<b>Correct: ${right} of ${classifyItems.length}</b>` : "";
+  }
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** Three coins are tossed together and their faces recorded. How many elements does the sample space have?
+
+**3.** A box holds one black, one white and one red ball. We draw two balls in turn and record the colours in order. How many elements does $\Omega$ have (a) without replacement and (b) with replacement?
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. **8**: Ω = {HHH, HHT, HTH, THH, HTT, THT, TTH, TTT}. Try `expand.grid(rep(list(c("H","T")), 3))`.
+3. (a) **6** ordered pairs of different colours; (b) **9**, since same-colour pairs are now allowed.
+:::
+
+---
+
+**Next post:** *Defining probability: from statistical regularity to basic properties.*

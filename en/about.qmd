@@ -1,0 +1,29 @@
+---
+title: "About"
+toc: false
+---
+
+**Stochastika** is a blog about Probability and Statistics, written for students, engineers and anyone who wants to understand the ideas rather than memorise formulas.
+
+## Why "Stochastika"?
+
+The English word *stochastic* comes from the Greek verb **στοχάζομαι** (*stochazomai*), meaning "to aim at" or "to conjecture". Something stochastic cannot be predicted with certainty, but it can be reasoned about. That is exactly what Probability and Statistics do.
+
+## How it is organised
+
+The posts follow the structure of a university course in Probability and Statistics, from random experiments and sample spaces to hypothesis testing, and then on to time-series analysis. Each post combines:
+
+- intuition and rigorous definitions,
+- **R** examples with code you can run,
+- **interactive** elements to experiment with the ideas,
+- review questions.
+
+## Who writes it
+
+The content is based on the teaching material of **Epameinondas Diamantopoulos**, who teaches Probability and Statistics at the Department of Electrical and Computer Engineering, Democritus University of Thrace, Greece.
+
+AI assistance is used to draft the posts, code and interactive elements. Every post is reviewed and approved by the author before publication.
+
+## Contact
+
+For comments, corrections or topic suggestions: [CONTACT EMAIL]

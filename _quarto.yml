@@ -1,0 +1,52 @@
+project:
+  type: website
+  output-dir: _site
+  render:
+    - "*.qmd"
+    - "!STYLE_GUIDE.md"
+    - "!README.md"
+    - "!CLAUDE.md"
+
+website:
+  title: "Stochastika"
+  site-url: "https://www.stochastika.com"
+  description: "Πιθανότητες και Στατιστική με R και διαδραστικά παραδείγματα · Probability and Statistics with R and interactive examples"
+  favicon: assets/logo.svg
+  # Άρθρα με draft: true δεν δημοσιεύονται καθόλου (βλ. _scripts/hide_future_posts.py)
+  draft-mode: gone
+  open-graph: true
+  twitter-card: true
+  search:
+    location: navbar
+    type: overlay
+  navbar:
+    logo: assets/logo-nav.svg
+    left:
+      - href: el/index.qmd
+        text: "Ελληνικά"
+      - href: en/index.qmd
+        text: "English"
+    right:
+      - href: el/about.qmd
+        text: "Σχετικά"
+      - href: en/about.qmd
+        text: "About"
+  page-footer:
+    center: "© 2026 Stochastika · [Απόρρητο](/el/privacy.html) · [Privacy](/en/privacy.html)"
+
+format:
+  html:
+    theme: [cosmo, assets/theme.scss]
+    css: assets/styles.css
+    include-after-body: assets/lang-switch.html
+    toc: true
+    toc-depth: 2
+    code-copy: true
+    code-overflow: wrap
+    fig-align: center
+    smooth-scroll: true
+
+execute:
+  echo: true
+  warning: false
+  message: false
