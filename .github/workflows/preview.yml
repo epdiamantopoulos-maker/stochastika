@@ -17,6 +17,7 @@ concurrency:
 jobs:
   preview:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -30,9 +31,14 @@ jobs:
             any::knitr
             any::rmarkdown
 
-      - uses: quarto-dev/quarto-actions/setup@v2
-        with:
-          version: 1.6.42
+      - name: Εγκατάσταση Quarto
+        run: |
+          v=1.6.42
+          curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors \
+            --connect-timeout 20 --max-time 300 -o "$RUNNER_TEMP/quarto.deb" \
+            "https://github.com/quarto-dev/quarto-cli/releases/download/v$v/quarto-$v-linux-amd64.deb"
+          sudo apt-get install -y --allow-downgrades "$RUNNER_TEMP/quarto.deb"
+          quarto --version
 
       - name: Render
         run: quarto render
