@@ -3,10 +3,11 @@
 Τρέχει μετά το hide_future_posts.py. Παίρνει όλα τα αρχεία του αποθετηρίου
 (git ls-files), παραλείπει τους φακέλους των άρθρων που έχουν `draft: true`
 (μελλοντικά άρθρα) και τα αρχεία που δεν επηρεάζουν το site (.github/,
-αρχεία .md στη ρίζα), και επιστρέφει ένα SHA-256 των υπολοίπων.
+_scripts/, αρχεία .md στη ρίζα), και επιστρέφει ένα SHA-256 των υπολοίπων.
 
 Το workflow της δημοσίευσης συγκρίνει αυτό το αποτύπωμα με εκείνο της
-τελευταίας δημοσίευσης (αρχείο deploy-fingerprint.txt στο live site) και
+τελευταίας δημοσίευσης (αρχείο deploy-fingerprint.txt στο live site ή, αν
+δεν υπάρχει ακόμα, _scripts/initial-fingerprint.txt) και
 δημοσιεύει μόνο όταν διαφέρουν. Έτσι ένα merge με άρθρα μελλοντικής
 ημερομηνίας, ή μια μέρα χωρίς νέο άρθρο, δεν καταναλώνει credits της Netlify.
 """
@@ -27,7 +28,7 @@ for f in root.glob("*/posts/*/index.qmd"):
 
 h = hashlib.sha256()
 for rel in sorted(files):
-    if rel.startswith(".github/") or (("/" not in rel) and rel.endswith(".md")):
+    if rel.startswith((".github/", "_scripts/")) or (("/" not in rel) and rel.endswith(".md")):
         continue
     if any(rel.startswith(d) for d in hidden_dirs):
         continue

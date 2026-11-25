@@ -39,6 +39,8 @@ jobs:
         run: |
           new=$(python3 _scripts/site_fingerprint.py)
           old=$(curl -fsS --retry 3 --max-time 20 https://www.stochastika.com/deploy-fingerprint.txt 2>/dev/null | tr -d '[:space:]' || true)
+          # πριν από την πρώτη δημοσίευση με αποτύπωμα: η κατάσταση του live site στις 25/11/2026
+          [ -n "$old" ] || old=$(tr -d '[:space:]' < _scripts/initial-fingerprint.txt)
           echo "fingerprint=$new" >> "$GITHUB_OUTPUT"
           echo "Νέο αποτύπωμα:  $new"
           echo "Δημοσιευμένο:   ${old:-(κανένα)}"
