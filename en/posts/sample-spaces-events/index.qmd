@@ -70,6 +70,13 @@ An **event** is any subset $A \subseteq \Omega$. We say that $A$ **occurs** when
 In R, a finite sample space is naturally a data frame, and an event is a logical (`TRUE`/`FALSE`) vector over it. For two dice rolls:
 
 ```{r}
+#| label: setup
+#| include: false
+# non-ASCII characters in output and plots under a "C" locale
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+```
+
+```{r}
 #| label: omega-dice
 # All ordered pairs (first roll, second roll)
 omega <- expand.grid(d1 = 1:6, d2 = 1:6)

@@ -10,6 +10,8 @@ keywords: [Kolmogorov axioms, probability space, sigma-algebra, countable additi
 #| label: setup
 #| include: false
 set.seed(2026)
+# non-ASCII characters in output and plots under a "C" locale
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
 fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
 ```
 

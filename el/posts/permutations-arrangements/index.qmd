@@ -10,6 +10,8 @@ keywords: [μεταθέσεις, διατάξεις, παραγοντικό, α�
 #| label: setup
 #| include: false
 set.seed(2026)
+# ελληνικοί χαρακτήρες στην έξοδο και στα γραφήματα και σε locale "C"
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
 fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, decimal.mark = ",")
 pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
 int <- function(x) formatC(x, format = "d", big.mark = ".", decimal.mark = ",")

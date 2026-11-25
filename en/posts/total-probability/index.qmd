@@ -1,0 +1,260 @@
+---
+title: "The law of total probability: splitting a problem into scenarios"
+description: "The law of total probability as a weighted average of scenarios, with an interactive area diagram, the answer to the sampling-without-replacement puzzle and the two-urns problem."
+date: 2027-01-06
+categories: [Probability, Conditional probability, R, Interactive]
+keywords: [law of total probability, total probability theorem, partition of the sample space, conditional probability, weighted average, probability tree]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# non-ASCII characters in output and plots under a "C" locale
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+A shop gets 80% of its products from supplier A, where 1% are defective, and 20% from supplier B, where 3% are defective. What is the probability that a random product in the shop is defective? We do not know which supplier it came from, but we know what happens **in each scenario**. The law of total probability combines the scenarios into one answer.
+
+## The theorem
+
+Events $B_1, B_2, \ldots$ form a **partition** of the sample space when they are pairwise disjoint and their union is all of $\Omega$: in every run of the experiment **exactly one** of them occurs. Then, for any event $A$:
+
+$$P(A) = \sum_{n} P(A \cap B_n) = \sum_{n} P(A \mid B_n) \cdot P(B_n).$$
+
+The proof is short. The pieces $A \cap B_n$ are disjoint and their union is $A$, so by the (countable) additivity of [Kolmogorov's axioms](../kolmogorov-axioms/index.qmd), $P(A) = \sum P(A \cap B_n)$. Each term is rewritten with the [multiplication rule](../multiplication-rule/index.qmd) as $P(A \mid B_n) P(B_n)$.
+
+For the shop, with $B_1$ = {from A}, $B_2$ = {from B} and $A$ = {defective}:
+
+$$P(A) = 0.01 \cdot 0.8 + 0.03 \cdot 0.2 = 0.008 + 0.006 = 0.014.$$
+
+In a probability tree, the theorem says **add all the paths** that end in $A$: the first split is the scenario, the second the outcome.
+
+## A weighted average
+
+Since $\sum P(B_n) = 1$, $P(A)$ is the **weighted average** of the $P(A \mid B_n)$, with the scenario probabilities as weights. That is why it always lies between the smallest and the largest of them: the shop's 1.4% lies between 1% and 3%, closer to 1% because A carries more weight.
+
+In the diagram each scenario is a column of width $P(B_n)$, and its coloured height is $P(A \mid B_n)$. The total coloured area is $P(A)$, and the dashed line shows the height it would have if we "levelled" the colour.
+
+::: {.ix-panel}
+::: {.ix-title}
+Total probability as area
+:::
+
+```{ojs}
+//| echo: false
+viewof w24 = Inputs.form([
+  Inputs.range([0, 1], {label: "Weight of scenario 1", step: 0.05, value: 0.5}),
+  Inputs.range([0, 1], {label: "Weight of scenario 2", step: 0.05, value: 0.3}),
+  Inputs.range([0, 1], {label: "Weight of scenario 3", step: 0.05, value: 0.2})
+])
+viewof p24 = Inputs.form([
+  Inputs.range([0, 1], {label: "P(A | B₁)", step: 0.05, value: 0.2}),
+  Inputs.range([0, 1], {label: "P(A | B₂)", step: 0.05, value: 0.5}),
+  Inputs.range([0, 1], {label: "P(A | B₃)", step: 0.05, value: 0.9})
+])
+```
+
+```{ojs}
+//| echo: false
+{
+  const sw = d3.sum(w24);
+  if (sw === 0) return html`<div class="ix-note">Give at least one scenario a positive weight.</div>`;
+  const w = w24.map(x => x / sw), p = p24, cols = ["#4e79a7", "#59a14f", "#f28e2b"];
+  const PA = d3.sum(w.map((x, i) => x * p[i]));
+  const S = 320, H = 220, m = 24;
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${S + 2 * m} ${H + 2 * m}`).style("width", "100%").style("max-width", "380px").style("font", "12px sans-serif");
+  svg.append("rect").attr("x", m).attr("y", m).attr("width", S).attr("height", H).attr("fill", "#f3f6f9").attr("stroke", "#888");
+  let x0 = 0;
+  w.forEach((wi, i) => {
+    if (wi === 0) return;
+    svg.append("rect").attr("x", m + x0 * S).attr("y", m + (1 - p[i]) * H).attr("width", wi * S).attr("height", p[i] * H).attr("fill", cols[i]).attr("fill-opacity", 0.8);
+    svg.append("line").attr("x1", m + x0 * S).attr("x2", m + x0 * S).attr("y1", m).attr("y2", m + H).attr("stroke", "#fff").attr("stroke-width", 2);
+    svg.append("text").attr("x", m + (x0 + wi / 2) * S).attr("y", m - 6).attr("text-anchor", "middle").attr("fill", cols[i]).attr("font-weight", "bold").text(`B${"₁₂₃"[i]}`);
+    x0 += wi;
+  });
+  svg.append("line").attr("x1", m).attr("x2", m + S).attr("y1", m + (1 - PA) * H).attr("y2", m + (1 - PA) * H).attr("stroke", "#222").attr("stroke-dasharray", "5,4").attr("stroke-width", 1.5);
+  svg.append("text").attr("x", m + S + 3).attr("y", m + (1 - PA) * H).attr("dy", "0.35em").text("P(A)");
+  const f = x => x.toLocaleString("en-GB", {minimumFractionDigits: 2, maximumFractionDigits: 3});
+  const terms = w.map((wi, i) => wi > 0 ? `${f(p[i])} · ${f(wi)}` : null).filter(Boolean).join(" + ");
+  return html`<div class="ix-row"><div style="flex:0 1 380px">${svg.node()}</div><div>
+    <table class="ix-tbl">${w.map((wi, i) => html`<tr><td style="color:${cols[i]}"><b>B${"₁₂₃"[i]}</b></td><td>P(B) = ${f(wi)}</td><td>P(A | B) = ${f(p[i])}</td></tr>`)}</table>
+    <div class="ix-note">P(A) = ${terms} = <b>${f(PA)}</b>.<br>The weights are normalised to sum to 1. P(A) always lies between the smallest and the largest P(A | B).</div></div></div>`;
+}
+```
+:::
+
+Shift the weight towards one scenario: the larger it gets, the closer $P(A)$ moves to that scenario's $P(A \mid B_n)$. And if all the $P(A \mid B_n)$ are equal, $P(A)$ does not depend on the weights at all: knowing the scenario does not change the probability of $A$, which is the [independence](../independence/index.qmd) of the previous post.
+
+## The puzzle from the multiplication rule
+
+In the [tree of the multiplication rule post](../multiplication-rule/index.qmd) we saw that the probability that the **2nd** ball is red is the same with and without replacement. Take the bulbs: a box holds 25 bulbs, 3 defective, and we take two. Let $A$ = {the 1st is defective} and $B$ = {the 2nd is defective}. The scenarios for the 2nd bulb are $A$ and $A'$:
+
+**With replacement:**
+
+$$P(B) = \dfrac{3}{25} \cdot \dfrac{3}{25} + \dfrac{3}{25} \cdot \dfrac{22}{25} = \dfrac{3}{25} = 0.12$$
+
+**Without replacement:**
+
+$$P(B) = \dfrac{2}{24} \cdot \dfrac{3}{25} + \dfrac{3}{24} \cdot \dfrac{22}{25} = \dfrac{6 + 66}{600} = \dfrac{72}{600} = 0.12$$
+
+Without replacement the conditional probabilities change, yet their weighted average is again $3/25$. It makes sense: if we **do not know** what came out first, the 2nd bulb is just a random bulb from the box.
+
+```{r}
+#| label: bulbs
+box <- c(rep("bad", 3), rep("good", 22))
+second_bad <- replicate(100000, sample(box, 2)[2] == "bad")
+c(simulation = mean(second_bad), exact = 3 / 25)
+```
+
+## When the scenarios do not cover everything
+
+A particle can land in one of three counters with probabilities 0.3, 0.2 and 0.4. If it lands in the 1st it is recorded with probability 0.6, in the 2nd with 0.5 and in the 3rd with 0.55. What is the probability that it is recorded?
+
+The scenario probabilities add up to 0.9, not 1: with probability 0.1 the particle misses all the counters. The law still holds, as long as $A$ lies inside the union of the scenarios, and here it does, because a particle that misses the counters is not recorded. Equivalently, add a 4th scenario "no counter" with $P(A \mid B_4) = 0$:
+
+$$P(A) = 0.6 \cdot 0.3 + 0.5 \cdot 0.2 + 0.55 \cdot 0.4 + 0 \cdot 0.1 = 0.18 + 0.10 + 0.22 = 0.50.$$
+
+## The two-urns problem
+
+We have 100 red and 100 blue balls and two identical urns. We split all the balls between the urns however we like. Someone picks an urn at random and draws one ball. How should we split the balls to make a red ball as likely as possible?
+
+The scenarios are the two urns, each with probability $1/2$. If urn 1 holds $r$ red and $b$ blue balls:
+
+$$P(\text{red}) = \frac{1}{2} \cdot \frac{r}{r + b} + \frac{1}{2} \cdot \frac{100 - r}{200 - r - b}.$$
+
+Experiment before you look at the solution:
+
+::: {.ix-panel}
+::: {.ix-title}
+Split the balls
+:::
+
+```{ojs}
+//| echo: false
+viewof r24 = Inputs.range([0, 100], {label: "Red in urn 1", step: 1, value: 50})
+viewof b24 = Inputs.range([0, 100], {label: "Blue in urn 1", step: 1, value: 50})
+```
+
+```{ojs}
+//| echo: false
+{
+  const P = (r, b) => { const n1 = r + b, n2 = 200 - n1; if (n1 === 0 || n2 === 0) return NaN; return 0.5 * r / n1 + 0.5 * (100 - r) / n2; };
+  const grid = [];
+  for (let r = 0; r <= 100; r += 4) for (let b = 0; b <= 100; b += 4) grid.push({r, b, p: P(r, b)});
+  const v = P(r24, b24);
+  const chart = Plot.plot({
+    width: 360, height: 330, marginLeft: 45, marginBottom: 40,
+    x: {label: "Red in urn 1 →", domain: [-2, 102]}, y: {label: "↑ Blue in urn 1", domain: [-2, 102]},
+    color: {type: "linear", domain: [0.25, 0.75], range: ["#c6dbef", "#f28e2b"], legend: true, label: "P(red)"},
+    marks: [
+      Plot.rect(grid.filter(d => !isNaN(d.p)), {x1: d => d.r - 2, x2: d => d.r + 2, y1: d => d.b - 2, y2: d => d.b + 2, fill: "p"}),
+      Plot.dot([{r: r24, b: b24}], {x: "r", y: "b", r: 7, stroke: "#222", strokeWidth: 2.5, fill: "none"})
+    ]
+  });
+  const f = x => x.toLocaleString("en-GB", {minimumFractionDigits: 4, maximumFractionDigits: 4});
+  return html`<div class="ix-row"><div style="flex:0 1 380px">${chart}</div><div>
+    <table class="ix-tbl">
+      <tr><td>Urn 1</td><td><b>${r24} red, ${b24} blue</b></td></tr>
+      <tr><td>Urn 2</td><td><b>${100 - r24} red, ${100 - b24} blue</b></td></tr>
+      <tr><td>P(red)</td><td><b>${isNaN(v) ? "an urn is empty" : f(v)}</b></td></tr>
+    </table>
+    <div class="ix-note">The map's colour shows P(red) for every split. The circle is yours.</div></div></div>`;
+}
+```
+:::
+
+::: {.callout-tip collapse="true"}
+## The solution
+
+Put **a single red ball** in urn 1 and all the others in urn 2. The first scenario gives red for certain, and the second almost with probability $1/2$:
+
+$$P(\text{red}) = \frac{1}{2} \cdot 1 + \frac{1}{2} \cdot \frac{99}{199} \approx 0.749.$$
+
+The weighted average gives the two scenarios equal weight, however many balls each holds. That is why a "small" scenario with probability 1 pays off. R confirms it by checking every split:
+
+```{r}
+#| label: two-urns
+P <- function(r, b) 0.5 * r / (r + b) + 0.5 * (100 - r) / (200 - r - b)
+best <- c(p = 0)
+for (r in 0:100) for (b in 0:100) {
+  if (r + b == 0 || r + b == 200) next
+  p <- P(r, b)
+  if (p > best["p"]) best <- c(p = p, r = r, b = b)
+}
+best
+```
+:::
+
+## Key takeaways
+
+- If $B_1, B_2, \ldots$ partition $\Omega$, then $P(A) = \sum P(A \mid B_n) \, P(B_n)$.
+- $P(A)$ is a **weighted average** of the $P(A \mid B_n)$, so it lies between the smallest and the largest.
+- In a probability tree: add all the paths that end in $A$.
+- The law also holds when the scenarios do not cover all of $\Omega$, as long as they cover $A$.
+
+## Review questions
+
+**1. Quick quiz.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz24 = [
+  {q: "Bag A holds 7 red and 3 green marbles, bag B 2 red and 8 green. We pick a bag at random and then a marble. What is the probability that the marble is green?",
+   opts: ["0.45", "0.55", "0.3", "0.8"], ans: 1,
+   why: "P = 1/2 · 3/10 + 1/2 · 8/10 = 0.15 + 0.40 = 0.55."},
+  {q: "60% of an island's ferries come from port X and are late with probability 10%, the rest from port Y with 5%. What is the probability that a ferry is late?",
+   opts: ["7.5%", "8%", "15%", "6%"], ans: 1,
+   why: "0.1 · 0.6 + 0.05 · 0.4 = 0.06 + 0.02 = 0.08."},
+  {q: "If P(A | B₁) = 0.2 and P(A | B₂) = 0.6 for a partition {B₁, B₂}, which value of P(A) is impossible?",
+   opts: ["0.25", "0.4", "0.59", "0.7"], ans: 3,
+   why: "P(A) is a weighted average of 0.2 and 0.6, so it lies between them."},
+  {q: "Which family of events is a partition for one die roll?",
+   opts: ["{1, 2}, {2, 3, 4}, {5, 6}", "{1, 3, 5}, {2, 4, 6}", "{1, 2, 3}, {4, 5}", "{1}, {2, 3, 4, 5, 6}, {6}"], ans: 1,
+   why: "{1, 3, 5} and {2, 4, 6} are disjoint and their union is Ω. In the others some events overlap or an outcome is missing."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz24.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz24.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** We roll a die and then toss as many coins as the die shows. What is the probability of getting no heads at all?
+
+**3.** Show that for any event $B$ with $0 < P(B) < 1$,
+
+$$P(A) = P(A \mid B)\,P(B) + P(A \mid B')\,P(B').$$
+
+**4.** Write an R simulation for question 2.
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. The scenarios are the 6 die outcomes, each with probability $1/6$. With $k$ coins, the probability of no heads is $(1/2)^k$. So $P = \frac{1}{6}\sum_{k=1}^{6} 2^{-k} = \frac{1}{6} \cdot \frac{63}{64} = \frac{21}{128} \approx 0.164$.
+3. $B$ and $B'$ form a two-event partition of $\Omega$, so this is a special case of the theorem.
+4. `mean(replicate(100000, { k <- sample(6, 1); all(sample(c("H", "T"), k, replace = TRUE) == "T") }))` gives about 0.164.
+:::
+
+---
+
+**Next post:** *Bayes' theorem: reversing the conditioning.*

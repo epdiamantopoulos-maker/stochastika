@@ -10,6 +10,8 @@ keywords: [combinations, binomial coefficient, n choose k, Pascal's triangle, lo
 #| label: setup
 #| include: false
 set.seed(2026)
+# non-ASCII characters in output and plots under a "C" locale
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
 fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
 pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
 int <- function(x) formatC(x, format = "d", big.mark = ",")

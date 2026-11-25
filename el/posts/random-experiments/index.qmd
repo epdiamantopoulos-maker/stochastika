@@ -13,6 +13,8 @@ execute:
 #| label: setup
 #| include: false
 set.seed(2026)
+# ελληνικοί χαρακτήρες στην έξοδο και στα γραφήματα και σε locale "C"
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
 # Μορφοποίηση αριθμών με ελληνική υποδιαστολή
 fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, decimal.mark = ",")
 pct <- function(x, d = 0) paste0(fmt(100 * x, d), "%")
