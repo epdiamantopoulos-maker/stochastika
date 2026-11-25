@@ -10,6 +10,8 @@ keywords: [αξιώματα Kolmogorov, χώρος πιθανοτήτων, σ-ά
 #| label: setup
 #| include: false
 set.seed(2026)
+# ελληνικοί χαρακτήρες στην έξοδο και στα γραφήματα και σε locale "C"
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
 fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, decimal.mark = ",")
 ```
 

@@ -1,0 +1,204 @@
+---
+title: "Independent vs mutually exclusive: a classic mix-up"
+description: "What independence of events means, why it has nothing to do with disjoint (mutually exclusive) events, pairwise versus mutual independence, with an interactive area diagram and examples in R."
+date: 2027-01-04
+categories: [Probability, Conditional probability, R, Interactive]
+keywords: [independent events, mutually exclusive events, disjoint events, independence, conditional independence, pairwise independence, probability]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# non-ASCII characters in output and plots under a "C" locale
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+Toss a coin twice. The first toss does not affect the second: the tosses are **independent**. Toss a coin once. Heads and tails cannot happen together: they are **disjoint**, or **mutually exclusive**. Both words sound like "they have nothing to do with each other", which is why they are so often confused. In fact they describe almost opposite situations.
+
+## Definition
+
+Two events $A$, $B$ are **independent** when the occurrence of one does not change the probability of the other. In terms of [conditional probability](../conditional-probability/index.qmd), for $P(A) > 0$:
+
+$$A, B \text{ independent} \iff P(B \mid A) = P(B).$$
+
+By the [multiplication rule](../multiplication-rule/index.qmd), $P(A \cap B) = P(A) \cdot P(B \mid A)$, which gives the equivalent definition, valid even when a probability is 0:
+
+$$A, B \text{ independent} \iff P(A \cap B) = P(A) \cdot P(B).$$
+
+In an equally likely sample space this reads $\dfrac{N(A \cap B)}{N(\Omega)} = \dfrac{N(A)}{N(\Omega)} \cdot \dfrac{N(B)}{N(\Omega)}$, that is, $N(A \cap B) \cdot N(\Omega) = N(A) \cdot N(B)$.
+
+**Example.** With two coin tosses, $A$ = {heads on the 1st} and $B$ = {heads on the 2nd}: $P(A \cap B) = 1/4 = 1/2 \cdot 1/2$. Independent.
+
+**A less obvious example.** Roll a die, with $A = \{1, 2, 3\}$ and $B = \{3, 4\}$. The events concern the same die and share an outcome, yet $P(A \cap B) = 1/6 = 1/2 \cdot 1/3$. They are independent: learning that the result is 1, 2 or 3 leaves the probability of $B$ at $1/3$. Independence is a **numerical property** of the probabilities, not necessarily a "physical" absence of connection.
+
+## Independence in one picture
+
+In the diagram the square has area 1. The left column is $A$, of width $P(A)$, and the right one is $A'$. Within each column, the orange height is the probability of $B$ **given** that column. The total orange area is $P(B)$.
+
+::: {.ix-panel}
+::: {.ix-title}
+Area diagram: when are A and B independent?
+:::
+
+```{ojs}
+//| echo: false
+viewof a23 = Inputs.range([0.05, 0.95], {label: "P(A)", step: 0.05, value: 0.4})
+viewof pa23 = Inputs.range([0, 1], {label: "P(B | A)", step: 0.05, value: 0.6})
+viewof pn23 = Inputs.range([0, 1], {label: "P(B | A')", step: 0.05, value: 0.3})
+```
+
+```{ojs}
+//| echo: false
+{
+  const a = a23, p1 = pa23, p0 = pn23;
+  const pAB = a * p1, pB = a * p1 + (1 - a) * p0, prod = a * pB;
+  const S = 300, m = 22, X = x => m + x * S, Y = y => m + (1 - y) * S;
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${S + 2 * m} ${S + 2 * m}`).style("width", "100%").style("max-width", "340px").style("font", "12px sans-serif");
+  svg.append("rect").attr("x", X(0)).attr("y", Y(1)).attr("width", S).attr("height", S).attr("fill", "#f3f6f9").attr("stroke", "#888");
+  svg.append("rect").attr("x", X(0)).attr("y", Y(p1)).attr("width", a * S).attr("height", p1 * S).attr("fill", "#f28e2b");
+  svg.append("rect").attr("x", X(a)).attr("y", Y(p0)).attr("width", (1 - a) * S).attr("height", p0 * S).attr("fill", "#f28e2b").attr("fill-opacity", 0.55);
+  svg.append("line").attr("x1", X(a)).attr("x2", X(a)).attr("y1", Y(0)).attr("y2", Y(1)).attr("stroke", "#4e79a7").attr("stroke-width", 2.5);
+  svg.append("line").attr("x1", X(0)).attr("x2", X(1)).attr("y1", Y(pB)).attr("y2", Y(pB)).attr("stroke", "#333").attr("stroke-dasharray", "5,4");
+  svg.append("text").attr("x", X(a / 2)).attr("y", m - 6).attr("text-anchor", "middle").attr("fill", "#4e79a7").attr("font-weight", "bold").text("A");
+  svg.append("text").attr("x", X(a + (1 - a) / 2)).attr("y", m - 6).attr("text-anchor", "middle").attr("fill", "#4e79a7").attr("font-weight", "bold").text("A'");
+  svg.append("text").attr("x", X(1) + 3).attr("y", Y(pB)).attr("dy", "0.35em").text("P(B)");
+  const f = x => x.toLocaleString("en-GB", {minimumFractionDigits: 2, maximumFractionDigits: 4});
+  const eq = Math.abs(p1 - p0) < 1e-9;
+  let verdict;
+  if (p1 === 0 && pB > 0) verdict = html`A and B are <b>disjoint</b>: P(A ∩ B) = 0, while P(A) · P(B) > 0. Learning that A occurred <b>wipes out</b> the probability of B, so they are <b>not</b> independent.`;
+  else if (eq) verdict = html`<b>Independent:</b> the two orange heights are equal, so knowing about A does not change the probability of B.`;
+  else if (p1 > p0) verdict = html`<b>Dependent</b> (positively): when A occurs, B becomes more likely.`;
+  else verdict = html`<b>Dependent</b> (negatively): when A occurs, B becomes less likely.`;
+  return html`<div class="ix-row"><div style="flex:0 1 340px">${svg.node()}</div><div>
+    <table class="ix-tbl">
+      <tr><td>P(B)</td><td><b>${f(pB)}</b></td></tr>
+      <tr><td>P(A ∩ B)</td><td><b>${f(pAB)}</b></td></tr>
+      <tr><td>P(A) · P(B)</td><td><b>${f(prod)}</b></td></tr>
+    </table>
+    <div class="ix-note">${verdict}</div></div></div>`;
+}
+```
+:::
+
+Set $P(B \mid A) = P(B \mid A')$: the orange region becomes a rectangle of the same height everywhere, and then $P(A \cap B) = P(A) \cdot P(B)$. This is the geometric picture of independence. Then set $P(B \mid A) = 0$: the events become disjoint and are as far from independent as they can be.
+
+## Independent versus disjoint
+
+If $A$ and $B$ are disjoint and have positive probabilities, then $P(A \cap B) = 0$ while $P(A) \cdot P(B) > 0$, so they **cannot be independent**. Likewise, two independent events with positive probabilities have $P(A \cap B) > 0$, so they are not disjoint. Disjointness is in fact the strongest form of dependence: knowing that one happened tells us for certain that the other did not.
+
+| | Independent | Disjoint |
+|---|---|---|
+| **Definition** | $P(A \cap B) = P(A) \cdot P(B)$ | $A \cap B = \emptyset$, so $P(A \cap B) = 0$ |
+| **Union** | $P(A \cup B) = P(A) + P(B) - P(A)\,P(B)$ | $P(A \cup B) = P(A) + P(B)$ |
+| **Conditioning** | $P(B \mid A) = P(B)$ | $P(B \mid A) = 0$ |
+| **Complements** | $A'$, $B'$ are independent | $A'$, $B'$ are not disjoint unless $A \cup B = \Omega$ |
+| **Depends on** | The probabilities | Only the sets |
+
+The last row is the heart of it: disjointness shows up in a Venn diagram, independence does **not**. To judge independence we need the probabilities.
+
+**Why complements of independent events are independent.** By De Morgan's law,
+
+$$P(A' \cap B') = 1 - P(A \cup B) = 1 - P(A) - P(B) + P(A)\,P(B) = \big(1 - P(A)\big)\big(1 - P(B)\big) = P(A')\,P(B').$$
+
+## More than two events
+
+Events $A_1, \ldots, A_n$ are **(mutually) independent** when for **every** subset of them the probability of the intersection is the product of the probabilities. For three: $P(A \cap B) = P(A)P(B)$, $P(A \cap C) = P(A)P(C)$, $P(B \cap C) = P(B)P(C)$ **and** $P(A \cap B \cap C) = P(A)P(B)P(C)$.
+
+Pairwise independence is not enough. Toss two coins, with $A$ = {heads on the 1st}, $B$ = {heads on the 2nd} and $C$ = {the two coins match}:
+
+```{r}
+#| label: pairwise
+omega <- expand.grid(c1 = c("H", "T"), c2 = c("H", "T"))
+A <- omega$c1 == "H"; B <- omega$c2 == "H"; C <- omega$c1 == omega$c2
+P <- function(e) mean(e)
+c(AB = P(A & B), AC = P(A & C), BC = P(B & C), ABC = P(A & B & C), product = P(A) * P(B) * P(C))
+```
+
+Every pair is independent ($1/4 = 1/2 \cdot 1/2$), yet $P(A \cap B \cap C) = 1/4 \neq 1/8$: if we know $A$ and $B$, we know $C$ for certain.
+
+**An application.** A machine works as long as all three of its components work. Within a year the components fail with probabilities 0.05, 0.1 and 0.08, independently of each other. The machine stops if at least one fails. Instead of the addition rule for three events, we pass to the complement: complements of independent events are independent, so
+
+$$P(\text{failure}) = 1 - (1 - 0.05)(1 - 0.1)(1 - 0.08) = 1 - 0.7866 = 0.2134.$$
+
+## Independence given a third event
+
+$A$ and $B$ are **conditionally independent given $C$** when $P(B \mid A \cap C) = P(B \mid C)$. This property is unrelated to plain independence: either can hold without the other. Let $X_1, X_2, X_3$ be integers from 0 to 3 chosen at random, with $A = \{X_1 = 2\}$, $B = \{X_1 + X_2 + X_3 = 3\}$ and $C = \{X_1 + X_2 = 2\}$:
+
+```{r}
+#| label: conditional-independence
+w <- expand.grid(x1 = 0:3, x2 = 0:3, x3 = 0:3)
+A <- w$x1 == 2; B <- w$x1 + w$x2 + w$x3 == 3; C <- w$x1 + w$x2 == 2
+c(P_B = mean(B), P_B_given_A = mean(B[A]), P_B_given_C = mean(B[C]), P_B_given_AC = mean(B[A & C]))
+```
+
+Here $P(B \mid A) = 2/16 \neq 10/64 = P(B)$, so $A$ and $B$ are not independent. But $P(B \mid A \cap C) = P(B \mid C) = 1/4$: once we know $X_1 + X_2 = 2$, $B$ depends only on $X_3$, and $A$ adds no information.
+
+## Key takeaways
+
+- **Independent:** $P(A \cap B) = P(A) \cdot P(B)$, equivalently $P(B \mid A) = P(B)$. Information about one does not change the probability of the other.
+- **Disjoint:** $A \cap B = \emptyset$. With positive probabilities, disjoint events are never independent.
+- Complements of independent events are independent, which is very handy for "at least one" probabilities.
+- For three or more events, pairwise independence is not enough.
+
+## Review questions
+
+**1. Quick quiz.** In questions 1–4 we roll a die: are A and B independent, disjoint or neither?
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz23 = [
+  {q: "A = {1, 2} and B = {2, 4, 6}", opts: ["Independent", "Disjoint", "Neither"], ans: 0,
+   why: "P(A ∩ B) = P({2}) = 1/6 and P(A) · P(B) = 1/3 · 1/2 = 1/6."},
+  {q: "A = {1, 2, 3} and B = {4, 5, 6}", opts: ["Independent", "Disjoint", "Neither"], ans: 1,
+   why: "They share no outcome. Since P(A) · P(B) = 1/4 > 0, they are not independent."},
+  {q: "A = {2, 4, 6} and B = {4, 5, 6}", opts: ["Independent", "Disjoint", "Neither"], ans: 2,
+   why: "P(A ∩ B) = P({4, 6}) = 1/3, while P(A) · P(B) = 1/4. They share outcomes, so they are not disjoint."},
+  {q: "A = {1, 2, 3, 4} and B = {1, 5, 6}", opts: ["Independent", "Disjoint", "Neither"], ans: 2,
+   why: "P(A ∩ B) = 1/6, while P(A) · P(B) = 2/3 · 1/2 = 1/3."},
+  {q: "If P(A) = 0.3, P(B) = 0.5 and A, B are independent, what is P(A ∪ B)?", opts: ["0.8", "0.65", "0.15", "0.35"], ans: 1,
+   why: "P(A ∪ B) = 0.3 + 0.5 − 0.3 · 0.5 = 0.65."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz23.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz23.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** Show that if $A$ and $B$ are independent, then so are $A$ and $B'$.
+
+**3.** Roll two dice. Are the events "the sum is 7" and "the 1st die is 6" independent? What about "the sum is 8" and "the 1st die is 6"? Check in the grid of the [conditional probability](../conditional-probability/index.qmd) post.
+
+**4.** An alarm system has two sensors that work independently and each detects a break-in with probability 0.9. What is the probability that at least one detects it?
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. $P(A \cap B') = P(A) - P(A \cap B) = P(A) - P(A)P(B) = P(A)\big(1 - P(B)\big) = P(A)\,P(B')$.
+3. Sum 7 and 1st die 6: $P = 1/36 = 1/6 \cdot 1/6$, independent. Sum 8 and 1st die 6: $P = 1/36$, while $5/36 \cdot 1/6 = 5/216$, so dependent.
+4. $1 - (1 - 0.9)^2 = 1 - 0.01 = 0.99$.
+:::
+
+---
+
+**Next post:** *The law of total probability: splitting a problem into scenarios.*

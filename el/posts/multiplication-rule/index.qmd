@@ -1,0 +1,259 @@
+---
+title: "Ο κανόνας πολλαπλασιασμού: πιθανότητες βήμα-βήμα"
+description: "Ο κανόνας πολλαπλασιασμού P(A ∩ B) = P(A) · P(B | A) και η γενίκευσή του σε πολλά βήματα, με διαδραστικό δέντρο πιθανοτήτων για εξαγωγές από κάλπη και την άσκηση με τις κάρτες ΛΟΤΤΟ."
+date: 2027-01-01
+categories: [Πιθανότητες, Δεσμευμένη πιθανότητα, R, Διαδραστικό]
+keywords: [κανόνας πολλαπλασιασμού, πολλαπλασιαστικός νόμος, δεσμευμένη πιθανότητα, δέντρο πιθανοτήτων, εξαγωγή χωρίς επανάθεση, αλυσιδωτός κανόνας]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# ελληνικοί χαρακτήρες στην έξοδο και στα γραφήματα και σε locale "C"
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, decimal.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+Ένα χαρτοκιβώτιο έχει 25 λαμπτήρες, από τους οποίους οι 3 είναι ελαττωματικοί. Βγάζουμε δύο, χωρίς επανάθεση. Ποια είναι η πιθανότητα να είναι και οι δύο ελαττωματικοί; Θα μπορούσαμε να μετρήσουμε με [συνδυασμούς](../combinations/index.qmd), όμως υπάρχει πιο φυσικός δρόμος: σκεφτόμαστε **βήμα-βήμα**, όπως γίνεται και το πείραμα.
+
+## Ο κανόνας για δύο ενδεχόμενα
+
+Από τον ορισμό της [δεσμευμένης πιθανότητας](../conditional-probability/index.qmd), $P(B \mid A) = P(A \cap B)/P(A)$, πολλαπλασιάζοντας με $P(A)$ παίρνουμε τον **κανόνα πολλαπλασιασμού**:
+
+$$P(A \cap B) = P(A) \cdot P(B \mid A).$$
+
+Για να συμβούν και τα δύο, πρέπει να συμβεί πρώτα το $A$, και **έπειτα**, δεδομένου του $A$, το $B$.
+
+Στους λαμπτήρες, έστω $A$ = {ο 1ος είναι ελαττωματικός} και $B$ = {ο 2ος είναι ελαττωματικός}. Είναι $P(A) = 3/25$. Αν ο 1ος ήταν ελαττωματικός, μένουν 24 λαμπτήρες με 2 ελαττωματικούς, άρα $P(B \mid A) = 2/24$. Επομένως
+
+$$P(A \cap B) = \frac{3}{25} \cdot \frac{2}{24} = \frac{1}{100}.$$
+
+Με συνδυασμούς βρίσκουμε το ίδιο: $\binom{3}{2} / \binom{25}{2} = 3/300 = 1/100$.
+
+## Πολλά βήματα
+
+Εφαρμόζοντας τον κανόνα ξανά και ξανά, για οποιαδήποτε ενδεχόμενα $A_1, A_2, \ldots, A_n$:
+
+$$\begin{aligned}
+P(A_1 \cap A_2 \cap \cdots \cap A_n) = {} & P(A_1) \cdot P(A_2 \mid A_1) \cdot P(A_3 \mid A_1 \cap A_2) \\
+& \cdots P(A_n \mid A_1 \cap \cdots \cap A_{n-1}).
+\end{aligned}$$
+
+Κάθε παράγοντας είναι η πιθανότητα του επόμενου βήματος, **δεδομένων όλων των προηγούμενων**. Ο ίδιος κανόνας ισχύει και όταν όλα δεσμεύονται σε ένα ενδεχόμενο $\Gamma$ με $P(\Gamma) > 0$::
+
+$$P(A \cap B \mid \Gamma) = P(A \mid \Gamma) \cdot P(B \mid A \cap \Gamma).$$
+
+Το πρόβλημα των γενεθλίων, που λύσαμε με [διατάξεις](../permutations-arrangements/index.qmd), είναι ένα παράδειγμα: ο 2ος έχει διαφορετικά γενέθλια από τον 1ο με πιθανότητα $364/365$, ο 3ος από τους δύο πρώτους με $363/365$, κ.ο.κ.
+
+## Το δέντρο πιθανοτήτων
+
+Ο κανόνας γίνεται εικόνα σε ένα **δέντρο πιθανοτήτων**: κάθε κλαδί γράφει τη δεσμευμένη πιθανότητα του βήματος, και η πιθανότητα μιας διαδρομής είναι το **γινόμενο** των κλαδιών της. Για ένα ενδεχόμενο που αποτελείται από πολλές διαδρομές, **προσθέτουμε** τις πιθανότητές τους, αφού οι διαδρομές είναι ξένες μεταξύ τους.
+
+Στο δέντρο παρακάτω βγάζουμε σφαίρες από μια κάλπη με κόκκινες (Κ) και πράσινες (Π). Αλλάξτε το περιεχόμενο, το πλήθος των εξαγωγών και την επανάθεση, και διαλέξτε ένα ενδεχόμενο.
+
+::: {.ix-panel}
+::: {.ix-title}
+Δέντρο πιθανοτήτων: εξαγωγές από κάλπη
+:::
+
+```{ojs}
+//| echo: false
+viewof r22 = Inputs.range([1, 8], {label: "Κόκκινες", step: 1, value: 3})
+viewof g22 = Inputs.range([1, 8], {label: "Πράσινες", step: 1, value: 5})
+viewof k22 = Inputs.radio([2, 3], {label: "Εξαγωγές", value: 3})
+viewof rep22 = Inputs.toggle({label: "Με επανάθεση", value: false})
+viewof ev22 = Inputs.select(new Map([
+  ["Όλες κόκκινες", s => !s.includes("Π")],
+  ["Ακριβώς μία κόκκινη", s => [...s].filter(c => c === "Κ").length === 1],
+  ["Τουλάχιστον μία κόκκινη", s => s.includes("Κ")],
+  ["Η 2η είναι κόκκινη", s => s[1] === "Κ"]
+]), {label: "Ενδεχόμενο"})
+```
+
+```{ojs}
+//| echo: false
+{
+  const gcd = (a, b) => b ? gcd(b, a % b) : a;
+  const fr = (n, d) => { if (n === 0) return "0"; const g = gcd(n, d); return d / g === 1 ? `${n / g}` : `${n / g}/${d / g}`; };
+  const k = (rep22 || r22 + g22 >= 3) ? k22 : 2, leaves = [], edges = [];
+  // αναδρομικά: κάθε κόμβος έχει κλαδί Κ και κλαδί Π
+  const rec = (seq, r, g, num, den) => {
+    if (seq.length === k) { leaves.push({seq, num, den}); return; }
+    [["Κ", r], ["Π", g]].forEach(([c, cnt]) => {
+      const tot = r + g;
+      const n2 = num * cnt, d2 = den * tot;
+      edges.push({from: seq, to: seq + c, label: fr(cnt, tot), zero: cnt === 0});
+      const nr = rep22 ? r : r - (c === "Κ" ? 1 : 0), ng = rep22 ? g : g - (c === "Π" ? 1 : 0);
+      rec(seq + c, nr, ng, n2, d2);
+    });
+  };
+  rec("", r22, g22, 1, 1);
+  const nL = leaves.length, row = 44, W = 560, H = nL * row + 20;
+  const colX = d => 20 + d * (380 / k);
+  const yOf = new Map();
+  leaves.forEach((l, i) => yOf.set(l.seq, 15 + i * row + row / 2));
+  const nodeY = s => d3.mean(leaves.filter(l => l.seq.startsWith(s)), l => yOf.get(l.seq));
+  const inEv = l => ev22(l.seq);
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H}`).style("width", "100%").style("max-width", W + "px").style("font", "18px sans-serif");
+  edges.forEach(e => {
+    const x1 = colX(e.from.length), y1 = nodeY(e.from), x2 = colX(e.to.length), y2 = nodeY(e.to);
+    const hot = leaves.some(l => l.seq.startsWith(e.to) && inEv(l) && l.num > 0);
+    svg.append("line").attr("x1", x1).attr("y1", y1).attr("x2", x2).attr("y2", y2)
+      .attr("stroke", e.zero ? "#ddd" : hot ? "#f28e2b" : "#9ecae1").attr("stroke-width", hot ? 2.5 : 1.3);
+    svg.append("text").attr("x", (x1 + x2) / 2).attr("y", (y1 + y2) / 2 - 4).attr("text-anchor", "middle")
+      .attr("fill", e.zero ? "#bbb" : "#2c5a8a").style("font-size", "16px").text(e.label);
+    svg.append("text").attr("x", x2 + 4).attr("y", y2).attr("dy", "0.35em").attr("fill", e.to.endsWith("Κ") ? "#c62828" : "#2e7d32").attr("font-weight", "bold").text(e.to.slice(-1));
+  });
+  svg.append("circle").attr("cx", colX(0)).attr("cy", nodeY("")).attr("r", 6).attr("fill", "#4e79a7");
+  leaves.forEach(l => {
+    const y = yOf.get(l.seq), on = inEv(l) && l.num > 0;
+    svg.append("text").attr("x", 430).attr("y", y).attr("dy", "0.35em").attr("fill", on ? "#c25e00" : (l.num ? "#333" : "#bbb")).attr("font-weight", on ? "bold" : null)
+      .text(`${l.seq}: ${fr(l.num, l.den)}`);
+  });
+  const evL = leaves.filter(l => inEv(l) && l.num > 0);
+  const D = leaves[0].den;
+  const tot = evL.reduce((s, l) => s + l.num * (D / l.den), 0);
+  const val = tot / D;
+  return html`${svg.node()}<div class="ix-note">Πορτοκαλί: οι διαδρομές του ενδεχομένου. Κάθε διαδρομή είναι γινόμενο κλαδιών, και το ενδεχόμενο είναι το άθροισμα των διαδρομών του:<br>
+    <b>P = ${evL.length > 1 ? evL.map(l => fr(l.num, l.den)).join(" + ") + " = " : ""}${fr(tot, D)} ≈ ${val.toLocaleString("el-GR", {maximumFractionDigits: 4})}</b></div>`;
+}
+```
+:::
+
+Συγκρίνετε την επιλογή «Η 2η είναι κόκκινη» με και χωρίς επανάθεση. Χωρίς επανάθεση τα κλαδιά του 2ου βήματος αλλάζουν, όμως το αποτέλεσμα βγαίνει πάλι $r/(r+g)$, όσο και για την 1η σφαίρα. Αυτό δεν είναι σύμπτωση, και θα το εξηγήσουμε με την ολική πιθανότητα σε δύο άρθρα.
+
+## Οι κάρτες ΛΟΤΤΟ
+
+Σε 7 κάρτες είναι γραμμένα τα γράμματα Λ, Λ, Ο, Ο, Ο, Τ, Τ. Τις ανακατεύουμε, τραβάμε πέντε και τις βάζουμε στη σειρά. Ποια είναι η πιθανότητα να σχηματιστεί η λέξη ΛΟΤΤΟ;
+
+Ακολουθούμε τη λέξη γράμμα-γράμμα. Η 1η κάρτα πρέπει να είναι Λ: 2 από τις 7. Δεδομένου αυτού, η 2η πρέπει να είναι Ο: 3 από τις 6 που έμειναν. Συνεχίζοντας:
+
+$$P(\text{ΛΟΤΤΟ}) = \frac{2}{7} \cdot \frac{3}{6} \cdot \frac{2}{5} \cdot \frac{1}{4} \cdot \frac{2}{3} = \frac{24}{2.520} = \frac{1}{105} \approx 0{,}0095.$$
+
+```{r}
+#| label: lotto-cards
+cards <- c("Λ", "Λ", "Ο", "Ο", "Ο", "Τ", "Τ")
+target <- c("Λ", "Ο", "Τ", "Τ", "Ο")
+hits <- replicate(100000, all(sample(cards, 5) == target))
+c(simulation = mean(hits), exact = 1 / 105)
+```
+
+Τραβήξτε κι εσείς κάρτες. Ο πίνακας δείχνει, βήμα-βήμα, την πιθανότητα να βγει το σωστό γράμμα δεδομένων των προηγούμενων:
+
+::: {.ix-panel}
+::: {.ix-title}
+Θα σχηματιστεί η λέξη ΛΟΤΤΟ;
+:::
+
+```{ojs}
+//| echo: false
+viewof one22 = Inputs.button("Τράβηξε 5 κάρτες")
+viewof many22 = Inputs.button("1.000 προσπάθειες")
+```
+
+```{ojs}
+//| echo: false
+lotto22 = {
+  const deck = [..."ΛΛΟΟΟΤΤ"], target = [..."ΛΟΤΤΟ"];
+  const draw = () => d3.shuffle(deck.slice()).slice(0, 5);
+  return {deck, target, draw};
+}
+manyRes22 = { many22; if (many22 === 0) return null; let k = 0; for (let i = 0; i < 1000; i++) if (lotto22.draw().join("") === "ΛΟΤΤΟ") k++; return k; }
+{
+  one22;
+  const {deck, target} = lotto22, hand = lotto22.draw();
+  const rows = [];
+  let left = deck.slice(), prod = 1, alive = true;
+  target.forEach((t, i) => {
+    const need = left.filter(c => c === t).length, n = left.length, p = need / n;
+    if (alive) prod *= p;
+    const ok = hand[i] === t;
+    rows.push(html`<tr><td>${i + 1}</td><td><b>${t}</b></td><td>${need}/${n}</td>
+      <td><span style="display:inline-block;width:1.8em;text-align:center;border:1px solid ${ok && alive ? "#2e7d32" : "#c62828"};border-radius:4px;background:${ok && alive ? "#e8f5e9" : "#fdecea"}">${hand[i]}</span></td></tr>`);
+    if (alive && !ok) alive = false;
+    left.splice(left.indexOf(t), 1);
+  });
+  const win = hand.join("") === "ΛΟΤΤΟ";
+  return html`<table class="ix-tbl"><tr><th>Βήμα</th><th>Χρειάζομαι</th><th>P(σωστό)</th><th>Κάρτα</th></tr>${rows}</table>
+    <div class="ix-note">Γινόμενο: 2/7 · 3/6 · 2/5 · 1/4 · 2/3 = <b>1/105</b>. Αυτή τη φορά: <b>${hand.join("")}</b> ${win ? html`<span class="ix-ok">✓ ΛΟΤΤΟ!</span>` : html`<span class="ix-no">✗</span>`}
+    ${manyRes22 !== null ? html`<br>Σε 1.000 προσπάθειες: <b>${manyRes22}</b> επιτυχίες (αναμενόμενες περίπου 9,5).` : ""}</div>`;
+}
+```
+:::
+
+Στον πίνακα η στήλη «Χρειάζομαι» είναι πάντα το σωστό γράμμα, και οι πιθανότητες υπολογίζονται **σαν να είχαν βγει σωστά όλα τα προηγούμενα**. Αυτό ακριβώς λέει ο κανόνας: κάθε παράγοντας είναι δεσμευμένος στα προηγούμενα βήματα.
+
+Αν ρωτήσουμε όχι αν σχηματίζεται η λέξη αλλά αν οι πέντε κάρτες **μπορούν** να τη σχηματίσουν (με οποιαδήποτε σειρά), η σειρά δεν μετράει και δουλεύουμε με συνδυασμούς: χρειαζόμαστε 1 από τα 2 Λ, 2 από τα 3 Ο και τα 2 Τ, άρα
+
+$$\frac{\binom{2}{1}\binom{3}{2}\binom{2}{2}}{\binom{7}{5}} = \frac{6}{21} = \frac{2}{7}.$$
+
+## Σύνοψη
+
+- **Κανόνας πολλαπλασιασμού:** $P(A \cap B) = P(A) \cdot P(B \mid A)$.
+- Για πολλά βήματα πολλαπλασιάζουμε τις πιθανότητες κάθε βήματος, δεσμευμένες σε όλα τα προηγούμενα.
+- Σε ένα **δέντρο πιθανοτήτων** πολλαπλασιάζουμε κατά μήκος μιας διαδρομής και προσθέτουμε τις διαδρομές ενός ενδεχομένου.
+- Χωρίς επανάθεση οι πιθανότητες αλλάζουν από βήμα σε βήμα. Με επανάθεση μένουν ίδιες.
+
+## Ερωτήσεις εμπέδωσης
+
+**1. Γρήγορο κουίζ.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz22 = [
+  {q: "Από μια τράπουλα 52 φύλλων τραβάμε δύο χωρίς επανάθεση. Ποια είναι η πιθανότητα να είναι και τα δύο άσοι;",
+   opts: ["(4/52)²", "4/52 · 3/51", "2/52", "4/52 + 3/51"], ans: 1,
+   why: "P(1ος άσος) = 4/52 και, δεδομένου αυτού, P(2ος άσος) = 3/51. Το γινόμενο είναι 1/221."},
+  {q: "Σε ένα δέντρο πιθανοτήτων, πώς βρίσκουμε την πιθανότητα ενός ενδεχομένου που αποτελείται από δύο διαδρομές;",
+   opts: ["Πολλαπλασιάζουμε τις δύο διαδρομές", "Προσθέτουμε τις δύο διαδρομές", "Παίρνουμε τη μεγαλύτερη"], ans: 1,
+   why: "Κάθε διαδρομή είναι γινόμενο κλαδιών. Οι διαδρομές είναι ξένες μεταξύ τους, άρα οι πιθανότητές τους προστίθενται."},
+  {q: "Τρία άτομα. Ποια είναι η πιθανότητα να έχουν όλα διαφορετικά γενέθλια (365 ισοπίθανες ημέρες);",
+   opts: ["364/365 · 363/365", "(364/365)²", "3/365", "1 − 3/365"], ans: 0,
+   why: "Ο 1ος έχει οποιαδήποτε ημέρα. Ο 2ος διαφέρει από τον 1ο με πιθανότητα 364/365, και ο 3ος από τους δύο πρώτους με 363/365."},
+  {q: "Ποια είναι η σωστή γραφή του κανόνα πολλαπλασιασμού;",
+   opts: ["P(A ∩ B) = P(A) · P(B)", "P(A ∩ B) = P(A) · P(B | A)", "P(A ∩ B) = P(A | B) · P(A)", "P(A ∩ B) = P(B | A) / P(A)"], ans: 1,
+   why: "Το P(A) · P(B) ισχύει μόνο για ανεξάρτητα ενδεχόμενα, το θέμα του επόμενου άρθρου. Ισχύει επίσης P(A ∩ B) = P(B) · P(A | B)."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz22.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Σωστό.</span> ` : `<span class="ix-no">✗ Όχι ακριβώς.</span> `) + item.why;
+        score.innerHTML = `<b>Σωστές: ${[...done.values()].filter(x => x).length} από ${quiz22.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** Από το χαρτοκιβώτιο με τους 25 λαμπτήρες (3 ελαττωματικοί) βγάζουμε τρεις χωρίς επανάθεση. Ποια είναι η πιθανότητα να μην είναι κανένας ελαττωματικός; Λύστε με τον κανόνα πολλαπλασιασμού και ελέγξτε με συνδυασμούς.
+
+**3.** Ρίχνουμε ένα ζάρι μέχρι να έρθει 6. Ποια είναι η πιθανότητα να χρειαστούν ακριβώς τρεις ρίψεις;
+
+**4.** Τροποποιήστε τον κώδικα R ώστε να εκτιμήσετε την πιθανότητα οι πέντε κάρτες να **μπορούν** να σχηματίσουν τη λέξη ΛΟΤΤΟ.
+
+::: {.callout-tip collapse="true"}
+## Απαντήσεις
+
+2. $\dfrac{22}{25} \cdot \dfrac{21}{24} \cdot \dfrac{20}{23} = \dfrac{9.240}{13.800} \approx$ `r fmt(22/25 * 21/24 * 20/23, 3)`. Με συνδυασμούς: $\binom{22}{3} / \binom{25}{3} = 1.540 / 2.300$, το ίδιο.
+3. Οι δύο πρώτες ρίψεις δεν φέρνουν 6 και η τρίτη φέρνει: $\dfrac{5}{6} \cdot \dfrac{5}{6} \cdot \dfrac{1}{6} = \dfrac{25}{216} \approx 0{,}116$.
+4. `mean(replicate(100000, all(sort(sample(cards, 5)) == sort(target))))` δίνει περίπου 0,286, δηλαδή $2/7$.
+:::
+
+---
+
+**Επόμενο άρθρο:** *Ανεξάρτητα ή ασυμβίβαστα; Ένα από τα πιο συχνά λάθη.*
