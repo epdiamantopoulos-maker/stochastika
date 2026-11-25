@@ -1,0 +1,224 @@
+---
+title: "Bayes' theorem: reversing the conditioning"
+description: "Bayes' theorem as the way from P(A | B) to P(B | A), with worked examples and an interactive game where the probability is updated after every coin toss."
+date: 2027-01-08
+categories: [Probability, Bayes, R, Interactive]
+keywords: [Bayes theorem, Bayes rule, prior probability, posterior probability, likelihood, conditional probability, total probability, Bayesian updating]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# non-ASCII characters in output and plots under a "C" locale
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+Ferries reach an island from port X (60%) and port Y (40%). 10% of the ferries from X are late, and 5% of those from Y. With [total probability](../total-probability/index.qmd) we find that a random ferry is late with probability $0.1 \cdot 0.6 + 0.05 \cdot 0.4 = 0.08$.
+
+Today the ferry was late. What is the probability that it came from X? Now we know the **effect** and ask about the **cause**. But our data are probabilities in the other direction: $P(\text{late} \mid X)$. Bayes' theorem **reverses the conditioning**.
+
+## The theorem
+
+For events $A$, $B$ with $P(A) > 0$ and $P(B) > 0$:
+
+$$P(B \mid A) = \frac{P(A \mid B) \cdot P(B)}{P(A)}.$$
+
+The proof is one line. By the [multiplication rule](../multiplication-rule/index.qmd),
+
+$$P(A \cap B) = P(B \mid A)\,P(A) = P(A \mid B)\,P(B),$$
+
+and we divide by $P(A)$.
+
+Usually the denominator is not known directly and we compute it with total probability. If $B_1, B_2, \ldots$ partition $\Omega$:
+
+$$P(B_k \mid A) = \frac{P(A \mid B_k) \cdot P(B_k)}{\sum_n P(A \mid B_n) \cdot P(B_n)}.$$
+
+For two scenarios, $B$ and $B'$:
+
+$$P(B \mid A) = \frac{P(A \mid B)\,P(B)}{P(A \mid B)\,P(B) + P(A \mid B')\,P(B')}.$$
+
+For the ferries, with $B_1$ = {from X} and $A$ = {late}:
+
+$$P(B_1 \mid A) = \frac{0.1 \cdot 0.6}{0.08} = \frac{0.06}{0.08} = 0.75.$$
+
+Before we learned about the delay, port X had probability 60%. Afterwards, 75%: delays are more common on X's ferries, so the observation "moves" the probability towards it.
+
+## Before and after the observation
+
+Each term of the theorem has a name:
+
+- $P(B)$: the **prior** probability of the cause, before the observation,
+- $P(A \mid B)$: the **likelihood**, how compatible the observation is with the cause,
+- $P(B \mid A)$: the **posterior** probability, after the observation.
+
+In words: *the posterior is proportional to the prior times the likelihood.* The denominator merely normalises, so that the posteriors of all scenarios add up to 1.
+
+**A second example.** In a factory 60% of the workers are men and 40% women. 50% of the men smoke and 30% of the women. If a smoker is chosen at random, what is the probability that she is a woman?
+
+$$P(W \mid S) = \frac{0.3 \cdot 0.4}{0.5 \cdot 0.6 + 0.3 \cdot 0.4} = \frac{0.12}{0.42} = \frac{2}{7} \approx 0.286.$$
+
+```{r}
+#| label: bayes-function
+bayes <- function(prior, likelihood) prior * likelihood / sum(prior * likelihood)
+# ferries: port X, port Y
+bayes(prior = c(0.6, 0.4), likelihood = c(0.10, 0.05))
+# factory: men, women
+bayes(prior = c(0.6, 0.4), likelihood = c(0.5, 0.3))
+```
+
+The `bayes()` function is the whole theorem in one line: multiply the priors by the likelihoods and divide by the sum.
+
+## Updating step by step: which coin am I holding?
+
+We have three coins. Two are fair, while the third shows heads with probability 0.75. Someone picks one at random, tosses it 3 times and gets 3 heads. What is the probability that it is the biased coin?
+
+The prior is $1/3$. The likelihoods of three heads are $(1/2)^3 = 1/8$ for a fair coin and $(3/4)^3 = 27/64$ for the biased one:
+
+$$P(\text{biased} \mid \text{HHH}) = \frac{\frac{1}{3} \cdot \frac{27}{64}}{\frac{1}{3} \cdot \frac{27}{64} + \frac{2}{3} \cdot \frac{1}{8}} = \frac{27}{27 + 16} = \frac{27}{43} \approx 0.628.$$
+
+The theorem can be applied **after every toss**: the posterior after one toss becomes the prior for the next. Try it: the computer has secretly picked a coin.
+
+::: {.ix-panel}
+::: {.ix-title}
+Which coin am I holding?
+:::
+
+```{ojs}
+//| echo: false
+{
+  const pH = [0.5, 0.5, 0.75];
+  let coin, tosses;
+  const reset = () => { coin = Math.floor(3 * Math.random()); tosses = []; };
+  reset();
+  const out = html`<div></div>`;
+  const toss = n => { for (let i = 0; i < n; i++) tosses.push(Math.random() < pH[coin] ? "H" : "T"); draw(false); };
+  const bToss = html`<button>Toss once</button>`, b5 = html`<button>5 tosses</button>`;
+  const bNew = html`<button>New secret coin</button>`, bShow = html`<button>Reveal</button>`;
+  bToss.onclick = () => toss(1); b5.onclick = () => toss(5);
+  bNew.onclick = () => { reset(); draw(false); };
+  bShow.onclick = () => draw(true);
+  const draw = (reveal) => {
+    // posterior after every toss
+    const path = [{n: 0, p: 1 / 3}];
+    let lb = 1, lf = 1;
+    tosses.forEach((t, i) => {
+      lb *= t === "H" ? 0.75 : 0.25; lf *= 0.5;
+      path.push({n: i + 1, p: (lb / 3) / (lb / 3 + 2 * lf / 3)});
+    });
+    const last = path[path.length - 1].p;
+    const h = tosses.filter(t => t === "H").length, n = tosses.length;
+    const chart = Plot.plot({
+      width: 560, height: 220, marginLeft: 50,
+      x: {label: "Tosses →", domain: [0, Math.max(10, n)]},
+      y: {label: "↑ P(biased | tosses)", domain: [0, 1], grid: true, tickFormat: "%"},
+      marks: [
+        Plot.ruleY([1 / 3], {stroke: "#9ecae1", strokeDasharray: "4,3"}),
+        Plot.line(path, {x: "n", y: "p", stroke: "#4e79a7", strokeWidth: 2}),
+        Plot.dot(path, {x: "n", y: "p", r: 3, fill: "#4e79a7"})
+      ]
+    });
+    const seq = tosses.length ? tosses.map(t => html`<span style="display:inline-block;width:1.6em;text-align:center;margin:1px;border-radius:50%;background:${t === "H" ? "#f28e2b" : "#9ecae1"};color:#fff;font-weight:bold">${t}</span>`) : html`<i>no tosses yet</i>`;
+    const f = x => x.toLocaleString("en-GB", {style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1});
+    out.replaceChildren(html`<div style="margin:6px 0">${seq}</div>${chart}
+      <table class="ix-tbl">
+        <tr><td>Heads / tosses</td><td><b>${h} / ${n}</b></td></tr>
+        <tr><td>P(biased | tosses)</td><td><b>${f(last)}</b></td></tr>
+        <tr><td>The coin is</td><td><b>${reveal ? (coin === 2 ? "the biased one" : "a fair one") : "secret"}</b></td></tr>
+      </table>
+      <div class="ix-note">Each head multiplies the odds "biased : fair" by 0.75/0.5 = 1.5, each tail by 0.25/0.5 = 0.5. The dashed line is the prior probability 1/3.</div>`);
+  };
+  draw(false);
+  return html`<div>${bToss}${b5}${bNew}${bShow}</div>${out}`;
+}
+```
+:::
+
+With few tosses the probability swings up and down. With many, it converges towards 0 or 1, and the reveal almost always confirms what the curve "believed". A simulation in R confirms $27/43$: we keep only the runs with three heads and count how many used the biased coin.
+
+```{r}
+#| label: three-coins
+n <- 200000
+coin <- sample(1:3, n, replace = TRUE)
+p_heads <- ifelse(coin == 3, 0.75, 0.5)
+hhh <- rbinom(n, 3, p_heads) == 3
+c(simulation = mean(coin[hhh] == 3), exact = 27 / 43)
+```
+
+## Bayes with a third event
+
+Like every probability rule, the theorem also holds when everything is conditioned on an event $C$ with $P(C) > 0$:
+
+$$P(A \mid B \cap C) = \frac{P(B \mid A \cap C) \cdot P(A \mid C)}{P(B \mid C)}.$$
+
+In a Statistics master's programme ($C$), 60% of the students hold a mathematics degree ($A$). A scholarship ($B$) goes to 50% of the mathematicians and 20% of the others. The probability that a scholarship holder in the programme is a mathematician is
+
+$$P(A \mid B \cap C) = \frac{0.5 \cdot 0.6}{0.5 \cdot 0.6 + 0.2 \cdot 0.4} = \frac{0.30}{0.38} \approx 0.789.$$
+
+## Key takeaways
+
+- **Bayes' theorem:** $P(B \mid A) = P(A \mid B)\,P(B) / P(A)$, with the denominator from total probability.
+- It goes from the probability of the effect given the cause to the probability of the cause given the effect.
+- **Posterior ∝ prior × likelihood.**
+- Updating works step by step: today's posterior is tomorrow's prior.
+
+## Review questions
+
+**1. Quick quiz.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz25 = [
+  {q: "Supplier A provides 40% of the computers and is late with 5% of deliveries, B 30% with 3% and C 30% with 2.5%. A computer arrived late. What is the probability it came from A?",
+   opts: ["0.40", "0.55", "0.05", "0.0365"], ans: 1,
+   why: "P(late) = 0.02 + 0.009 + 0.0075 = 0.0365, so P(A | late) = 0.02 / 0.0365 ≈ 0.548."},
+  {q: "If the likelihood P(A | B) is the same for every scenario B, what happens to the posteriors?",
+   opts: ["They all become equal", "They stay equal to the priors", "They become 0 or 1"], ans: 1,
+   why: "The observation does not tell the scenarios apart, so nothing changes. The likelihoods cancel in the ratio."},
+  {q: "In the coin game, after one head, what is P(biased)?",
+   opts: ["1/3", "3/7", "1/2", "3/4"], ans: 1,
+   why: "(1/3 · 3/4) / (1/3 · 3/4 + 2/3 · 1/2) = (1/4) / (1/4 + 1/3) = 3/7."},
+  {q: "Which relation holds in general?",
+   opts: ["P(B | A) = P(A | B)", "P(B | A) · P(A) = P(A | B) · P(B)", "P(B | A) + P(A | B) = 1", "P(B | A) = P(A | B) · P(A)"], ans: 1,
+   why: "Both sides equal P(A ∩ B). The theorem follows from this."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz25.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz25.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** An insurer classifies its customers as good (20%), average (50%) and bad (30%) drivers, with a probability of an accident within a year of 0.05, 0.15 and 0.30 respectively. (a) What share of customers has an accident within a year? (b) A customer had no accident. What is the probability that they are a good driver?
+
+**3.** In the coin game, how many heads in a row are needed for the probability of the biased coin to exceed 90%? Use `bayes()`.
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. (a) $0.2 \cdot 0.05 + 0.5 \cdot 0.15 + 0.3 \cdot 0.30 = 0.175$. (b) We need the likelihood of "no accident": $P(\text{good} \mid \text{none}) = \dfrac{0.2 \cdot 0.95}{1 - 0.175} = \dfrac{0.19}{0.825} \approx 0.230$. No accident raises the probability slightly, from 20% to 23%.
+3. With $k$ heads, `bayes(c(2/3, 1/3), c(0.5^k, 0.75^k))[2]`. The probability exceeds 90% for $k =$ `r min(which(sapply(1:20, function(k) (0.75^k/3) / (0.75^k/3 + 2*0.5^k/3)) > 0.9))`.
+:::
+
+---
+
+**Next post:** *The Monty Hall problem: should you switch?*

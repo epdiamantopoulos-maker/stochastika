@@ -1,0 +1,237 @@
+---
+title: "The Monty Hall problem: should you switch?"
+description: "The famous three-door problem: play it interactively, see why switching wins with probability 2/3 using Bayes' theorem, and what changes when the host does not know where the car is."
+date: 2027-01-11
+categories: [Probability, Bayes, R, Interactive]
+keywords: [Monty Hall problem, three doors, Bayes theorem, conditional probability, probability paradox, simulation, should you switch]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# non-ASCII characters in output and plots under a "C" locale
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+You are on a game show, facing three closed doors, A, B and C. Behind one is a car, behind the other two a goat each. The host knows where the car is. You pick a door, say A. The host opens one of the other two, say B, and shows a goat. Then he asks: **do you keep A or switch to C?**
+
+Most people answer that it does not matter: two doors are left, so 50% each. The correct answer is that **switching wins with probability 2/3**. The problem is named after the host of the American game show *Let's Make a Deal*, and it is perhaps the best-known example that [information changes probabilities](../conditional-probability/index.qmd), as long as we know **how** it was given.
+
+## Play
+
+::: {.ix-panel}
+::: {.ix-title}
+Three doors
+:::
+
+```{ojs}
+//| echo: false
+{
+  const names = ["A", "B", "C"];
+  let car, pick, opened, stage;
+  const stats = {stay: [0, 0], swit: [0, 0]};
+  const root = html`<div></div>`, msg = html`<div class="ix-note" style="min-height:2.6em"></div>`, doorsBox = html`<div style="display:flex;gap:10px;margin:8px 0"></div>`, statBox = html`<div></div>`;
+  const newGame = () => { car = Math.floor(3 * Math.random()); pick = null; opened = null; stage = 0; render(); };
+  const door = i => {
+    const isOpen = opened === i || stage === 2;
+    const face = isOpen ? (i === car ? "🚗" : "🐐") : names[i];
+    const b = html`<button style="width:4.2em;height:5.5em;font-size:1.4em;margin:0;border-width:2px;${pick === i ? "border-color:#f28e2b;background:#fff4e8" : ""}">${face}</button>`;
+    b.disabled = stage === 2 || opened === i;
+    b.onclick = () => {
+      if (stage === 0) {
+        pick = i;
+        const goats = [0, 1, 2].filter(j => j !== pick && j !== car);
+        opened = goats[Math.floor(Math.random() * goats.length)];
+        stage = 1;
+      } else if (stage === 1) {
+        const switched = i !== pick;
+        pick = i; stage = 2;
+        const win = pick === car;
+        const s = switched ? stats.swit : stats.stay;
+        s[0] += win ? 1 : 0; s[1] += 1;
+      }
+      render();
+    };
+    return b;
+  };
+  const render = () => {
+    doorsBox.replaceChildren(...[0, 1, 2].map(door));
+    if (stage === 0) msg.innerHTML = "Pick a door.";
+    else if (stage === 1) msg.innerHTML = `You picked door <b>${names[pick]}</b>. The host opened door <b>${names[opened]}</b>: a goat. Press <b>${names[pick]}</b> again to stay, or the other closed door to switch.`;
+    else msg.innerHTML = pick === car ? `<span class="ix-ok">✓ You won the car!</span>` : `<span class="ix-no">✗ A goat.</span> The car was behind door <b>${names[car]}</b>.`;
+    const r = ([w, n]) => n ? `${w} / ${n} (${(100 * w / n).toFixed(0)}%)` : "–";
+    statBox.innerHTML = `<table class="ix-tbl"><tr><th>Strategy</th><th>Wins / games</th></tr>
+      <tr><td>Stay</td><td><b>${r(stats.stay)}</b></td></tr>
+      <tr><td>Switch</td><td><b>${r(stats.swit)}</b></td></tr></table>`;
+  };
+  const again = html`<button>New game</button>`;
+  again.onclick = newGame;
+  newGame();
+  root.append(doorsBox, msg, again, statBox);
+  return root;
+}
+```
+:::
+
+Play 10–20 times with each strategy. With few games the percentages are unstable, but switching soon starts to pull ahead.
+
+## Why 2/3: every case
+
+Suppose the car is behind B. Your first pick is equally likely to be A, B or C:
+
+| First pick | The host opens | If you stay | If you switch |
+|---|---|---|---|
+| A | C (forced) | goat | **car** |
+| B | A or C | **car** | goat |
+| C | A (forced) | goat | **car** |
+
+Switching wins in two of the three equally likely cases. The intuition is simple: your first door hides the car with probability $1/3$, and nothing the host does changes that, since he can **always** open a door with a goat. The remaining $2/3$ "collects" on the only door he left closed.
+
+## With Bayes' theorem
+
+You picked A and the host opened B. Let $C_A$, $C_B$, $C_C$ be the events "the car is behind A, B, C", each with probability $1/3$, and $H$ = {the host opens B}. The likelihoods depend on **how** the host chooses:
+
+- if the car is behind A, he opens B or C at random: $P(H \mid C_A) = 1/2$,
+- if it is behind B, he never opens it: $P(H \mid C_B) = 0$,
+- if it is behind C, he must open B: $P(H \mid C_C) = 1$.
+
+By [Bayes' theorem](../bayes-theorem/index.qmd):
+
+$$P(C_A \mid H) = \frac{\frac{1}{2} \cdot \frac{1}{3}}{\frac{1}{2} \cdot \frac{1}{3} + 0 \cdot \frac{1}{3} + 1 \cdot \frac{1}{3}} = \frac{1/6}{1/2} = \frac{1}{3}, \qquad P(C_C \mid H) = \frac{1/3}{1/2} = \frac{2}{3}.$$
+
+## What if the host did not know?
+
+Suppose the host **does not know** where the car is and opens one of the other two doors at random. This time it happened to be a goat. Then the likelihoods change: the probability that he opens B **and shows a goat** is $1/2$ if the car is behind A, $0$ if it is behind B and $1/2$ if it is behind C. Bayes gives
+
+$$P(C_A \mid H) = P(C_C \mid H) = \frac{1}{2}.$$
+
+The scene on stage is exactly the same, yet the answer changes, because the **model** that produced the information changed. It is the same lesson as [Bertrand's paradox](../bertrand-paradox/index.qmd): to compute a probability, we need to know how the data came about.
+
+The simulation below compares the two models and generalises to $n$ doors: the host opens $n - 2$ doors with goats and leaves one more door closed.
+
+::: {.ix-panel}
+::: {.ix-title}
+Simulation: n doors and two kinds of host
+:::
+
+```{ojs}
+//| echo: false
+viewof n26 = Inputs.range([3, 50], {label: "Doors", step: 1, value: 3})
+viewof knows26 = Inputs.radio(new Map([["Knows where the car is", true], ["Opens doors at random", false]]), {label: "Host", value: true})
+viewof go26 = Inputs.button("10,000 games")
+```
+
+```{ojs}
+//| echo: false
+{
+  go26;
+  let valid = 0, stayW = 0, switchW = 0;
+  for (let g = 0; g < 10000; g++) {
+    const car = Math.floor(n26 * Math.random()), pick = 0;
+    let other;
+    if (knows26) {
+      // leaves the car door closed, or a random one if the car is behind our pick
+      other = car !== pick ? car : 1 + Math.floor((n26 - 1) * Math.random());
+    } else {
+      // opens n − 2 random doors among the others, leaves one closed
+      other = 1 + Math.floor((n26 - 1) * Math.random());
+      if (car !== pick && car !== other) continue; // the car was revealed: the game is void
+    }
+    valid++;
+    if (car === pick) stayW++; else switchW++;
+  }
+  const f = x => x.toLocaleString("en-GB", {style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1});
+  const th = knows26 ? [1 / n26, (n26 - 1) / n26] : [0.5, 0.5];
+  return html`<table class="ix-tbl">
+    <tr><th></th><th>Stay</th><th>Switch</th></tr>
+    <tr><td>Win frequency</td><td><b>${f(stayW / valid)}</b></td><td><b>${f(switchW / valid)}</b></td></tr>
+    <tr><td>Exact value</td><td>${f(th[0])}</td><td>${f(th[1])}</td></tr></table>
+    <div class="ix-note">Counted ${valid.toLocaleString("en-GB")} games${knows26 ? "" : html`. In the rest the host accidentally revealed the car and they were voided`}.
+    ${knows26 ? html` With ${n26} doors switching wins with probability ${n26 - 1}/${n26}: the first pick "keeps" only 1/${n26}.` : html` Without knowledge, the goat that was revealed is just luck, and the two closed doors are equally likely.`}</div>`;
+}
+```
+:::
+
+With 50 doors switching becomes obvious: you picked one, the host opened 48 goats and left **one particular** door closed. The car is almost certainly there.
+
+## The same in R
+
+```{r}
+#| label: monty-sim
+play <- function(switch_door) {
+  car <- sample(3, 1); pick <- sample(3, 1)
+  goats <- setdiff(1:3, c(pick, car))
+  opened <- if (length(goats) == 1) goats else sample(goats, 1)
+  if (switch_door) pick <- setdiff(1:3, c(pick, opened))
+  pick == car
+}
+c(stay = mean(replicate(20000, play(FALSE))), switch = mean(replicate(20000, play(TRUE))))
+```
+
+Note the line with `sample(goats, 1)`: when R's `sample()` gets a single number $k$, it samples from $1{:}k$. That is why we first check whether only one goat door is available. It is a classic trap in R simulations.
+
+## Key takeaways
+
+- If the host knows where the car is and always opens a goat door, **switching wins with probability 2/3**.
+- Your first pick keeps probability $1/3$, because the host's action gives no information about it.
+- If the host opens doors at random, the two closed doors are equally likely.
+- The same observation yields different probabilities under different models: Bayes' likelihoods depend on how the data arose.
+
+## Review questions
+
+**1. Quick quiz.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz26 = [
+  {q: "With 10 doors, the host (who knows) opens 8 with goats. What is your chance of winning if you switch?",
+   opts: ["1/2", "1/10", "9/10", "8/10"], ans: 2,
+   why: "Your first door keeps 1/10. The remaining 9/10 goes to the only other closed door."},
+  {q: "The host opens a door at random and happens to show a goat. What do you do?",
+   opts: ["Switch: 2/3", "Stay: 2/3", "It does not matter: 1/2 each"], ans: 2,
+   why: "Without knowledge, the goat was not 'chosen'. Bayes gives 1/2 to each closed door."},
+  {q: "In the classic game, if you picked A, what is P(the host opens B | the car is behind C)?",
+   opts: ["0", "1/2", "1", "1/3"], ans: 2,
+   why: "He cannot open A (your pick) or C (the car), so he must open B."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz26.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz26.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** In the classic game, suppose that whenever the host can choose between two goat doors, he **always** opens B if he can. You picked A and he opened B. What is your chance of winning if you switch?
+
+**3.** Modify `play()` for the version where the host opens a door at random, and confirm the probability $1/2$ by keeping only the games where he showed a goat.
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. Now $P(H \mid C_A) = 1$ (he can choose and prefers B), $P(H \mid C_B) = 0$ and $P(H \mid C_C) = 1$. So $P(C_C \mid H) = \dfrac{1/3}{1/3 + 1/3} = \dfrac{1}{2}$. Switching never hurts, but here it does not help. Had the host opened C, however, you would know for sure that the car is behind B.
+3. Replace the choice of `opened` with `opened <- sample(setdiff(1:3, pick), 1)`, return `NA` when `opened == car`, and compute `mean(..., na.rm = TRUE)`.
+:::
+
+---
+
+**Next post:** *Sensitivity, specificity, PPV and NPV: how to evaluate a diagnostic test.*
