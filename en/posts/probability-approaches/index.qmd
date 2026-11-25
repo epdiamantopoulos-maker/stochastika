@@ -1,0 +1,212 @@
+---
+title: "Classical, geometric and axiomatic probability: three views of one idea"
+description: "The ways we assign probabilities (classical, frequentist, geometric) and how the axiomatic foundation unites them, with the meeting problem as an interactive Monte Carlo simulation."
+date: 2026-12-16
+categories: [Probability, Foundations, R, Interactive]
+keywords: [classical probability, geometric probability, frequentist probability, axiomatic probability, meeting problem, Monte Carlo, estimating pi]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+```
+
+With [Kolmogorov's axioms](../kolmogorov-axioms/index.qmd) we saw *which rules* a probability must obey. The axioms do not tell us, however, *which number* to give each event. That is decided by the nature of the problem, and in practice there are three main ways to do it. Today we look at them side by side.
+
+## 1. Classical probability
+
+When the sample space is **finite** and, by symmetry, all outcomes are **equally likely**, probability comes from counting:
+
+$$P(A) = \frac{N(A)}{N(\Omega)}.$$
+
+When tossing two coins, $\Omega = \{\text{HH}, \text{HT}, \text{TH}, \text{TT}\}$ and the probability of two tails is $1/4$. Classical probability is exact and needs no data, but it requires symmetry: it says nothing about a loaded die or about the chance of rain tomorrow.
+
+## 2. Frequentist (statistical) probability
+
+When there is no symmetry but the experiment can be repeated, we estimate the probability from the **relative frequency** over many repetitions, as we saw when [defining probability](../probability-definition/index.qmd):
+
+$$P(A) \approx \frac{N_n(A)}{n} \quad \text{for large } n.$$
+
+This is how we estimate, for example, the defect rate of a production line or the chance that a ferry is late. Frequentist probability works without symmetry, but it gives an **estimate**, not an exact value, with an error that shrinks as $n$ grows:
+
+```{r}
+#| label: frequentist
+for (n in c(100, 10000, 1000000)) {
+  rolls <- sample(1:6, n, replace = TRUE) + sample(1:6, n, replace = TRUE)
+  cat("n =", format(n, big.mark = ","), "  estimate of P(sum = 7) =", round(mean(rolls == 7), 4), "\n")
+}
+cat("Exact value 1/6 =", round(1/6, 4), "\n")
+```
+
+## 3. Geometric probability
+
+When the outcome is a **point chosen uniformly** in an interval, a region or a volume, the probability of an event is a ratio of "sizes":
+
+$$P(A) = \frac{\text{length, area or volume of } A}{\text{length, area or volume of } \Omega}.$$
+
+It is the natural extension of classical probability to infinite, uncountable sample spaces: instead of counting elements, we measure size.
+
+**A simple example.** A bus comes every 10 minutes and we arrive at the stop at a random moment. The probability of waiting at most 3 minutes is $3/10$: the favourable interval has length 3 out of 10.
+
+### The meeting problem
+
+Two friends agree to meet between 12:00 and 13:00. Each arrives at a random moment within the hour, independently of the other, and waits 15 minutes before leaving. What is the probability that they meet?
+
+If $x$ and $y$ are the arrival times in minutes after 12:00, the outcome is a point $(x, y)$ of the square $[0, 60] \times [0, 60]$. The friends meet when $|x - y| \le 15$, that is, when the point falls in the band around the diagonal. Outside the band there are two triangles with legs $45$, so
+
+$$P(\text{meet}) = 1 - \frac{2 \cdot \tfrac12 \cdot 45^2}{60^2} = 1 - \Big(\frac{45}{60}\Big)^2 = \frac{7}{16} = 0.4375.$$
+
+In the simulator below we "throw" random points into the square. Each point is a pair of arrival times: green if the friends meet, grey if not. Change the waiting time and watch the band and the probability change.
+
+::: {.ix-panel}
+::: {.ix-title}
+The meeting problem: Monte Carlo simulation
+:::
+
+```{ojs}
+//| echo: false
+viewof w15 = Inputs.range([0, 60], {label: "Waiting time (minutes)", step: 1, value: 15})
+viewof n15 = Inputs.select([100, 1000, 5000], {label: "Number of points", value: 1000, format: x => x.toLocaleString("en-GB")})
+viewof run15 = Inputs.button("New points")
+```
+
+```{ojs}
+//| echo: false
+pts15 = { run15; return Array.from({length: n15}, () => ({x: 60 * Math.random(), y: 60 * Math.random()})); }
+```
+
+```{ojs}
+//| echo: false
+{
+  const w = w15, inside = d => Math.abs(d.x - d.y) <= w;
+  const hits = pts15.filter(inside).length, est = hits / pts15.length;
+  const exact = 1 - Math.pow(1 - w / 60, 2);
+  const band = d3.range(0, 60.01, 0.5).map(x => ({x, y1: Math.max(0, x - w), y2: Math.min(60, x + w)}));
+  const fmt = x => x.toLocaleString("en-GB", {minimumFractionDigits: 4, maximumFractionDigits: 4});
+  const chart = Plot.plot({
+    width: 360, height: 360, marginLeft: 45, marginBottom: 40,
+    x: {domain: [0, 60], label: "Arrival of friend 1 (minutes) →", ticks: 7},
+    y: {domain: [0, 60], label: "↑ Arrival of friend 2 (minutes)", ticks: 7},
+    marks: [
+      Plot.areaY(band, {x: "x", y1: "y1", y2: "y2", fill: "#59a14f", fillOpacity: 0.15}),
+      Plot.dot(pts15, {x: "x", y: "y", r: 2, fill: d => inside(d) ? "#2e7d32" : "#9aa3ad"}),
+      Plot.frame()
+    ]
+  });
+  return html`<div class="ix-row"><div style="flex:0 1 380px">${chart}</div><div>
+    <table class="ix-tbl">
+      <tr><td>Points in the band</td><td><b>${hits.toLocaleString("en-GB")} / ${pts15.length.toLocaleString("en-GB")}</b></td></tr>
+      <tr><td>Monte Carlo estimate</td><td><b>${fmt(est)}</b></td></tr>
+      <tr><td>Exact value 1 − (1 − w/60)²</td><td><b>${fmt(exact)}</b></td></tr>
+    </table>
+    <div class="ix-note">The estimate is a frequentist probability and the exact value a geometric one. With more points the gap between them shrinks.</div></div></div>`;
+}
+```
+:::
+
+The simulator shows the two approaches working together: geometry gives the exact answer, and the relative frequency of green points confirms it. With a 30-minute wait the probability rises to $3/4$; with a 60-minute wait the friends are certain to meet.
+
+### Estimating π with "darts"
+
+The same idea works in reverse: if geometry tells us a probability, we can estimate an unknown quantity by simulation. A point of the square $[0, 1]^2$ falls inside the quarter circle $x^2 + y^2 \le 1$ with probability $\pi/4$, the area of the quarter circle. So four times the relative frequency estimates $\pi$:
+
+```{r}
+#| label: pi-estimate
+n <- 1e6
+x <- runif(n); y <- runif(n)
+4 * mean(x^2 + y^2 <= 1)
+```
+
+This is the core idea of the **Monte Carlo method**, used today in everything from physics to finance.
+
+### Probability zero does not mean impossible
+
+In geometric probability, every single point has probability $0$: in the meeting problem, the probability that the friends arrive at *exactly* the same moment is the area of the diagonal, which is $0$. And yet it can happen. As we saw with the [axioms](../kolmogorov-axioms/index.qmd), an event of probability $0$ is not necessarily impossible.
+
+### What does "uniformly" mean?
+
+Geometric probability assumes we know **what** is chosen uniformly. In the meeting problem this is clear: the arrival times. In other problems, though, "choose at random" can mean different things that lead to different answers. The most famous example is **Bertrand's paradox** about random chords of a circle, which gets a post of its own.
+
+## Axiomatic probability ties it all together
+
+The three approaches are not rivals. They are three ways to **construct** a probability function, and all three satisfy Kolmogorov's axioms:
+
+| | Classical | Frequentist | Geometric |
+|---|---|---|---|
+| **When** | Finite $\Omega$, equally likely | Repeatable experiment | Uniform point in a region |
+| **How** | Counting elements | Relative frequency | Ratio of length, area or volume |
+| **Result** | Exact | Estimate | Exact |
+| **Limitation** | Needs symmetry | Needs data | Needs a clear meaning of "uniform" |
+
+The axiomatic foundation is the common framework: whichever approach we use, the rules of probability hold and the approaches can be combined. That is exactly what we did in the simulator, confirming a geometric probability with a frequentist estimate.
+
+## Key takeaways
+
+- **Classical** probability counts equally likely outcomes, **frequentist** probability estimates from repetitions, and **geometric** probability measures lengths, areas or volumes.
+- Geometric probability solves problems with continuous outcomes, such as the meeting problem: $P = 1 - (1 - w/60)^2$.
+- The **Monte Carlo method** estimates probabilities, and even constants such as $\pi$, by simulation.
+- All approaches are special cases of the **axiomatic** foundation.
+
+## Review questions
+
+**1. Quick quiz.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz15 = [
+  {q: "A bus comes every 15 minutes and we arrive at a random moment. What is the probability of waiting more than 5 minutes?",
+   opts: ["1/3", "1/2", "2/3", "5/15"], ans: 2,
+   why: "We wait more than 5 minutes if we arrive in the first 10 minutes of the 15-minute interval: 10/15 = 2/3."},
+  {q: "Which approach fits the question 'what is the probability that an item from this production line is defective'?",
+   opts: ["Classical", "Frequentist", "Geometric"], ans: 1,
+   why: "There is no symmetry and no geometry. We estimate the probability from the proportion of defects among many items."},
+  {q: "A point is chosen uniformly in the square [0, 1] × [0, 1]. What is the probability that x + y ≤ 1?",
+   opts: ["1/4", "1/2", "π/4", "3/4"], ans: 1,
+   why: "The region x + y ≤ 1 is the triangle below the diagonal, with area 1/2."},
+  {q: "In the meeting problem, if each friend waits 30 minutes, what is the probability that they meet?",
+   opts: ["1/2", "3/4", "7/16", "1/4"], ans: 1,
+   why: "1 − (1 − 30/60)² = 1 − 1/4 = 3/4. You can confirm it in the simulator."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz15.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz15.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** A point is chosen uniformly inside a disc of radius $R$. What is the probability that it lies closer than $R/2$ to the centre?
+
+**3.** A stick of length 1 is broken at a random point. What is the probability that the longer piece is at least twice as long as the shorter one?
+
+**4.** Write an R simulation that confirms your answer to question 3.
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. Ratio of areas: $\pi (R/2)^2 / (\pi R^2) = 1/4$.
+3. If the break point is $u$, the shorter piece is $\min\{u, 1 - u\}$, and the condition holds when $\min\{u, 1 - u\} \le 1/3$, i.e. $u \le 1/3$ or $u \ge 2/3$. The probability is $2/3$.
+4. `u <- runif(1e6); mean(pmin(u, 1 - u) <= 1/3)` gives about 0.667.
+:::
+
+---
+
+**Next post:** *The fundamental counting principle: counting without listing.*

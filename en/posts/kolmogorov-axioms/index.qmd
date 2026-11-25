@@ -1,0 +1,226 @@
+---
+title: "Kolmogorov's axioms: all of probability from three rules"
+description: "What a probability space is, why we need a sigma-algebra, how every probability rule follows from three axioms, and why there is no such thing as a 'random natural number'."
+date: 2026-12-14
+categories: [Probability, Foundations, R, Interactive]
+keywords: [Kolmogorov axioms, probability space, sigma-algebra, countable additivity, probability measure, loaded die]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+```
+
+The [classical definition](../probability-definition/index.qmd) $P(A) = N(A)/N(\Omega)$ only works when the sample space is finite and the outcomes are equally likely. But what about a loaded die, the number of customers at a checkout, which can be arbitrarily large, or the arrival time of the first customer, which takes uncountably many values? In 1933 Andrey Kolmogorov gave an answer that still stands: instead of saying *how* to compute a probability, we state **which rules it must obey**.
+
+## Probability spaces
+
+A **probability space** is a triple $(\Omega, \mathcal{F}, P)$, where:
+
+1. $\Omega$ is the sample space of the experiment.
+2. $\mathcal{F}$ is the collection of events to which we assign probabilities.
+3. $P$ is a function that assigns a number $P(A)$ to every event $A \in \mathcal{F}$.
+
+### Why we need the collection $\mathcal{F}$
+
+When $\Omega$ is finite or countable, we take $\mathcal{F}$ to be **all** subsets of $\Omega$, and there is no problem. But when $\Omega$ is uncountable, for example the interval $[0, 1]$, it can be proved that some subsets are so "pathological" that no consistent probability can be assigned to them (the Vitali set is the classic example). So we restrict ourselves to a collection $\mathcal{F}$ that is a **sigma-algebra**, meaning that:
+
+- it contains $\Omega$,
+- whenever it contains $A$, it also contains the complement $A'$,
+- whenever it contains $A_1, A_2, \ldots$, it also contains their union $\bigcup_{n} A_n$.
+
+In plain terms, $\mathcal{F}$ is closed under the operations we perform on events: anything built from events using complements, unions and intersections is itself an event. In practical problems we rarely need to think about the sigma-algebra; all intervals and their unions belong to it.
+
+## The three axioms
+
+The function $P$ is called a **probability** if it satisfies **Kolmogorov's axioms**:
+
+**(K1) Non-negativity.** $P(A) \ge 0$ for every $A \in \mathcal{F}$.
+
+**(K2) Normalisation.** $P(\Omega) = 1$.
+
+**(K3) Countable additivity.** If $A_1, A_2, \ldots$ are pairwise disjoint ($A_i \cap A_j = \varnothing$ for $i \ne j$), then
+
+$$P\Big(\bigcup_{n=1}^{\infty} A_n\Big) = \sum_{n=1}^{\infty} P(A_n).$$
+
+That is all. Nothing about equally likely outcomes, relative frequencies or how a number is computed. Any function satisfying these three rules is a legitimate probability.
+
+## Every rule from three axioms
+
+The rules from the previous post, which there came from counting, can now be proved for every probability:
+
+- **$P(\varnothing) = 0$.** Take $A_1 = \Omega$ and $A_2 = A_3 = \cdots = \varnothing$, which are pairwise disjoint. By (K3), $P(\Omega) = P(\Omega) + \sum_{n \ge 2} P(\varnothing)$, so $P(\varnothing) = 0$.
+- **Finite additivity.** If $A$ and $B$ are disjoint, take $A_1 = A$, $A_2 = B$ and all the rest empty: $P(A \cup B) = P(A) + P(B)$.
+- **Complement.** $A$ and $A'$ are disjoint with union $\Omega$, so $P(A) + P(A') = 1$. Since $P(A') \ge 0$, it also follows that $P(A) \le 1$.
+- **Monotonicity.** If $A \subseteq B$, then $B = A \cup (B - A)$ with disjoint pieces, so $P(B) = P(A) + P(B - A) \ge P(A)$.
+- **Union.** Write $A \cup B = A \cup (B - A)$ and $B = (A \cap B) \cup (B - A)$, always with disjoint pieces. Subtracting the two equations gives
+  $$P(A \cup B) = P(A) + P(B) - P(A \cap B).$$
+
+All of probability theory, from distributions to the central limit theorem, is built on these three axioms.
+
+## Examples of probability spaces
+
+**The classical definition as a special case.** If $\Omega$ is finite and we set $P(A) = N(A)/N(\Omega)$, the three axioms hold. The classical definition is therefore **one** example of a probability, not its definition.
+
+**A loaded die.** Give each face $i$ a weight $p_i \ge 0$ with $p_1 + \cdots + p_6 = 1$, and define $P(A) = \sum_{i \in A} p_i$. The axioms hold even though the outcomes are not equally likely. In the explorer below you build your own die: you give relative weights to the faces, the page normalises them so that (K2) holds, and it computes the probability of any event you choose.
+
+::: {.ix-panel}
+::: {.ix-title}
+Build your own die
+:::
+
+```{ojs}
+//| echo: false
+presets14 = ({
+  "Fair die": [1, 1, 1, 1, 1, 1],
+  "Die with P(1) = P(3) = P(5) = 2P(2) = 4P(4) = 2P(6)": [4, 2, 4, 1, 4, 2],
+  "Die that favours 6": [1, 1, 1, 1, 1, 5],
+  "Die that never shows 1": [0, 1, 1, 1, 1, 1]
+})
+viewof preset14 = Inputs.select(Object.keys(presets14), {label: "Start from", value: "Die with P(1) = P(3) = P(5) = 2P(2) = 4P(4) = 2P(6)"})
+```
+
+```{ojs}
+//| echo: false
+viewof w14 = Inputs.form(presets14[preset14].map((v, i) =>
+  Inputs.range([0, 10], {label: `Weight of face ${i + 1}`, step: 1, value: v})))
+viewof ev14 = Inputs.checkbox([1, 2, 3, 4, 5, 6], {label: "Event A", value: [2, 4, 6], format: x => `${x}`})
+```
+
+```{ojs}
+//| echo: false
+{
+  const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
+  const frac = (a, b) => { if (b === 0) return "—"; if (a === 0) return "0"; if (a === b) return "1"; const g = gcd(a, b); return `${a / g}/${b / g}`; };
+  const fmt = x => x.toLocaleString("en-GB", {minimumFractionDigits: 3, maximumFractionDigits: 3});
+  const total = w14.reduce((s, x) => s + x, 0);
+  if (total === 0) return html`<div class="ix-warn">All weights are 0: there is no way to make P(Ω) = 1. Give at least one face a positive weight.</div>`;
+  const data = w14.map((w, i) => ({face: i + 1, p: w / total, inA: ev14.includes(i + 1), w}));
+  const wA = data.filter(d => d.inA).reduce((s, d) => s + d.w, 0);
+  const chart = Plot.plot({
+    height: 220, marginLeft: 45,
+    x: {label: "Face", type: "band"}, y: {label: "↑ Probability", grid: true, domain: [0, Math.max(0.5, ...data.map(d => d.p))]},
+    marks: [
+      Plot.barY(data, {x: "face", y: "p", fill: d => d.inA ? "#4e79a7" : "#c9d1da"}),
+      Plot.text(data, {x: "face", y: "p", text: d => frac(d.w, total), dy: -8}),
+      Plot.ruleY([0])
+    ]
+  });
+  return html`<div>${chart}
+    <table class="ix-tbl">
+      <tr><td>Sum of probabilities (K2)</td><td><b>1</b> ✓ (weights divided by ${total})</td></tr>
+      <tr><td>P(A), A = {${ev14.join(", ")}}</td><td><b>${frac(wA, total)} ≈ ${fmt(wA / total)}</b></td></tr>
+      <tr><td>P(A′) = 1 − P(A)</td><td><b>${frac(total - wA, total)} ≈ ${fmt(1 - wA / total)}</b></td></tr>
+    </table>
+    <div class="ix-note">Blue bars belong to event A. Each probability is the face's weight divided by the sum of the weights.</div></div>`;
+}
+```
+:::
+
+With the default die, the probability of an even number is $5/17$, as we computed in the previous post. Try the die that never shows 1 as well: there $P(\{1\}) = 0$, which is perfectly legitimate.
+
+**A countable sample space.** For the number $X$ of customers arriving at a checkout in one minute, a simple model is $P(X = k) = (1 - q)\,q^k$ for $k = 0, 1, 2, \ldots$, with $0 < q < 1$. (K2) holds thanks to the geometric series $\sum_{k \ge 0} (1 - q) q^k = 1$, and (K3) lets us add up infinitely many terms:
+
+```{r}
+#| label: geometric
+q <- 0.7
+k <- 0:500
+p <- (1 - q) * q^k
+sum(p)                 # ≈ 1: (K2) holds
+sum(p[k >= 4])         # P(X ≥ 4) as a sum of infinitely many disjoint events
+q^4                    # the same number from the formula
+```
+
+**An uncountable sample space.** Pick a point of $[0, 1]$ "uniformly": the probability that it lands in an interval $[a, b]$ is its length, $b - a$. Then every **single** point has probability $0$, since a point is an interval of length $0$. Yet some point will be chosen! So **$P(A) = 0$ does not mean that $A$ is impossible**. The converse always holds, $P(\varnothing) = 0$, but not this. We will meet this again with continuous random variables.
+
+## Why there is no "random natural number"
+
+A well-known question asks: "Pick a natural number at random. What is the probability that it is divisible by 3?" The intuitive answer is $1/3$. Axiom (K3), however, shows that the question, as stated, makes no sense.
+
+If "at random" means that all natural numbers are equally likely, then $P(\{n\}) = c$ for every $n$. The sets $\{1\}, \{2\}, \ldots$ are disjoint with union $\mathbb{N}$, so by (K2) and (K3):
+
+$$1 = P(\mathbb{N}) = \sum_{n=1}^{\infty} c = \begin{cases} 0, & c = 0, \\ \infty, & c > 0. \end{cases}$$
+
+Both cases are impossible. **There is no uniform probability on the natural numbers.**
+
+So what is the $1/3$? It is the **asymptotic density** of the multiples of 3: their proportion among $1, 2, \ldots, N$ as $N$ grows.
+
+```{r}
+#| label: density
+N <- 10^(1:6)
+data.frame(N = N, `proportion of multiples of 3` = sapply(N, function(n) mean((1:n) %% 3 == 0)),
+           check.names = FALSE)
+```
+
+The proportion tends to $1/3$, but density is not probability: it is not countably additive, since every single number has density $0$ while $\mathbb{N}$ has density $1$. To speak correctly about probability here, we must define the experiment, for example "pick a number uniformly from $1$ to $N$", in which case the answer is $\lfloor N/3 \rfloor / N$.
+
+## Key takeaways
+
+- A **probability space** $(\Omega, \mathcal{F}, P)$ consists of the sample space, the events (a sigma-algebra) and the probability function.
+- The **three axioms** are non-negativity, $P(\Omega) = 1$ and countable additivity. Every probability rule is proved from them.
+- The classical definition is a special case. Non-uniform, countable and continuous models all fit in the same framework.
+- **$P(A) = 0$ does not mean impossible**, and **there is no uniform probability on $\mathbb{N}$**.
+
+## Review questions
+
+**1. Quick quiz.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz14 = [
+  {q: "Which of the following is NOT one of Kolmogorov's axioms, but is proved from them?",
+   opts: ["P(Ω) = 1", "P(A) ≥ 0", "P(A′) = 1 − P(A)", "Countable additivity"], ans: 2,
+   why: "The complement rule follows from (K2) and (K3), because A and A′ are disjoint with union Ω."},
+  {q: "A and B are disjoint. Can we have P(A) = 0.6 and P(B) = 0.5?",
+   opts: ["Yes", "No"], ans: 1,
+   why: "That would give P(A ∪ B) = 0.6 + 0.5 = 1.1 > 1, which is impossible."},
+  {q: "If P(A) = 0, must A be the empty set?",
+   opts: ["Yes, always", "Not necessarily"], ans: 1,
+   why: "When a point of [0, 1] is chosen uniformly, every single point has probability 0 without being impossible."},
+  {q: "Can we give every natural number the same probability?",
+   opts: ["Yes, 1/∞", "No, it contradicts the axioms"], ans: 1,
+   why: "A constant c > 0 sums to ∞, while c = 0 sums to 0. Neither gives P(ℕ) = 1."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz14.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz14.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** Prove **Boole's inequality** from the axioms: $P(A \cup B) \le P(A) + P(B)$.
+
+**3.** Prove that $P(A - B) = P(A) - P(A \cap B)$.
+
+**4.** In the model $P(X = k) = (1 - q)\,q^k$ with $q = 0.7$, what is the probability of at most 2 customers?
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. By the union rule, $P(A \cup B) = P(A) + P(B) - P(A \cap B) \le P(A) + P(B)$, since $P(A \cap B) \ge 0$ by (K1).
+3. $A - B$ and $A \cap B$ are disjoint with union $A$, so $P(A) = P(A - B) + P(A \cap B)$.
+4. $P(X \le 2) = 0.3 \cdot (1 + 0.7 + 0.49) = 0.657$, or equivalently $1 - q^3 = 1 - 0.343$.
+:::
+
+---
+
+**Next post:** *Classical, geometric and axiomatic probability: three views of one idea.*

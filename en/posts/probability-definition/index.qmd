@@ -1,0 +1,300 @@
+---
+title: "Defining probability: from statistical regularity to basic properties"
+description: "How the stabilising relative frequency leads to the idea of probability, the classical definition and its equally-likely trap, and the basic rules for computing probabilities, with interactive tools and R."
+date: 2026-12-11
+categories: [Probability, Foundations, R, Interactive]
+keywords: [definition of probability, relative frequency, statistical regularity, classical probability, equally likely outcomes, probability rules, inclusion-exclusion]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+In the post on [random experiments](../random-experiments/index.qmd) we saw that a single coin flip is unpredictable, yet over many flips a remarkable stability appears. Today we turn that observation into a number: the **probability** of an event. We will look at the classical definition, a trap that catches even experienced people, and the rules we use to compute probabilities.
+
+## Statistical regularity
+
+We repeat a random experiment $n$ times and count how many times $N_n(A)$ the event $A$ occurred. The **relative frequency** of $A$ is
+
+$$f_n(A) = \frac{N_n(A)}{n}.$$
+
+In the simulator below, choose an event and watch its relative frequency evolve in five independent runs.
+
+::: {.ix-panel}
+::: {.ix-title}
+Relative frequency simulator
+:::
+
+```{ojs}
+//| echo: false
+experiments13 = ({
+  "Heads on a coin flip": {p: 1/2, draw: () => Math.random() < 0.5},
+  "A six on a die roll": {p: 1/6, draw: () => Math.floor(6 * Math.random()) === 5},
+  "A sum of 7 with two dice": {p: 1/6, draw: () => Math.ceil(6 * Math.random()) + Math.ceil(6 * Math.random()) === 7}
+})
+viewof exp13 = Inputs.radio(Object.keys(experiments13), {label: "Event", value: "A six on a die roll"})
+viewof n13 = Inputs.select([100, 1000, 10000, 100000], {label: "Repetitions", value: 10000, format: x => x.toLocaleString("en-GB")})
+viewof run13 = Inputs.button("New simulation")
+```
+
+```{ojs}
+//| echo: false
+sim13 = {
+  run13;
+  const e = experiments13[exp13], n = n13, paths = [], finals = [];
+  // Keep log-spaced points so the chart stays light
+  const keep = new Set([...Array(400).keys()].map(i => Math.round(Math.exp(i / 399 * Math.log(n)))));
+  for (let k = 1; k <= 5; k++) {
+    let hits = 0;
+    for (let i = 1; i <= n; i++) {
+      if (e.draw()) hits++;
+      if (keep.has(i)) paths.push({n: i, f: hits / i, run: `Run ${k}`});
+    }
+    finals.push(hits / n);
+  }
+  return {p: e.p, paths, finals};
+}
+```
+
+```{ojs}
+//| echo: false
+{
+  const fmtP = x => x.toLocaleString("en-GB", {minimumFractionDigits: 4, maximumFractionDigits: 4});
+  const chart = Plot.plot({
+    height: 300, marginLeft: 50,
+    x: {type: "log", label: "Repetitions n →"},
+    y: {domain: [0, 1], label: "↑ Relative frequency", grid: true},
+    color: {legend: false},
+    marks: [
+      Plot.ruleY([sim13.p], {stroke: "#c62828", strokeDasharray: "5,4"}),
+      Plot.line(sim13.paths, {x: "n", y: "f", stroke: "run", strokeWidth: 1.4}),
+      Plot.text([sim13.p], {x: n13, y: d => d, text: () => "probability", dy: -9, textAnchor: "end", fill: "#c62828"})
+    ]
+  });
+  return html`<div>${chart}<div class="ix-note">Final relative frequencies after ${n13.toLocaleString("en-GB")} repetitions:
+    <b>${sim13.finals.map(fmtP).join(" · ")}</b>. The red line is the probability ${fmtP(sim13.p)}.</div></div>`;
+}
+```
+:::
+
+Whichever event you pick, the five paths start out chaotic and end up at the same value. This **statistical regularity** is the empirical basis of probability: the probability of $A$ is the number around which the relative frequency of $A$ settles.
+
+This is the **frequentist interpretation**, and it is very useful for understanding what a probability means. As a definition, though, it has a serious problem: we cannot run infinitely many repetitions, so we cannot *compute* a probability from it. We need a way to find the red line without rolling a single die.
+
+## The classical definition
+
+When the sample space $\Omega$ is finite and **all outcomes are equally likely**, the probability of an event $A$ is
+
+$$P(A) = \frac{\text{favourable outcomes}}{\text{possible outcomes}} = \frac{N(A)}{N(\Omega)}.$$
+
+For example, the probability that a card drawn from a 52-card deck is red is $26/52 = 0.5$. The definition immediately gives $0 \le P(A) \le 1$, $P(\Omega) = 1$ and $P(\varnothing) = 0$.
+
+### The equally-likely trap
+
+The condition "equally likely" is not a technicality. Roll two dice and record the sum, so $\Omega = \{2, 3, \ldots, 12\}$ with 11 elements. Is the probability of a sum of 7 equal to $1/11$? No, because the 11 sums are **not** equally likely. A sum of 2 arises only from (1, 1), while 7 arises from six pairs. The equally likely outcomes are the 36 ordered pairs:
+
+```{r}
+#| label: fig-sums
+#| fig-cap: "Probability of each sum of two dice. The dashed line is the incorrect value 1/11."
+#| fig-height: 3.6
+omega <- expand.grid(d1 = 1:6, d2 = 1:6)
+p_sum <- table(omega$d1 + omega$d2) / nrow(omega)
+
+barplot(p_sum, col = "#9ecae1", border = NA, ylim = c(0, 0.18),
+        xlab = "Sum", ylab = "Probability")
+abline(h = 1/11, lty = 2, col = "#c62828")
+```
+
+The correct answer is $P(\text{sum } 7) = 6/36 = 1/6$, which is exactly where the simulator converges for the third event. The general rule: **choose the sample space so that its outcomes are equally likely**, and then count.
+
+### Two examples by enumeration in R
+
+When the sample space is small, R does the counting for us. What is the probability that two dice show **consecutive** numbers?
+
+```{r}
+#| label: consecutive
+consecutive <- abs(omega$d1 - omega$d2) == 1
+sum(consecutive)
+mean(consecutive)
+```
+
+There are `r sum(consecutive)` favourable pairs, so the probability is $10/36 \approx$ `r fmt(mean(consecutive), 3)`.
+
+A slightly more interesting one: the coefficients of $x^2 + k x + l = 0$ come from two die rolls. What is the probability that the equation has **rational roots**? This happens exactly when the discriminant $\Delta = k^2 - 4l$ is a perfect square ($0, 1, 4, 9, \ldots$).
+
+```{r}
+#| label: rational-roots
+k <- omega$d1; l <- omega$d2
+D <- k^2 - 4 * l
+rational <- D >= 0 & sqrt(pmax(D, 0)) == round(sqrt(pmax(D, 0)))
+omega[rational, ]
+mean(rational)
+```
+
+We find `r sum(rational)` favourable equations, so $P = 7/36 \approx$ `r fmt(mean(rational), 3)`.
+
+## Basic rules
+
+Counting elements of sets under the classical definition gives the rules below. In the [next post](../kolmogorov-axioms/index.qmd) we will see that they hold for **every** probability, not just the classical one.
+
+| Rule | Formula |
+|---|---|
+| Disjoint events | $A \cap B = \varnothing \;\Rightarrow\; P(A \cup B) = P(A) + P(B)$ |
+| Complement | $P(A') = 1 - P(A)$ |
+| Union | $P(A \cup B) = P(A) + P(B) - P(A \cap B)$ |
+| Monotonicity | $A \subseteq B \;\Rightarrow\; P(A) \le P(B)$ |
+| Difference | $P(A - B) = P(A) - P(A \cap B)$ |
+| Symmetric difference | $P(A \,\Delta\, B) = P(A) + P(B) - 2P(A \cap B)$ |
+
+The union rule extends to three events as the **inclusion–exclusion principle**, which we met for counts in the post on [events](../sample-spaces-events/index.qmd):
+
+$$\begin{aligned}
+P(A \cup B \cup C) = {} & P(A) + P(B) + P(C) \\
+ & - P(A \cap B) - P(A \cap C) - P(B \cap C) + P(A \cap B \cap C).
+\end{aligned}$$
+
+In the calculator below you enter $P(A)$, $P(B)$ and $P(A \cap B)$ and see the probability of every region of the Venn diagram and of the usual events. The default values solve this problem: 60% of a town's pupils have a mobile phone ($A$), 40% have a computer ($B$) and 25% have both.
+
+::: {.ix-panel}
+::: {.ix-title}
+Probability calculator for two events
+:::
+
+```{ojs}
+//| echo: false
+viewof pv13 = Inputs.form({
+  a:  Inputs.range([0, 1], {label: "P(A)", step: 0.01, value: 0.6}),
+  b:  Inputs.range([0, 1], {label: "P(B)", step: 0.01, value: 0.4}),
+  ab: Inputs.range([0, 1], {label: "P(A ∩ B)", step: 0.01, value: 0.25})
+})
+```
+
+```{ojs}
+//| echo: false
+{
+  const {a, b, ab} = pv13;
+  const r = x => Math.round(x * 100) / 100;
+  const f = x => r(x).toLocaleString("en-GB", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const lo = r(Math.max(0, a + b - 1)), hi = r(Math.min(a, b));
+  if (r(ab) < lo || r(ab) > hi) {
+    const why = r(ab) > hi
+      ? `An intersection cannot be larger than either event: P(A ∩ B) ≤ min{P(A), P(B)} = ${f(hi)}.`
+      : `A union cannot exceed 1, so P(A ∩ B) ≥ P(A) + P(B) − 1 = ${f(lo)}.`;
+    return html`<div class="ix-warn">Impossible combination. ${why}</div>
+      <div class="ix-note">For these values of P(A) and P(B), P(A ∩ B) must lie in [${f(lo)}, ${f(hi)}].</div>`;
+  }
+  const onlyA = a - ab, onlyB = b - ab, none = 1 - a - b + ab;
+  const rows = [
+    ["A ∪ B", "at least one", a + b - ab],
+    ["A Δ B", "exactly one", a + b - 2 * ab],
+    ["A − B", "A only", onlyA],
+    ["A′ ∩ B′", "neither", none],
+    ["(A ∩ B)′", "at most one", 1 - ab]
+  ];
+  const svg = `<svg viewBox="0 0 320 200" style="width:100%;max-width:320px">
+    <rect x="2" y="2" width="316" height="196" fill="#fff" stroke="#333"/>
+    <circle cx="125" cy="100" r="68" fill="#4e79a7" fill-opacity="0.2" stroke="#4e79a7" stroke-width="2"/>
+    <circle cx="195" cy="100" r="68" fill="#f28e2b" fill-opacity="0.2" stroke="#f28e2b" stroke-width="2"/>
+    <text x="14" y="22" font-size="14">Ω</text>
+    <text x="62" y="40" font-size="14" fill="#4e79a7" font-weight="600">A</text>
+    <text x="252" y="40" font-size="14" fill="#d9771f" font-weight="600">B</text>
+    <g font-size="15" text-anchor="middle" font-weight="600">
+      <text x="98" y="105">${f(onlyA)}</text><text x="160" y="105">${f(ab)}</text>
+      <text x="222" y="105">${f(onlyB)}</text><text x="285" y="185">${f(none)}</text>
+    </g></svg>`;
+  const box = html`<div class="ix-row"><div></div><div></div></div>`;
+  box.children[0].innerHTML = svg;
+  box.children[1].innerHTML = `<table class="ix-tbl"><tr><th>Event</th><th>Meaning</th><th>Probability</th></tr>
+    ${rows.map(([s, m, p]) => `<tr><td>${s}</td><td>${m}</td><td><b>${f(p)}</b></td></tr>`).join("")}</table>
+    <div class="ix-note">Allowed values of P(A ∩ B) for these P(A), P(B): [${f(lo)}, ${f(hi)}].</div>`;
+  return box;
+}
+```
+:::
+
+The calculator "complains" when the values are impossible. Try $P(A) = 0.8$ and $P(B) = 0.4$: $P(A \cap B)$ cannot drop below $0.2$, because then $P(A \cup B)$ would exceed 1, nor rise above $0.4$, because the intersection lies inside $B$. In general:
+
+$$\max\{0,\; P(A) + P(B) - 1\} \;\le\; P(A \cap B) \;\le\; \min\{P(A),\, P(B)\}.$$
+
+The rules are also easy to check by enumeration. For two dice, with $A$ = {sum is 7} and $B$ = {at least one six}:
+
+```{r}
+#| label: union-rule
+A <- omega$d1 + omega$d2 == 7
+B <- omega$d1 == 6 | omega$d2 == 6
+c(`P(A ∪ B)` = mean(A | B),
+  `P(A) + P(B) − P(A ∩ B)` = mean(A) + mean(B) - mean(A & B))
+```
+
+## Key takeaways
+
+- The **relative frequency** of an event settles down over many repetitions; the value it settles at is its probability.
+- The **classical definition** $P(A) = N(A)/N(\Omega)$ applies only when outcomes are **equally likely**.
+- The rules for complements, unions, differences and inclusion–exclusion are the basic computational tools.
+- $P(A \cap B)$ cannot take just any value: it is constrained by $P(A)$ and $P(B)$.
+
+## Review questions
+
+**1. Quick quiz.** Pick an answer and you will see right away whether it is correct.
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz13 = [
+  {q: "Two coins are tossed and we record the number of heads: Ω = {0, 1, 2}. What is P(exactly 1 head)?",
+   opts: ["1/3", "1/2", "1/4", "2/3"], ans: 1,
+   why: "0, 1, 2 are not equally likely. The equally likely outcomes are HH, HT, TH, TT, and exactly one head occurs in HT and TH: 2/4 = 1/2."},
+  {q: "If P(A) = 0.5, P(B) = 0.4 and P(A ∩ B) = 0.2, what is the probability that neither A nor B occurs?",
+   opts: ["0.1", "0.3", "0.5", "0.7"], ans: 1,
+   why: "P(A′ ∩ B′) = 1 − P(A ∪ B) = 1 − (0.5 + 0.4 − 0.2) = 0.3."},
+  {q: "If P(A) = 0.7 and P(B) = 0.6, which value is impossible for P(A ∩ B)?",
+   opts: ["0.25", "0.3", "0.45", "0.6"], ans: 0,
+   why: "We need P(A ∩ B) ≥ 0.7 + 0.6 − 1 = 0.3. A value of 0.25 would give P(A ∪ B) = 1.05 > 1."},
+  {q: "What is the probability that three births include at least one boy (boys and girls equally likely)?",
+   opts: ["1/2", "3/4", "7/8", "1/3"], ans: 2,
+   why: "Complement: P(no boys) = P(GGG) = 1/8, so P(at least one boy) = 1 − 1/8 = 7/8."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz13.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz13.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** If $P(A)/P(A') = 3/4$, find $P(A)$.
+
+**3.** A loaded die satisfies $P(1) = P(3) = P(5)$ $= 2P(2) = 4P(4) = 2P(6)$. What is the probability of an even number?
+
+**4.** Show that if $P(A) = 0.8$ and $P(B) = 0.4$, then $0.2 \le P(A \cap B) \le 0.4$.
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. $P(A) = \frac{3}{4}(1 - P(A))$, so $\frac{7}{4}P(A) = \frac{3}{4}$ and $P(A) = 3/7$.
+3. If $P(1) = x$, then $P(2) = P(6) = x/2$ and $P(4) = x/4$. From $3x + x/2 + x/4 + x/2 = 1$ we get $x = 4/17$, so $P(\text{even}) = x/2 + x/4 + x/2 = 5/17$. This die does not have equally likely outcomes, yet the rules still apply.
+4. The intersection lies inside $B$, so $P(A \cap B) \le 0.4$. Also $P(A \cup B) = 1.2 - P(A \cap B) \le 1$, so $P(A \cap B) \ge 0.2$.
+:::
+
+---
+
+**Next post:** *Kolmogorov's axioms: all of probability from three rules.*
