@@ -1,0 +1,218 @@
+---
+title: "The ROC curve and AUC: choosing a decision threshold"
+description: "How a model that outputs probabilities becomes a binary prediction, why every decision threshold trades sensitivity for specificity, and what the area under the ROC curve measures, with an interactive threshold slider."
+date: 2027-01-18
+categories: [Probability, Diagnostic tests, R, Interactive]
+keywords: [ROC curve, AUC, area under the curve, decision threshold, cut-off, sensitivity, specificity, classification, spam filter]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# non-ASCII characters in output and plots under a "C" locale
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+A spam filter does not just answer "spam" or "not spam". A statistical model, such as the logistic regression we will meet later in the course, gives each email an **estimated probability** of being spam. To turn that probability into a decision we must pick a **threshold** $a$: above $a$, the email goes to the junk folder. Which threshold should we choose?
+
+## Every threshold, a confusion matrix
+
+Each threshold $a$ gives a different [confusion matrix](../sensitivity-specificity/index.qmd), and so a different sensitivity and specificity:
+
+- **Low threshold:** almost everything is flagged as spam. Sensitivity is high, but many normal emails are lost (low specificity).
+- **High threshold:** only very "suspicious" emails are flagged. Specificity is high, but much spam gets through (low sensitivity).
+
+The **ROC curve** (receiver operating characteristic) shows all these pairs together: for each threshold we plot a point with $1 -$ specificity on the x axis and sensitivity on the y axis, that is the pair (FPR, TPR). The name comes from Second World War radar: as the operators turned up the signal gain they detected more aircraft, but also more rain clouds and flocks of birds ([Streiner & Cairney, 2007](https://doi.org/10.1177/070674370705200210)).
+
+## Try it
+
+We have 30 emails (simulated data): 12 spam and 18 normal, each with the probability a model gave it. Move the threshold and watch the table and the point on the curve change together. Try the other models too.
+
+```{r}
+#| label: roc-data
+#| include: false
+gen <- function(model, a1, b1, a0, b0) {
+  data.frame(model = model, spam = c(rep(1, 12), rep(0, 18)),
+             score = round(c(rbeta(12, a1, b1), rbeta(18, a0, b0)), 3))
+}
+roc_df <- rbind(gen("good", 5, 2.5, 2.5, 5), gen("fair", 3, 2.2, 2.2, 3),
+                gen("random", 2, 2, 2, 2), gen("reversed", 2, 3.5, 3.5, 2))
+ojs_define(roc_data = roc_df)
+```
+
+::: {.ix-panel}
+::: {.ix-title}
+Decision threshold and ROC curve
+:::
+
+```{ojs}
+//| echo: false
+viewof m29 = Inputs.select(new Map([["Good model", "good"], ["Fair model", "fair"], ["Random model", "random"], ["Reversed model", "reversed"]]), {label: "Model"})
+viewof a29 = Inputs.range([0, 1], {label: "Threshold a", step: 0.01, value: 0.5})
+```
+
+```{ojs}
+//| echo: false
+{
+  const rows = transpose(roc_data).filter(d => d.model === m29);
+  const pos = rows.filter(d => d.spam === 1).map(d => d.score), neg = rows.filter(d => d.spam === 0).map(d => d.score);
+  const rate = (arr, t) => arr.filter(s => s >= t).length / arr.length;
+  const ts = [1.01, ...[...new Set(rows.map(d => d.score))].sort((p, q) => q - p), -0.01];
+  const curve = ts.map(t => ({fpr: rate(neg, t), tpr: rate(pos, t)}));
+  let auc = 0;
+  for (const p of pos) for (const q of neg) auc += p > q ? 1 : p === q ? 0.5 : 0;
+  auc /= pos.length * neg.length;
+  const d = pos.filter(s => s >= a29).length, g = pos.length - d, b = neg.filter(s => s >= a29).length, a = neg.length - b;
+  const sens = d / pos.length, spec = a / neg.length;
+  const strip = Plot.plot({
+    width: 420, height: 130, marginLeft: 70,
+    x: {domain: [0, 1], label: "Estimated probability of spam →", tickFormat: t => t.toLocaleString("en-GB")},
+    y: {domain: ["spam", "normal"], label: null},
+    marks: [
+      Plot.ruleX([a29], {stroke: "#c62828", strokeWidth: 2}),
+      Plot.dot(rows, {x: "score", y: d => d.spam ? "spam" : "normal", r: 5, stroke: d => d.spam ? "#f28e2b" : "#4e79a7", fill: d => d.score >= a29 ? (d.spam ? "#f28e2b" : "#4e79a7") : "white", strokeWidth: 1.5})
+    ]
+  });
+  const roc = Plot.plot({
+    width: 300, height: 280, marginLeft: 45, marginBottom: 40,
+    x: {domain: [0, 1], label: "FPR = 1 − specificity →", tickFormat: t => t.toLocaleString("en-GB")}, y: {domain: [0, 1], label: "↑ TPR = sensitivity", tickFormat: t => t.toLocaleString("en-GB")},
+    marks: [
+      Plot.areaY(curve, {x: "fpr", y1: 0, y2: "tpr", fill: "#9ecae1", fillOpacity: 0.35}),
+      Plot.line([[0, 0], [1, 1]], {stroke: "#999", strokeDasharray: "4,3"}),
+      Plot.line(curve, {x: "fpr", y: "tpr", stroke: "#4e79a7", strokeWidth: 2}),
+      Plot.dot([{fpr: 1 - spec, tpr: sens}], {x: "fpr", y: "tpr", r: 7, fill: "#c62828"}),
+      Plot.frame()
+    ]
+  });
+  const f = v => v.toLocaleString("en-GB", {style: "percent", maximumFractionDigits: 1});
+  return html`${strip}<div class="ix-note">Filled circles: flagged as spam (probability ≥ a). Hollow: let through as normal.</div>
+    <div class="ix-row"><div style="flex:0 1 310px">${roc}</div><div>
+    <table class="ix-tbl">
+      <tr><th></th><th>Predicted<br>normal</th><th>Predicted<br>spam</th></tr>
+      <tr><td><b>Normal</b></td><td>α = ${a}</td><td>β = ${b}</td></tr>
+      <tr><td><b>Spam</b></td><td>γ = ${g}</td><td>δ = ${d}</td></tr>
+    </table>
+    <table class="ix-tbl">
+      <tr><td>Sensitivity</td><td><b>${d}/${pos.length} = ${f(sens)}</b></td></tr>
+      <tr><td>Specificity</td><td><b>${a}/${neg.length} = ${f(spec)}</b></td></tr>
+      <tr><td>AUC</td><td><b>${auc.toLocaleString("en-GB", {maximumFractionDigits: 3})}</b></td></tr>
+    </table></div></div>`;
+}
+```
+:::
+
+With a threshold near 0, the red point moves to the corner $(1, 1)$: everything is spam. With a threshold near 1, to $(0, 0)$: nothing is spam. A perfect model would have a threshold giving the point $(0, 1)$, with no errors at all. For the "good" model the curve hugs that corner. For the "random" one it stays near the diagonal.
+
+## The curve in R
+
+The curve needs no package: for each threshold we compute the two rates.
+
+```{r}
+#| label: roc-r
+#| fig-width: 4.5
+#| fig-height: 4.5
+#| fig-alt: "ROC curve of the good model, above the diagonal of random classification."
+good <- subset(roc_df, model == "good")
+ths <- c(Inf, sort(unique(good$score), decreasing = TRUE), -Inf)
+tpr <- sapply(ths, function(t) mean(good$score[good$spam == 1] >= t))
+fpr <- sapply(ths, function(t) mean(good$score[good$spam == 0] >= t))
+par(mar = c(4, 4, 1, 1))
+plot(fpr, tpr, type = "l", lwd = 2, col = "#4e79a7", xlim = c(0, 1), ylim = c(0, 1),
+     xlab = "1 - specificity (FPR)", ylab = "Sensitivity (TPR)", asp = 1)
+abline(0, 1, lty = 2, col = "grey50")
+```
+
+## The area under the curve (AUC)
+
+The **AUC** (area under the curve) sums up the whole curve in one number between 0 and 1:
+
+- $\text{AUC} = 1$: some threshold separates the two classes perfectly,
+- $\text{AUC} = 0.5$: the model tells nothing apart, like tossing a coin,
+- the closer to 1, the better the classification, **whatever threshold** is chosen.
+
+AUC also has a very clean interpretation as a probability: **it is the probability that a random spam email gets a higher score than a random normal one.** We can check this by comparing all pairs:
+
+```{r}
+#| label: auc
+pos <- good$score[good$spam == 1]; neg <- good$score[good$spam == 0]
+# area by the trapezoid rule
+auc_area <- sum(diff(fpr) * (head(tpr, -1) + tail(tpr, -1)) / 2)
+# share of (spam, normal) pairs in the right order
+auc_pairs <- mean(outer(pos, neg, ">")) + 0.5 * mean(outer(pos, neg, "=="))
+c(area = auc_area, pairs = auc_pairs)
+```
+
+**And if AUC < 0.5?** The "reversed" model in the interactive systematically gives normal emails higher scores. It is worse than chance, so we certainly do not use it as it is. But it is not useless: if we reverse its predictions, flagging as spam whatever has a **low** score, we get AUC $= 1 - \text{AUC}$, above 0.5. An AUC below 0.5 usually means something got mixed up, such as the coding of the classes. The truly useless model is the one with AUC near 0.5.
+
+## Which threshold should we pick?
+
+The ROC curve does not choose the threshold for us. It shows the options, and the decision depends on the **cost of each error**. In a spam filter a lost normal email (false positive) is usually worse than spam getting through, so we prefer high specificity. In a screening test for a serious disease it is the other way round: we prefer high sensitivity and confirm positives with a second test, as we saw in the [base-rate fallacy](../base-rate-fallacy/index.qmd).
+
+## Key takeaways
+
+- A model that outputs probabilities becomes a binary prediction through a **decision threshold** $a$.
+- Each threshold gives a pair (FPR, TPR). Together they form the **ROC curve**.
+- **AUC** is the probability that a random positive scores higher than a random negative. 0.5 means chance, 1 means perfect separation.
+- The choice of threshold depends on the costs of false positives and false negatives.
+
+## Review questions
+
+**1. Quick quiz.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz29 = [
+  {q: "If we raise the decision threshold a, what typically happens?",
+   opts: ["Both sensitivity and specificity rise", "Sensitivity falls, specificity rises", "Sensitivity rises, specificity falls"], ans: 1,
+   why: "Fewer emails are flagged as spam: we miss more spam but lose fewer normal emails."},
+  {q: "A model has AUC = 0.8. What does that mean?",
+   opts: ["It classifies 80% of emails correctly", "In 80% of (spam, normal) pairs it scores the spam higher", "It has 80% sensitivity"], ans: 1,
+   why: "AUC does not refer to a particular threshold. It is the probability of the right order in a random pair."},
+  {q: "Which point of the ROC plot corresponds to perfect classification?",
+   opts: ["(0, 0)", "(1, 1)", "(0, 1)", "(1, 0)"], ans: 2,
+   why: "FPR = 0 (no false positives) and TPR = 1 (no false negatives)."},
+  {q: "A model has AUC = 0.2. What do we do?",
+   opts: ["Throw it away: it is worse than chance", "Check whether the classes are reversed: flipping its predictions gives AUC 0.8", "Use it with threshold 0.2"], ans: 1,
+   why: "A systematically wrong model carries information with the wrong sign. See the 'reversed' model in the interactive."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz29.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz29.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** For the "good" model in the interactive, find a threshold with sensitivity of at least 90% and specificity as high as possible.
+
+**3.** Show that if we reverse a model's scores ($s \mapsto 1 - s$), AUC becomes $1 - \text{AUC}$. Check it in R with the "reversed" model.
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. Move the threshold up until sensitivity drops below 90%, and keep the previous value. The point is where the ROC curve first reaches height 0.9.
+3. Reversing changes the order of every (spam, normal) pair, so correctly ordered pairs become wrongly ordered and vice versa (ties stay ties). In R: `r_ <- subset(roc_df, model == "reversed")`, and `mean(outer(1 - r_$score[r_$spam == 1], 1 - r_$score[r_$spam == 0], ">"))` gives `r fmt({r_ <- subset(roc_df, model == "reversed"); mean(outer(1 - r_$score[r_$spam == 1], 1 - r_$score[r_$spam == 0], ">"))}, 3)`, while the original AUC is `r fmt({r_ <- subset(roc_df, model == "reversed"); mean(outer(r_$score[r_$spam == 1], r_$score[r_$spam == 0], ">"))}, 3)`.
+:::
+
+---
+
+**Next post:** *System reliability: components in series and in parallel.*
