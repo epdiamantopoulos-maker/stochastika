@@ -1,0 +1,236 @@
+---
+title: "Bertrand's paradox: why \"at random\" needs a model"
+description: "Three seemingly correct solutions of the same problem give 1/3, 1/2 and 1/4. We simulate the three kinds of random chord in R and interactively, and see why the problem is not well posed."
+date: 2026-12-25
+categories: [Probability, Foundations, R, Interactive]
+keywords: [Bertrand paradox, geometric probability, random chord, sample space, Monte Carlo simulation, uniform distribution, principle of indifference]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+In [geometric probability](../probability-approaches/index.qmd) we assumed we know **what** is chosen uniformly. In 1889 Joseph Bertrand showed with a simple problem what happens when this is unclear: three solutions, all seemingly correct, give three different answers.
+
+## The problem
+
+Consider an equilateral triangle inscribed in a circle. **If we choose a chord of the circle at random, what is the probability that the chord is longer than a side of the triangle?**
+
+Before reading on, think: what is not entirely clear in the statement?
+
+In a circle of radius 1 the side of the inscribed equilateral triangle is $\sqrt{3} \approx 1.73$. A chord at distance $d$ from the centre has length $2\sqrt{1 - d^2}$, so it is longer than the side exactly when $d < 1/2$: when its **midpoint** lies inside the circle of radius $1/2$.
+
+## Three ways to pick a "random" chord
+
+**Method 1: two random points on the circumference.** Choose two points uniformly on the circle and join them. Rotate the triangle so that one vertex coincides with the first point. The chord is longer than the side when the second point falls on the arc opposite that vertex, between the other two vertices. That arc is $1/3$ of the circumference, so $P = 1/3$.
+
+**Method 2: a random point on a radius.** Choose a radius and a point uniformly on it, and draw the chord through the point perpendicular to the radius. Rotate the triangle so that one side is perpendicular to the radius. The side cuts the radius at its midpoint, so the chord is longer when the point is closer than $1/2$ to the centre: $P = 1/2$.
+
+**Method 3: a random midpoint in the disc.** Choose a point uniformly inside the disc and draw the chord that has this point as its midpoint. The chord is longer when the point falls in the disc of radius $1/2$, which has $1/4$ of the area: $P = 1/4$.
+
+## Simulation in R
+
+Each method is an algorithm. We code them and count how often the chord is longer than $\sqrt{3}$:
+
+```{r}
+#| label: three-methods
+n <- 100000
+# method 1: two uniform angles on the circumference
+th <- abs(runif(n, 0, 2 * pi) - runif(n, 0, 2 * pi))
+len1 <- 2 * sin(th / 2)
+# method 2: distance from the centre uniform on [0, 1]
+d2 <- runif(n)
+len2 <- 2 * sqrt(1 - d2^2)
+# method 3: midpoint uniform in the disc (r = sqrt(U))
+d3 <- sqrt(runif(n))
+len3 <- 2 * sqrt(1 - d3^2)
+round(c(m1 = mean(len1 > sqrt(3)), m2 = mean(len2 > sqrt(3)), m3 = mean(len3 > sqrt(3))), 3)
+```
+
+The estimates agree with $1/3$, $1/2$ and $1/4$. No algorithm is wrong: they simply produce **different** random chords. The picture shows it, with 150 chords from each method:
+
+```{r}
+#| label: chords-plot
+#| fig-width: 9
+#| fig-height: 3.4
+#| fig-alt: "Three circles with 150 random chords each, one for each of Bertrand's methods. Chords longer than the side of the triangle are orange."
+from_mid <- function(d, phi) cbind(phi - acos(d), phi + acos(d))
+draw <- function(ends, title) {
+  plot(NA, xlim = c(-1, 1), ylim = c(-1, 1), asp = 1, axes = FALSE, xlab = "", ylab = "", main = title)
+  symbols(0, 0, circles = 1, inches = FALSE, add = TRUE, fg = "grey60")
+  # chord length from the angle between the endpoints
+  long <- 2 * abs(sin((ends[, 2] - ends[, 1]) / 2)) > sqrt(3)
+  segments(cos(ends[, 1]), sin(ends[, 1]), cos(ends[, 2]), sin(ends[, 2]),
+           col = ifelse(long, "#f28e2b", "#9ecae1"), lwd = 0.8)
+}
+m <- 150
+par(mfrow = c(1, 3), mar = c(0.5, 0.5, 2, 0.5))
+# method 1: the endpoints are two uniform angles
+draw(cbind(runif(m, 0, 2 * pi), runif(m, 0, 2 * pi)), "Method 1: 1/3")
+# methods 2 and 3: chord from the distance d and direction phi of its midpoint
+draw(from_mid(runif(m), runif(m, 0, 2 * pi)), "Method 2: 1/2")
+draw(from_mid(sqrt(runif(m)), runif(m, 0, 2 * pi)), "Method 3: 1/4")
+```
+
+Method 1 gives many chords near the circumference, method 3 leaves the centre of the circle almost empty, and method 2 sits somewhere in between.
+
+## Try it
+
+Choose a method and a number of chords. The "Midpoints" view shows where the midpoints fall: a chord is long when its midpoint lies in the inner (dashed) circle. "Construction" shows step by step how one chord is made.
+
+::: {.ix-panel}
+::: {.ix-title}
+Three kinds of "random" chord
+:::
+
+```{ojs}
+//| echo: false
+viewof meth19 = Inputs.radio(new Map([["1: two points on the circumference", 1], ["2: point on a radius", 2], ["3: midpoint in the disc", 3]]), {label: "Method", value: 1})
+viewof view19 = Inputs.radio(["Chords", "Midpoints", "Construction"], {label: "View", value: "Chords"})
+viewof n19 = Inputs.select([20, 100, 500, 2000], {label: "Chords", value: 100, format: x => x.toLocaleString("en-GB")})
+viewof go19 = Inputs.button("New chords")
+```
+
+```{ojs}
+//| echo: false
+chords19 = {
+  go19;
+  const T = 2 * Math.PI, out = [];
+  for (let i = 0; i < n19; i++) {
+    let d, phi, extra;
+    if (meth19 === 1) { const a = T * Math.random(), b = T * Math.random(); d = Math.abs(Math.cos((a - b) / 2)); phi = (a + b) / 2; if (Math.cos((a - b) / 2) < 0) phi += Math.PI; extra = {a, b}; }
+    else if (meth19 === 2) { d = Math.random(); phi = T * Math.random(); extra = {}; }
+    else { d = Math.sqrt(Math.random()); phi = T * Math.random(); extra = {}; }
+    const w = Math.acos(d);
+    out.push({d, phi, long: d < 0.5, x1: Math.cos(phi - w), y1: Math.sin(phi - w), x2: Math.cos(phi + w), y2: Math.sin(phi + w), mx: d * Math.cos(phi), my: d * Math.sin(phi), ...extra});
+  }
+  return out;
+}
+```
+
+```{ojs}
+//| echo: false
+{
+  const S = 330, c = S / 2, R = S / 2 - 12, X = x => c + R * x, Y = y => c - R * y;
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${S} ${S}`).style("width", "100%").style("max-width", S + "px");
+  svg.append("circle").attr("cx", c).attr("cy", c).attr("r", R).attr("fill", "none").attr("stroke", "#888");
+  const tri = [90, 210, 330].map(a => [Math.cos(a * Math.PI / 180), Math.sin(a * Math.PI / 180)]);
+  svg.append("polygon").attr("points", tri.map(([x, y]) => `${X(x)},${Y(y)}`).join(" ")).attr("fill", "none").attr("stroke", "#c62828").attr("stroke-width", 1.2).attr("stroke-opacity", 0.6);
+  svg.append("circle").attr("cx", c).attr("cy", c).attr("r", R / 2).attr("fill", "none").attr("stroke", "#555").attr("stroke-dasharray", "4,3");
+  const col = d => d.long ? "#f28e2b" : "#9ecae1";
+  if (view19 === "Chords") {
+    svg.selectAll("line.ch").data(chords19).join("line").attr("class", "ch")
+      .attr("x1", d => X(d.x1)).attr("y1", d => Y(d.y1)).attr("x2", d => X(d.x2)).attr("y2", d => Y(d.y2))
+      .attr("stroke", col).attr("stroke-width", n19 > 500 ? 0.4 : 0.9).attr("stroke-opacity", n19 > 500 ? 0.6 : 0.9);
+  } else if (view19 === "Midpoints") {
+    svg.selectAll("circle.m").data(chords19).join("circle").attr("class", "m")
+      .attr("cx", d => X(d.mx)).attr("cy", d => Y(d.my)).attr("r", n19 > 500 ? 1.3 : 2.2).attr("fill", col);
+  } else {
+    const d = chords19[0], g = svg.append("g");
+    if (meth19 === 1) {
+      [d.a, d.b].forEach((t, k) => g.append("circle").attr("cx", X(Math.cos(t))).attr("cy", Y(Math.sin(t))).attr("r", 5).attr("fill", k ? "#4e79a7" : "#59a14f"));
+    } else if (meth19 === 2) {
+      g.append("line").attr("x1", c).attr("y1", c).attr("x2", X(Math.cos(d.phi))).attr("y2", Y(Math.sin(d.phi))).attr("stroke", "#59a14f").attr("stroke-width", 2);
+      g.append("circle").attr("cx", X(d.mx)).attr("cy", Y(d.my)).attr("r", 5).attr("fill", "#4e79a7");
+    } else {
+      g.append("circle").attr("cx", X(d.mx)).attr("cy", Y(d.my)).attr("r", 5).attr("fill", "#4e79a7");
+    }
+    g.append("line").attr("x1", X(d.x1)).attr("y1", Y(d.y1)).attr("x2", X(d.x2)).attr("y2", Y(d.y2)).attr("stroke", col(d)).attr("stroke-width", 3);
+  }
+  const k = chords19.filter(d => d.long).length, est = k / chords19.length, exact = [null, 1 / 3, 1 / 2, 1 / 4][meth19];
+  const f = x => x.toLocaleString("en-GB", {minimumFractionDigits: 3, maximumFractionDigits: 3});
+  const steps = {
+    1: "Green: the first point. Blue: the second, uniform on the circumference. The chord joins them.",
+    2: "Green: a random radius. Blue: a point uniform on it. The chord passes through the point perpendicular to the radius.",
+    3: "Blue: a point uniform inside the disc. The chord has this point as its midpoint."
+  };
+  return html`<div class="ix-row"><div style="flex:0 1 340px">${svg.node()}</div><div>
+    <table class="ix-tbl">
+      <tr><td>Longer than the side</td><td><b>${k} / ${chords19.length}</b></td></tr>
+      <tr><td>Estimate</td><td><b>${f(est)}</b></td></tr>
+      <tr><td>Exact value</td><td><b>${["", "1/3", "1/2", "1/4"][meth19]} = ${f(exact)}</b></td></tr>
+    </table>
+    <div class="ix-note">${view19 === "Construction" ? steps[meth19] + " Press \"New chords\" for another one." : "Orange: longer than the side of the triangle. Blue: shorter."}</div></div></div>`;
+}
+```
+:::
+
+Switch between the methods in the "Midpoints" view with 2,000 chords. In method 3 the midpoints fill the disc evenly. In method 2 they crowd towards the centre. In method 1 they gather near the circumference.
+
+## Where is the "mistake"?
+
+Nowhere in the calculations. The statement says "choose a chord at random" but does not say **how**. Each method defines a different sample space (pairs of points on the circumference, points on a radius, points in the disc) with a different uniform distribution. As we saw with [Kolmogorov's axioms](../kolmogorov-axioms/index.qmd), an experiment is described by a whole probability space $(\Omega, \mathcal{F}, P)$, and here we have three different ones.
+
+As stated, the problem is **not well posed**. Paradoxes like this showed why probability theory needed a rigorous foundation. One clarification, though: the axioms do not "solve" the paradox, nor do they pick which of the three answers is right. They force us to state the model $P$ before computing anything, and then the answer is unique.
+
+Which model is "natural" depends on the physical process. If we throw straws onto a circle drawn on the floor, a straw's position does not "know" where the circle is, and an invariance argument by E. T. Jaynes ([The Well-Posed Problem, 1973](https://doi.org/10.1007/BF00709116)) leads to the answer $1/2$.
+
+## Key takeaways
+
+- "Chosen at random" is not enough: we must state **what** is chosen uniformly and **how**.
+- Bertrand's three methods give $1/3$, $1/2$ and $1/4$ because they define three different probability models.
+- A simulation is an algorithm, and an algorithm is a model: writing it forces us to make the assumption explicit.
+- The axioms do not choose the model. They oblige us to define it.
+
+## Review questions
+
+**1. Quick quiz.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz19 = [
+  {q: "In a circle of radius 1, when is a chord longer than the side of the inscribed equilateral triangle?",
+   opts: ["When it is closer than 1/2 to the centre", "When its length exceeds 1", "When it passes through the centre", "When it is closer than √3/2 to the centre"], ans: 0,
+   why: "Length 2√(1 − d²) > √3 ⇔ 1 − d² > 3/4 ⇔ d < 1/2."},
+  {q: "Which method spreads the chords' midpoints uniformly over the disc?",
+   opts: ["Method 1", "Method 2", "Method 3", "None"], ans: 2,
+   why: "In method 3 we choose exactly the midpoint, uniformly in the disc. See it in the \"Midpoints\" view."},
+  {q: "Why do the three methods give different answers?",
+   opts: ["Because one calculation is wrong", "Because they define different probability models", "Because the simulation has an error", "Because the circle does not have radius 1"], ans: 1,
+   why: "All three calculations are correct. The statement does not say how the chord is chosen, and each method defines its own (Ω, F, P)."},
+  {q: "With method 2, what is the probability that the chord is longer than the radius?",
+   opts: ["1/2", "√3/2 ≈ 0.87", "3/4", "1/4"], ans: 1,
+   why: "Length 2√(1 − d²) > 1 ⇔ d < √3/2. With d uniform on [0, 1], the probability is √3/2."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz19.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz19.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** With each of the three methods, compute the probability that the chord is longer than the radius.
+
+**3.** Modify the R code to check your answers to question 2.
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. The chord is longer than the radius when $d < \sqrt{3}/2$. Method 1: the length $2\sin(\theta/2)$ exceeds 1 when the angle $\theta$ between the two points lies between $\pi/3$ and $5\pi/3$, so $P = 2/3$. Method 2: $P = \sqrt{3}/2 \approx 0.866$. Method 3: ratio of areas $(\sqrt{3}/2)^2 = 3/4$.
+3. Replace `sqrt(3)` with `1` in the line with the `mean()` calls. The values come out at about `r fmt(mean(len1 > 1), 3)`, `r fmt(mean(len2 > 1), 3)` and `r fmt(mean(len3 > 1), 3)`.
+:::
+
+---
+
+**Next post:** *Worked problems: foundations of probability.*

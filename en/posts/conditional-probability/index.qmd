@@ -1,0 +1,218 @@
+---
+title: "Conditional probability: how information changes the odds"
+description: "The definition of conditional probability P(B | A) as probability in a \"shrunken\" sample space, with an interactive two-dice grid, a simulation and the inversion error P(B | A) ≠ P(A | B)."
+date: 2026-12-30
+categories: [Probability, Conditional probability, R, Interactive]
+keywords: [conditional probability, P(B|A), given that, reduced sample space, confusion of the inverse, prosecutor's fallacy, dice, probability]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# non-ASCII characters in plots under a "C" locale
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+We roll a die. The probability of a 5 or a 6 is $2/6 = 1/3$. But if someone looks at the die and tells us "it is at least 4", the possible outcomes become $\{4, 5, 6\}$ and the probability of a 5 or a 6 rises to $2/3$. If they say "it is at most 3", it drops to $0$. **Information changes probabilities**, and conditional probability is how we compute that.
+
+## Definition
+
+The probability that event $B$ occurs, given that event $A$ has occurred, is written $P(B \mid A)$ and is called the **conditional probability** of $B$ given $A$.
+
+The idea is simple: once we know $A$ happened, $A$ becomes the **new sample space**. Of $B$, only what lies inside $A$ counts, namely $A \cap B$. In a finite, equally likely space:
+
+$$P(B \mid A) = \frac{N(A \cap B)}{N(A)} = \frac{N(A \cap B) / N(\Omega)}{N(A) / N(\Omega)} = \frac{P(A \cap B)}{P(A)}.$$
+
+The last formula is the general definition, for any $A$ with $P(A) > 0$.
+
+```{r}
+#| label: dots
+#| fig-width: 5
+#| fig-height: 3.2
+#| fig-alt: "A sample space of 16 equally likely points. A contains 8 points, B contains 6, and 3 are shared."
+par(mar = c(0, 0, 0, 0))
+plot(NA, xlim = c(0, 10), ylim = c(0, 6.4), asp = 1, axes = FALSE, xlab = "", ylab = "")
+rect(0.2, 0.2, 9.8, 6.2, border = "grey50")
+symbols(c(3.6, 6.4), c(3.2, 3.2), circles = c(2.4, 2), inches = FALSE, add = TRUE,
+        fg = c("#4e79a7", "#f28e2b"), lwd = 2)
+text(c(1.6, 8.3, 9.4), c(5.4, 5.2, 5.8), c("A", "B", "Ω"), cex = 1.3, col = c("#4e79a7", "#f28e2b", "grey40"))
+onlyA <- cbind(c(2.2, 2.6, 3.4, 2.4, 3.6), c(3.9, 2.4, 4.6, 3.1, 1.6))
+both <- cbind(c(4.9, 5.2, 4.8), c(3.9, 3.0, 2.2))
+onlyB <- cbind(c(6.8, 7.2, 6.6), c(4.1, 3.0, 2.0))
+outside <- cbind(c(0.8, 9.2, 0.9, 9.1, 5.0), c(1.0, 1.2, 5.6, 4.0, 5.8))
+points(rbind(onlyA, both, onlyB, outside), pch = 19, col = "grey25")
+```
+
+In the figure the sample space has 16 equally likely points, $A$ has 8, $B$ has 6 and 3 are shared. So $P(B \mid A) = 3/8$, while $P(A \mid B) = 3/6 = 0.5$. The two probabilities **differ**: they share the numerator but have a different "new" sample space in the denominator.
+
+## The shrinking sample space
+
+In the grid of the 36 outcomes of two dice, pick a **condition** $A$ (what we have learned) and an **event** $B$ (what we care about). The outcomes outside $A$ fade out, and $P(B \mid A)$ is measured only on the cells that remain.
+
+::: {.ix-panel}
+::: {.ix-title}
+Conditional probability with two dice
+:::
+
+```{ojs}
+//| echo: false
+condA21 = new Map([
+  ["The sum is at least 8", (a, b) => a + b >= 8],
+  ["The 1st die is 6", (a, b) => a === 6],
+  ["At least one 6", (a, b) => a === 6 || b === 6],
+  ["The two dice match", (a, b) => a === b],
+  ["The sum is even", (a, b) => (a + b) % 2 === 0],
+  ["No information (A = Ω)", (a, b) => true]
+])
+evB21 = new Map([
+  ["Sum is 7", (a, b) => a + b === 7],
+  ["Sum is at least 10", (a, b) => a + b >= 10],
+  ["The two dice match", (a, b) => a === b],
+  ["At least one 6", (a, b) => a === 6 || b === 6],
+  ["The 2nd die is 1", (a, b) => b === 1],
+  ["Sum is 8", (a, b) => a + b === 8]
+])
+viewof A21 = Inputs.select(condA21, {label: "Condition A", value: condA21.get("The sum is at least 8")})
+viewof B21 = Inputs.select(evB21, {label: "Event B", value: evB21.get("The two dice match")})
+```
+
+```{ojs}
+//| echo: false
+{
+  const cells = [];
+  for (let a = 1; a <= 6; a++) for (let b = 1; b <= 6; b++) cells.push({a, b, inA: A21(a, b), inB: B21(a, b)});
+  const nA = cells.filter(c => c.inA).length, nB = cells.filter(c => c.inB).length, nAB = cells.filter(c => c.inA && c.inB).length;
+  const s = 40, W = 6 * s + 30, H = 6 * s + 30;
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H}`).style("width", "100%").style("max-width", "300px");
+  const g = svg.selectAll("g").data(cells).join("g").attr("transform", c => `translate(${25 + (c.b - 1) * s},${5 + (c.a - 1) * s})`);
+  g.append("rect").attr("width", s - 3).attr("height", s - 3).attr("rx", 5)
+    .attr("fill", c => c.inA ? (c.inB ? "#f28e2b" : "#ffffff") : (c.inB ? "#fbe3cc" : "#eceff2"))
+    .attr("stroke", c => c.inA ? "#4e79a7" : "#d6dbe0").attr("stroke-width", c => c.inA ? 1.8 : 1);
+  g.append("text").attr("x", (s - 3) / 2).attr("y", (s - 3) / 2).attr("dy", "0.35em").attr("text-anchor", "middle")
+    .style("font", "11px sans-serif").attr("fill", c => c.inA ? "#222" : "#aab2ba").text(c => `${c.a},${c.b}`);
+  [1, 2, 3, 4, 5, 6].forEach(i => {
+    svg.append("text").attr("x", 25 + (i - 1) * s + (s - 3) / 2).attr("y", H - 6).attr("text-anchor", "middle").style("font", "11px sans-serif").attr("fill", "#4e79a7").text(i);
+    svg.append("text").attr("x", 12).attr("y", 5 + (i - 1) * s + (s - 3) / 2).attr("dy", "0.35em").attr("text-anchor", "middle").style("font", "11px sans-serif").attr("fill", "#4e79a7").text(i);
+  });
+  const fr = (p, q) => { if (q === 0) return "undefined"; const g = (x, y) => y ? g(y, x % y) : x; const d = g(p, q); return `${p}/${q}` + (d > 1 ? ` = ${p / d}/${q / d}` : ""); };
+  return html`<div class="ix-row"><div style="flex:0 1 310px">${svg.node()}<div class="ix-note" style="text-align:center">Row: 1st die, column: 2nd die</div></div><div>
+    <table class="ix-tbl">
+      <tr><td>N(A)</td><td><b>${nA}</b></td></tr>
+      <tr><td>N(A ∩ B)</td><td><b>${nAB}</b></td></tr>
+      <tr><td>P(B) = N(B)/36</td><td><b>${fr(nB, 36)}</b></td></tr>
+      <tr><td>P(B | A) = N(A ∩ B)/N(A)</td><td><b>${fr(nAB, nA)}</b></td></tr>
+      <tr><td>P(A | B) = N(A ∩ B)/N(B)</td><td><b>${fr(nAB, nB)}</b></td></tr>
+    </table>
+    <div class="ix-note">Blue frame: A, the new sample space. Orange: A ∩ B. Light orange: outcomes of B that were "lost" by conditioning.
+    ${nA > 0 && nB > 0 ? (nAB * 36 === nA * nB ? html`<br><b>Here P(B | A) = P(B):</b> knowing A did not change the probability of B.` : nAB * 36 > nA * nB ? html`<br>Knowing A <b>raised</b> the probability of B.` : html`<br>Knowing A <b>lowered</b> the probability of B.`) : ""}</div></div></div>`;
+}
+```
+:::
+
+Try the condition "The 1st die is 6" with the event "Sum is 7". The probability stays $1/6$, just as without the information: the two events are **independent**, a notion we cover in a later post. With "Sum is 8" instead of 7, the information does change the probability.
+
+## Conditional probability as a frequency
+
+Conditional probability also has a frequency reading: over many repetitions of the experiment we **keep only those where $A$ occurred** and count in how many of them $B$ occurred too.
+
+```{r}
+#| label: conditional-sim
+n <- 100000
+d1 <- sample(1:6, n, replace = TRUE)
+d2 <- sample(1:6, n, replace = TRUE)
+A <- d1 + d2 >= 8
+B <- d1 == d2
+c(kept = sum(A), freq_B_given_A = mean(B[A]), exact = 3 / 15)
+```
+
+Out of `r formatC(n, format = "d", big.mark = ",")` rolls we kept the `r formatC(sum(A), format = "d", big.mark = ",")` with a sum of at least 8, and among them the frequency of a double is `r fmt(mean(B[A]), 3)`, close to $3/15 = 0.2$. The R expression `B[A]` does exactly the "shrinking": it keeps the elements of `B` only where `A` holds.
+
+## The inversion error: $P(B \mid A) \neq P(A \mid B)$
+
+In a region, 51% of the residents are men, 4.2% are colour-blind and 4% are colour-blind men. Let $A$ = {the person is colour-blind} and $B$ = {the person is a man}. Then
+
+$$P(A \mid B) = \frac{P(A \cap B)}{P(B)} = \frac{0.04}{0.51} \approx 0.078, \qquad P(B \mid A) = \frac{P(A \cap B)}{P(A)} = \frac{0.04}{0.042} \approx 0.952.$$
+
+A man has about an 8% chance of being colour-blind, but a colour-blind person has over a 95% chance of being a man. Confusing the two, also known as the [prosecutor's fallacy](https://en.wikipedia.org/wiki/Prosecutor%27s_fallacy), is common in courtrooms and with medical tests. We will come back to it with Bayes' theorem.
+
+## $P(\,\cdot \mid A)$ is a probability
+
+For fixed $A$, the function $B \mapsto P(B \mid A)$ satisfies all three [Kolmogorov axioms](../kolmogorov-axioms/index.qmd): it is non-negative, gives $P(\Omega \mid A) = 1$ and is additive over disjoint events. So every rule we know holds for it, for example $P(B' \mid A) = 1 - P(B \mid A)$.
+
+Finally, multiplying the definition by $P(A)$ gives
+
+$$P(A \cap B) = P(A) \cdot P(B \mid A),$$
+
+the **multiplication rule**, which is the subject of the next post.
+
+## Key takeaways
+
+- $P(B \mid A) = P(A \cap B) / P(A)$, for $P(A) > 0$: the probability of $B$ when $A$ becomes the new sample space.
+- In an equally likely space: $P(B \mid A) = N(A \cap B) / N(A)$.
+- As a frequency: keep only the repetitions where $A$ occurred.
+- In general $P(B \mid A) \neq P(A \mid B)$: same numerator, different denominator.
+
+## Review questions
+
+**1. Quick quiz.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz21 = [
+  {q: "We roll a die. If A = {even} and B = {at least 5}, what is P(B | A)?",
+   opts: ["1/6", "1/3", "1/2", "2/3"], ans: 1,
+   why: "A = {2, 4, 6}, A ∩ B = {6}. So P(B | A) = 1/3."},
+  {q: "In three coin tosses there were two tails. What is the probability that the 2nd toss was tails?",
+   opts: ["1/2", "2/3", "1/3", "3/8"], ans: 1,
+   why: "The new sample space is {TTH, THT, HTT}. The 2nd toss is T in two of the three: 2/3."},
+  {q: "If A and B are disjoint and P(A) > 0, what is P(B | A)?",
+   opts: ["P(B)", "0", "1", "P(A) · P(B)"], ans: 1,
+   why: "Since A ∩ B = ∅, the numerator P(A ∩ B) is 0. If A occurred, B cannot have occurred."},
+  {q: "Is it always true that P(B | A) + P(B' | A) = 1?",
+   opts: ["Yes", "No, only if A and B are independent", "No, only if P(A) = 1/2"], ans: 0,
+   why: "P(· | A) is a probability, so the complement rule holds."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz21.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz21.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** We roll a die. Let $A$ = {even}, $B$ = {odd} and $\Gamma$ = {4 or 6}. Find $P(B \mid A)$ and $P(A \mid \Gamma)$.
+
+**3.** Events $A$, $B$, $\Gamma$ satisfy $B \subseteq A$, $B \cap \Gamma = \emptyset$, $P(A - (B \cup \Gamma)) = 0.4$, $P(\Gamma - A) = 0.25$, $P(B) = 0.15$ and $P(A \cap \Gamma) = 0.05$. Draw the Venn diagram and find $P(A)$, $P(\Gamma)$, $P(B \mid A)$, $P(\Gamma \mid A)$ and $P(A \mid \Gamma)$.
+
+**4.** Modify the R simulation to estimate $P(A \mid B)$ for the same $A$ and $B$, and confirm the result in the grid.
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. $A \cap B = \emptyset$, so $P(B \mid A) = 0$. Since $\Gamma \subseteq A$, $P(A \mid \Gamma) = P(\Gamma)/P(\Gamma) = 1$.
+3. $P(A) = 0.4 + 0.15 + 0.05 = 0.6$ and $P(\Gamma) = 0.25 + 0.05 = 0.3$. Since $B \subseteq A$, $P(B \mid A) = 0.15/0.6 = 0.25$. Also $P(\Gamma \mid A) = 0.05/0.6 \approx 0.083$ and $P(A \mid \Gamma) = 0.05/0.3 \approx 0.167$.
+4. `mean(A[B])` is enough; it gives about `r fmt(mean(A[B]), 3)`. In the grid, with the default choices, the row $P(A \mid B)$ shows $3/6 = 1/2$: of the 6 doubles, 3 have a sum of at least 8.
+:::
+
+---
+
+**Next post:** *The multiplication rule: probabilities step by step.*

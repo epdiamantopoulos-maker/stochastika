@@ -1,0 +1,228 @@
+---
+title: "Worked problems: foundations of probability"
+description: "Seven worked problems on sample spaces, the rules of probability, counting and geometric probability, with an answer checker and verification by simulation."
+date: 2026-12-28
+categories: [Probability, Exercises, R, Interactive]
+keywords: [probability worked problems, sample space, permutations, classical probability, geometric probability, simulation, counting exercises, broken stick problem]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+This post closes the first unit, from [random experiments](../random-experiments/index.qmd) to [Bertrand's paradox](../bertrand-paradox/index.qmd). Here are seven problems. Try them yourself first: under each problem there is a box to check your answer (type a fraction such as `2/3` or a decimal such as `0.667`), and the solution opens with one click. At the end you can verify several answers by simulation.
+
+```{ojs}
+//| echo: false
+// answer checker: accepts a fraction, a decimal or a percentage
+check20 = (exact) => {
+  const inp = html`<input type="text" placeholder="your answer" style="width:9em;padding:3px 6px;border:1px solid #9ecae1;border-radius:5px">`;
+  const btn = html`<button>Check</button>`, fb = html`<span class="ix-note" style="margin-left:8px"></span>`;
+  const parse = s => {
+    s = s.trim().replace(/\s/g, "").replace(",", ".");
+    if (!s) return NaN;
+    if (s.endsWith("%")) return parseFloat(s) / 100;
+    if (s.includes("/")) { const [a, b] = s.split("/").map(Number); return a / b; }
+    return Number(s);
+  };
+  const run = () => {
+    const v = parse(inp.value);
+    if (!Number.isFinite(v)) { fb.innerHTML = "Type a number or a fraction."; return; }
+    const ok = Math.abs(v - exact) <= Math.max(0.002, 0.005 * Math.abs(exact));
+    fb.innerHTML = ok ? `<span class="ix-ok">✓ Correct.</span>` : `<span class="ix-no">✗ Not yet.</span> Recheck your solution or open the one below.`;
+  };
+  btn.onclick = run;
+  inp.onkeydown = e => { if (e.key === "Enter") run(); };
+  return html`<div class="ix-panel" style="padding:8px 12px">${inp} ${btn}${fb}</div>`;
+}
+```
+
+## 1. Sample space
+
+A box holds one black (B), one white (W) and one red (R) ball. We draw two balls at random, one at a time, without replacement, and record the colours in order. Find the sample space and the probability that the red ball is drawn.
+
+```{ojs}
+//| echo: false
+check20(2 / 3)
+```
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+Order matters and no colour repeats, so $\Omega = \{\text{BW}, \text{BR}, \text{WB}, \text{WR}, \text{RB}, \text{RW}\}$, with $N(\Omega) = P(3, 2) = 6$ equally likely outcomes. Red appears in BR, WR, RB, RW, so $P = 4/6 = 2/3$. Equivalently, with the complement: red is missing only in BW and WB, so $1 - 2/6 = 2/3$.
+:::
+
+## 2. Set operations and the equiprobability trap
+
+We roll two dice and record the sum. Let $A$ = {the sum is prime} and $B$ = {the sum is a multiple of 5}. Find $A \cup B$, $A - B$, $A \cap B$, $B - A$, $A \,\Delta\, B$ and the probability $P(A)$.
+
+```{ojs}
+//| echo: false
+check20(15 / 36)
+```
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+The possible sums are $\{2, 3, \ldots, 12\}$, with $A = \{2, 3, 5, 7, 11\}$ and $B = \{5, 10\}$. So $A \cup B = \{2, 3, 5, 7, 10, 11\}$, $A - B = \{2, 3, 7, 11\}$, $A \cap B = \{5\}$, $B - A = \{10\}$ and $A \,\Delta\, B = \{2, 3, 7, 10, 11\}$. $A$ and $B$ are not disjoint, since $A \cap B \neq \emptyset$.
+
+**Careful:** the 11 sums are **not** equally likely, so $P(A) \neq 5/11$. We count in the equally likely space of 36 pairs (see [defining probability](../probability-definition/index.qmd)). A sum of 2 arises in 1 way, 3 in 2, 5 in 4, 7 in 6 and 11 in 2: $P(A) = 15/36 = 5/12$. Similarly $P(B) = (4 + 3)/36 = 7/36$ and $P(A \cap B) = 4/36$.
+
+```{r}
+#| label: ex2
+g <- expand.grid(d1 = 1:6, d2 = 1:6)
+s <- g$d1 + g$d2
+c(PA = mean(s %in% c(2, 3, 5, 7, 11)), PB = mean(s %% 5 == 0), PAB = mean(s == 5))
+```
+:::
+
+## 3. The rules of probability
+
+Two events satisfy $P(A) = 0.6$, $P(B) = 0.5$ and $P(A \cup B) = 0.8$. Find $P(A \cap B)$, $P(A - B)$ and $P(A' \cap B')$. Type $P(A \cap B)$ in the box.
+
+```{ojs}
+//| echo: false
+check20(0.3)
+```
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+By the addition rule, $P(A \cap B) = P(A) + P(B) - P(A \cup B) = 0.6 + 0.5 - 0.8 = 0.3$. Then $P(A - B) = P(A) - P(A \cap B) = 0.3$. By De Morgan's law, $A' \cap B' = (A \cup B)'$, so $P(A' \cap B') = 1 - 0.8 = 0.2$.
+:::
+
+## 4. A "block" in a permutation
+
+We put the letters A, B, C, D, E, F, G, H in random order. What is the probability that the string ABC appears, in that order and consecutively?
+
+```{ojs}
+//| echo: false
+check20(1 / 56)
+```
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+There are $8!$ orders. Treat ABC as one "block": together with D, E, F, G, H we have 6 objects, which can be ordered in $6!$ ways. So $P = 6!/8! = 1/(8 \cdot 7) = 1/56 \approx 0.018$.
+:::
+
+## 5. Four-digit numbers
+
+We form a four-digit number from the digits 0, 1, 2, 3, 5 without repetition (0 cannot come first). What is the probability that a random one is divisible by 5?
+
+```{ojs}
+//| echo: false
+check20(7 / 16)
+```
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+All numbers: the first position has 4 choices (not 0) and the rest $4 \cdot 3 \cdot 2$, so $96$. It is divisible by 5 when it ends in 0 or 5, and we count [case by case](../counting-principle/index.qmd). Ending in 0: the first three positions take 1, 2, 3, 5 in $4 \cdot 3 \cdot 2 = 24$ ways. Ending in 5: the first position has 3 choices (not 0, not 5) and the middle ones $3 \cdot 2$, so $18$. In total $42$, and $P = 42/96 = 7/16 \approx 0.44$.
+
+```{r}
+#| label: ex5
+g <- expand.grid(a = c(0, 1, 2, 3, 5), b = c(0, 1, 2, 3, 5), c = c(0, 1, 2, 3, 5), d = c(0, 1, 2, 3, 5))
+ok <- apply(g, 1, function(r) length(unique(r)) == 4) & g$a != 0
+c(all = sum(ok), div5 = sum(ok & g$d %in% c(0, 5)))
+```
+:::
+
+## 6. The maximum of three draws
+
+An urn holds 10 balls numbered 0 to 9. We make three draws, replacing the ball each time. What is the probability that the largest number drawn is 5?
+
+```{ojs}
+//| echo: false
+check20(91 / 1000)
+```
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+There are $10^3 = 1{,}000$ possible triples, arrangements with repetition. The maximum is **at most** 5 when all three numbers come from $\{0, \ldots, 5\}$: $6^3 = 216$ triples. The maximum is at most 4 in $5^3 = 125$ of them. The difference is the triples whose maximum is **exactly** 5: $216 - 125 = 91$, so $P = 91/1{,}000 = 0.091$.
+
+The trick "at most 5 minus at most 4" is far quicker than counting case by case how many 5s appear.
+:::
+
+## 7. A stick broken in three
+
+We break a stick of length 1 at two points chosen independently and uniformly. What is the probability that the three pieces form a triangle?
+
+```{ojs}
+//| echo: false
+check20(1 / 4)
+```
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+Three lengths form a triangle when each is less than the sum of the other two, that is, since they add up to 1, when **every piece is shorter than 1/2**. The break points $(x, y)$ are a uniform point of the square $[0, 1]^2$, so this is [geometric probability](../probability-approaches/index.qmd). If $x < y$, the pieces are $x$, $y - x$, $1 - y$, and the three conditions $x < 1/2$, $y - x < 1/2$, $y > 1/2$ define a triangle of area $1/8$. The same holds for $x > y$. So $P = 2 \cdot 1/8 = 1/4$.
+:::
+
+## Verify by simulation
+
+A simulation does not replace a solution, but it is a quick check. Choose a problem and a number of repetitions:
+
+::: {.ix-panel}
+::: {.ix-title}
+Verify by simulation
+:::
+
+```{ojs}
+//| echo: false
+sims20 = new Map([
+  ["2. P(sum is prime)", {exact: 15 / 36, run: () => { const s = 2 + Math.floor(6 * Math.random()) + Math.floor(6 * Math.random()); return [2, 3, 5, 7, 11].includes(s); }}],
+  ["4. The string ABC", {exact: 1 / 56, run: () => d3.shuffle([..."ABCDEFGH"]).join("").includes("ABC")}],
+  ["5. Divisible by 5", {exact: 7 / 16, run: () => { let p; do { p = d3.shuffle([0, 1, 2, 3, 5]).slice(0, 4); } while (p[0] === 0); return p[3] === 0 || p[3] === 5; }}],
+  ["6. Maximum equals 5", {exact: 91 / 1000, run: () => Math.max(...[0, 0, 0].map(() => Math.floor(10 * Math.random()))) === 5}],
+  ["7. Stick forms a triangle", {exact: 1 / 4, run: () => { const a = Math.random(), b = Math.random(), x = Math.min(a, b), y = Math.max(a, b); return x < 0.5 && y - x < 0.5 && y > 0.5; }}]
+])
+viewof ex20 = Inputs.select(sims20, {label: "Problem"})
+viewof n20 = Inputs.select([1000, 10000, 100000], {label: "Repetitions", value: 10000, format: x => x.toLocaleString("en-GB")})
+viewof go20 = Inputs.button("Simulate")
+```
+
+```{ojs}
+//| echo: false
+{
+  go20;
+  let k = 0;
+  const path = [];
+  const step = Math.max(1, Math.floor(n20 / 200));
+  for (let i = 1; i <= n20; i++) { if (ex20.run()) k++; if (i % step === 0) path.push({i, f: k / i}); }
+  const f = x => x.toLocaleString("en-GB", {minimumFractionDigits: 4, maximumFractionDigits: 4});
+  const chart = Plot.plot({
+    width: 560, height: 220, marginLeft: 50,
+    x: {label: "Repetitions →", type: "log"},
+    y: {label: "↑ Relative frequency", grid: true},
+    marks: [
+      Plot.ruleY([ex20.exact], {stroke: "#c62828", strokeDasharray: "4,3"}),
+      Plot.line(path, {x: "i", y: "f", stroke: "#4e79a7", strokeWidth: 1.8})
+    ]
+  });
+  return html`${chart}<table class="ix-tbl">
+    <tr><td>Successes</td><td><b>${k.toLocaleString("en-GB")} / ${n20.toLocaleString("en-GB")}</b></td></tr>
+    <tr><td>Estimate</td><td><b>${f(k / n20)}</b></td></tr>
+    <tr><td>Exact value</td><td><b>${f(ex20.exact)}</b></td></tr></table>
+    <div class="ix-note">The dashed red line is the exact value from the solution.</div>`;
+}
+```
+:::
+
+If one of your answers differs a lot from a simulation with 100,000 repetitions, something is missing from your count. A difference in the third decimal is normal: it is the error of a frequency estimate.
+
+## What to remember
+
+- Before any formula, write down the **sample space** and check that it is equally likely (problem 2).
+- The **complement** and "at most $k$ minus at most $k - 1$" often shorten the counting a lot (problems 1 and 6).
+- When a stage has a different number of choices depending on the others, count **case by case** (problem 5).
+- **Simulation** is the problem solver's best friend: it verifies, but it does not prove.
+
+---
+
+**Next post:** *Conditional probability: how information changes the odds.*
