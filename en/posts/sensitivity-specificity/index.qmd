@@ -1,0 +1,203 @@
+---
+title: "Sensitivity, specificity, PPV and NPV: how to evaluate a diagnostic test"
+description: "The confusion matrix of a binary prediction and the measures of accuracy, sensitivity, specificity, PPV and NPV as conditional probabilities, with an interactive calculator and real data from rapid tests."
+date: 2027-01-13
+categories: [Probability, Diagnostic tests, R, Interactive]
+keywords: [sensitivity, specificity, positive predictive value, negative predictive value, PPV, NPV, confusion matrix, accuracy, diagnostic test evaluation]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# non-ASCII characters in output and plots under a "C" locale
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+A rapid test, a spam filter, an algorithm that predicts whether a student will pass: they all give a **binary prediction**, "positive" or "negative". How good is such a prediction? The answer is not one number but several, and each answers a different question. All of them are [conditional probabilities](../conditional-probability/index.qmd).
+
+## The confusion matrix
+
+We compare prediction and reality in $\Sigma$ cases and record the results in a **confusion matrix**:
+
+| Actual condition | Predicted negative | Predicted positive | Total |
+|---|---|---|---|
+| **Negative** | $\alpha$ (true negatives) | $\beta$ (false positives) | $O_1 = \alpha + \beta$ |
+| **Positive** | $\gamma$ (false negatives) | $\delta$ (true positives) | $O_2 = \gamma + \delta$ |
+| **Total** | $P_1 = \alpha + \gamma$ | $P_2 = \beta + \delta$ | $\Sigma$ |
+
+From it we define:
+
+- **Accuracy** (PAC, percentage accuracy in classification): $(\alpha + \delta)/\Sigma$, the share of correct predictions.
+- **Sensitivity** (TPR): $\delta / O_2$, of those who **are** positive, how many the test detects.
+- **Specificity** (TNR): $\alpha / O_1$, of those who **are** negative, how many it recognises as negative.
+- **Positive predictive value** (PPV): $\delta / P_2$, of those who **tested** positive, how many really are positive.
+- **Negative predictive value** (NPV): $\alpha / P_1$, of those who **tested** negative, how many really are negative.
+
+Sensitivity and specificity are read **along the rows**: they start from the actual condition. PPV and NPV are read **down the columns**: they start from the test result, which is what the doctor or the patient sees.
+
+## A real example
+
+A study compared the ID NOW rapid test with the molecular RT-PCR test in 974 people ([eLife, 2021](https://doi.org/10.7554/eLife.65726)). Of the 785 symptomatic patients, 21 were positive on both tests and 2 only on RT-PCR. All 189 asymptomatic patients were negative on both. Taking RT-PCR as the actual condition:
+
+| RT-PCR | ID NOW negative | ID NOW positive | Total |
+|---|---|---|---|
+| **Negative** | 951 | 0 | 951 |
+| **Positive** | 2 | 21 | 23 |
+| **Total** | 953 | 21 | 974 |
+
+```{r}
+#| label: id-now
+metrics <- function(a, b, g, d) {
+  c(PAC = (a + d) / (a + b + g + d), sensitivity = d / (g + d), specificity = a / (a + b),
+    PPV = d / (b + d), NPV = a / (a + g))
+}
+round(metrics(a = 951, b = 0, g = 2, d = 21), 3)
+```
+
+Specificity and PPV are 100%: no false positives. Sensitivity is `r pct(21/23)`: the test missed 2 of the 23 positives.
+
+## Try it
+
+Change the numbers in the table and see all the measures together. In the diagram each column is an actual condition, with width proportional to its count, and the colours show what the test predicted.
+
+::: {.ix-panel}
+::: {.ix-title}
+Confusion matrix calculator
+:::
+
+```{ojs}
+//| echo: false
+viewof preset27 = Inputs.select(new Map([
+  ["ID NOW vs RT-PCR", [951, 0, 2, 21]],
+  ["A hypothetical test", [850, 50, 20, 80]],
+  ["A \"test\" that always says negative", [950, 0, 50, 0]]
+]), {label: "Example"})
+```
+
+```{ojs}
+//| echo: false
+viewof cm27 = Inputs.form({
+  a: Inputs.number([0, 1e6], {label: "α: true negatives", step: 1, value: preset27[0]}),
+  b: Inputs.number([0, 1e6], {label: "β: false positives", step: 1, value: preset27[1]}),
+  g: Inputs.number([0, 1e6], {label: "γ: false negatives", step: 1, value: preset27[2]}),
+  d: Inputs.number([0, 1e6], {label: "δ: true positives", step: 1, value: preset27[3]})
+})
+```
+
+```{ojs}
+//| echo: false
+{
+  const {a, b, g, d} = cm27, S = a + b + g + d;
+  if (!(S > 0)) return html`<div class="ix-note">Enter positive numbers.</div>`;
+  const O1 = a + b, O2 = g + d, P1 = a + g, P2 = b + d;
+  const W = 340, H = 220, m = 20, w1 = O1 / S * W;
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W + 2 * m} ${H + 2 * m + 10}`).style("width", "100%").style("max-width", "380px").style("font", "12px sans-serif");
+  const cell = (x, y, w, h, fill, lab) => { if (w <= 0 || h <= 0) return; svg.append("rect").attr("x", m + x).attr("y", m + y).attr("width", w).attr("height", h).attr("fill", fill).attr("stroke", "#fff").attr("stroke-width", 2); if (w > 26 && h > 16) svg.append("text").attr("x", m + x + w / 2).attr("y", m + y + h / 2).attr("dy", "0.35em").attr("text-anchor", "middle").attr("fill", "#fff").attr("font-weight", "bold").text(lab); };
+  const hb = O1 ? b / O1 * H : 0, hd = O2 ? d / O2 * H : 0;
+  cell(0, 0, w1, hb, "#c62828", "β");
+  cell(0, hb, w1, H - hb, "#4e79a7", "α");
+  cell(w1, 0, W - w1, hd, "#59a14f", "δ");
+  cell(w1, hd, W - w1, H - hd, "#f28e2b", "γ");
+  svg.append("text").attr("x", m + w1 / 2).attr("y", H + 2 * m).attr("text-anchor", "middle").text("Negative");
+  svg.append("text").attr("x", m + w1 + (W - w1) / 2).attr("y", H + 2 * m).attr("text-anchor", "middle").text("Positive");
+  const f = (x, y) => y ? `${x.toLocaleString("en-GB")}/${y.toLocaleString("en-GB")} = ${(x / y).toLocaleString("en-GB", {style: "percent", maximumFractionDigits: 1})}` : "undefined";
+  return html`<div class="ix-row"><div style="flex:0 1 380px">${svg.node()}
+    <div class="ix-note">Blue: true negatives. Red: false positives. Orange: false negatives. Green: true positives.</div></div><div>
+    <table class="ix-tbl">
+      <tr><td>PAC</td><td><b>${f(a + d, S)}</b></td></tr>
+      <tr><td>Sensitivity δ/O₂</td><td><b>${f(d, O2)}</b></td></tr>
+      <tr><td>Specificity α/O₁</td><td><b>${f(a, O1)}</b></td></tr>
+      <tr><td>PPV δ/P₂</td><td><b>${f(d, P2)}</b></td></tr>
+      <tr><td>NPV α/P₁</td><td><b>${f(a, P1)}</b></td></tr>
+    </table></div></div>`;
+}
+```
+:::
+
+Pick the "test" that always says negative: its accuracy is 95%, yet it detects **no** positive case. When one class is rare, accuracy alone is misleading. That is why we need sensitivity and specificity.
+
+## The measures as conditional probabilities
+
+Let $A$ = {the prediction is positive} and $B$ = {the actual condition is positive}. In the table, $N(B) = O_2$, $N(A) = P_2$, $N(A \cap B) = \delta$ and $N(A' \cap B') = \alpha$. Hence:
+
+| Measure | Conditional probability | Also called |
+|---|---|---|
+| Sensitivity | $P(A \mid B)$ | true positive rate (TPR), recall |
+| $1 -$ sensitivity | $P(A' \mid B)$ | false negative rate (FNR) |
+| Specificity | $P(A' \mid B')$ | true negative rate (TNR) |
+| $1 -$ specificity | $P(A \mid B')$ | false positive rate (FPR) |
+| PPV | $P(B \mid A)$ | precision |
+| NPV | $P(B' \mid A')$ | |
+
+Sensitivity and PPV are the two directions of the same conditioning: $P(A \mid B)$ and $P(B \mid A)$. As we saw with [Bayes' theorem](../bayes-theorem/index.qmd), getting from one to the other also requires $P(B)$, how common the condition is in the population. That is the subject of the next post.
+
+The measures are not only for medical tests but for any "symptom" $A$ linked to a "condition" $B$. If, for example, 90% of people with lung cancer and 30% of people without it are smokers, then smoking as a "test" for the disease has sensitivity $P(A \mid B) = 0.9$ and specificity $P(A' \mid B') = 1 - 0.3 = 0.7$.
+
+## Key takeaways
+
+- The **confusion matrix** compares prediction and reality: true/false positives and negatives.
+- **Sensitivity** $= P(\text{positive test} \mid \text{positive})$ and **specificity** $= P(\text{negative test} \mid \text{negative})$: properties of the test.
+- **PPV** $= P(\text{positive} \mid \text{positive test})$ and **NPV** $= P(\text{negative} \mid \text{negative test})$: what matters to whoever sees the result.
+- **Accuracy** is misleading when one class is rare.
+
+## Review questions
+
+**1. Quick quiz.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz27 = [
+  {q: "A test is positive in 95% of people who have the disease. Which measure is this?",
+   opts: ["Specificity", "Sensitivity", "PPV", "NPV"], ans: 1,
+   why: "We start from those who have the disease (a row of the table): P(positive test | disease) = sensitivity."},
+  {q: "Of those who tested positive, 40% really have the disease. Which measure is this?",
+   opts: ["Sensitivity", "PPV", "Specificity", "Accuracy"], ans: 1,
+   why: "We start from the test result (a column of the table): P(disease | positive test) = PPV."},
+  {q: "In a town of 1,000 people, 10% have a disease. A test has sensitivity 80% and specificity 70%. How many patients will be missed?",
+   opts: ["20", "80", "270", "30"], ans: 0,
+   why: "There are 100 patients. The test detects 80% of them, 80 people, and misses 20 (false negatives)."},
+  {q: "Which measure equals 1 − specificity?",
+   opts: ["False negative rate", "False positive rate", "NPV", "1 − PPV"], ans: 1,
+   why: "1 − P(negative | negative condition) = P(positive | negative condition), the false positive rate among negatives."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz27.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz27.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** Another study ([Jegerlehner et al., IJID, 2021](https://doi.org/10.1016/j.ijid.2021.07.010)) tested 1,465 people. RT-PCR was positive in 141. The rapid antigen test was positive in 94 people and negative or invalid in the remaining 1,371. Its sensitivity was 65.3% and its specificity 99.9%. (a) Fill in the confusion matrix. (b) Compute accuracy, PPV and NPV.
+
+**3.** A "test" returns a positive result at random, with probability 50%, regardless of the actual condition. What are its sensitivity and specificity?
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. (a) True positives: $0.653 \cdot 141 \approx 92$, so false negatives $141 - 92 = 49$. False positives: $94 - 92 = 2$. RT-PCR negatives: $1{,}465 - 141 = 1{,}324$, so true negatives $1{,}324 - 2 = 1{,}322$ (specificity $1{,}322/1{,}324 \approx 99.85\%$). (b) Accuracy $= (1{,}322 + 92)/1{,}465 \approx 96.5\%$, PPV $= 92/94 \approx 97.9\%$, NPV $= 1{,}322/1{,}371 \approx 96.4\%$. Check them in the calculator.
+3. Sensitivity 50% and specificity 50%: the test tells nothing apart. We will meet it again on the ROC curve, where such tests lie on the diagonal.
+:::
+
+---
+
+**Next post:** *Bayes in practice: why a positive test is often wrong (base-rate fallacy).*
