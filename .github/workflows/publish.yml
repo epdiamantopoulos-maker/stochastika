@@ -1,6 +1,11 @@
 # Δημοσίευση του stochastika.com στη Netlify.
 # Τρέχει σε κάθε push στο main και κάθε πρωί, ώστε τα άρθρα να εμφανίζονται
 # αυτόματα την ημερομηνία τους.
+#
+# Κάθε δημοσίευση στη Netlify κοστίζει credits, γι' αυτό το site ανεβαίνει
+# μόνο όταν αλλάζει το ορατό περιεχόμενο: συγκρίνουμε το αποτύπωμα των
+# αρχείων (χωρίς τα μελλοντικά άρθρα) με εκείνο της τελευταίας δημοσίευσης.
+# Για να ανέβει οπωσδήποτε: Actions → Publish → Run workflow → force.
 name: Publish
 
 on:
@@ -9,6 +14,11 @@ on:
   schedule:
     - cron: "5 4 * * *"   # 04:05 UTC = 06:05 ώρα Ελλάδας (χειμώνας)
   workflow_dispatch:
+    inputs:
+      force:
+        description: "Δημοσίευση ακόμα κι αν δεν άλλαξε τίποτα ορατό"
+        type: boolean
+        default: false
 
 concurrency:
   group: publish
@@ -21,17 +31,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Απόκρυψη μελλοντικών άρθρων
+        run: python3 _scripts/hide_future_posts.py
+
+      - name: Άλλαξε κάτι ορατό;
+        id: check
+        run: |
+          new=$(python3 _scripts/site_fingerprint.py)
+          old=$(curl -fsS --retry 3 --max-time 20 https://www.stochastika.com/deploy-fingerprint.txt 2>/dev/null | tr -d '[:space:]' || true)
+          echo "fingerprint=$new" >> "$GITHUB_OUTPUT"
+          echo "Νέο αποτύπωμα:  $new"
+          echo "Δημοσιευμένο:   ${old:-(κανένα)}"
+          if [ "${{ github.event.inputs.force }}" = "true" ] || [ "$new" != "$old" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Το ορατό περιεχόμενο δεν άλλαξε: καμία δημοσίευση σήμερα."
+          fi
+
       - uses: r-lib/actions/setup-r@v2
+        if: steps.check.outputs.changed == 'true'
         with:
           use-public-rspm: true
 
       - uses: r-lib/actions/setup-r-dependencies@v2
+        if: steps.check.outputs.changed == 'true'
         with:
           packages: |
             any::knitr
             any::rmarkdown
 
       - name: Εγκατάσταση Quarto
+        if: steps.check.outputs.changed == 'true'
         run: |
           v=1.6.42
           curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors \
@@ -40,13 +71,14 @@ jobs:
           sudo apt-get install -y --allow-downgrades "$RUNNER_TEMP/quarto.deb"
           quarto --version
 
-      - name: Απόκρυψη μελλοντικών άρθρων
-        run: python3 _scripts/hide_future_posts.py
-
       - name: Render
-        run: quarto render
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          quarto render
+          echo "${{ steps.check.outputs.fingerprint }}" > _site/deploy-fingerprint.txt
 
       - name: Deploy στη Netlify
+        if: steps.check.outputs.changed == 'true'
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
