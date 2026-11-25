@@ -1,0 +1,282 @@
+---
+title: "Συνδυασμοί: όταν η σειρά δεν μετράει"
+description: "Οι συνδυασμοί n ανά k και ο διωνυμικός συντελεστής, με διαδραστικό τρίγωνο του Pascal και ένα «Λόττο» που συγκρίνει την προσομοίωση με τις θεωρητικές πιθανότητες."
+date: 2026-12-23
+categories: [Πιθανότητες, Συνδυαστική, R, Διαδραστικό]
+keywords: [συνδυασμοί, διωνυμικός συντελεστής, n ανά k, τρίγωνο του Pascal, Λόττο, πιθανότητα, συνδυαστική]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, decimal.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+int <- function(x) formatC(x, format = "d", big.mark = ".", decimal.mark = ",")
+```
+
+Στο Λόττο διαλέγουμε 6 αριθμούς από τους 49. Αν κληρωθούν οι 5, 12, 23, 31, 40, 44, δεν έχει καμία σημασία με ποια σειρά βγήκαν τα σφαιρίδια. Στις [μεταθέσεις και τις διατάξεις](../permutations-arrangements/index.qmd) η σειρά μετρούσε. Εδώ μας ενδιαφέρει μόνο **ποια** στοιχεία επιλέχθηκαν, και τότε μιλάμε για **συνδυασμούς**.
+
+## Ορισμός
+
+**Συνδυασμός** των $n$ στοιχείων ενός συνόλου **ανά $k$** είναι κάθε υποσύνολό του με $k$ στοιχεία. Το πλήθος τους συμβολίζεται $C(n, k)$.
+
+**Παράδειγμα 1.** Οι συνδυασμοί του $\{\alpha, \beta, \gamma\}$ ανά δύο είναι $\{\alpha, \beta\}$, $\{\alpha, \gamma\}$, $\{\beta, \gamma\}$, άρα $C(3, 2) = 3$. Οι διατάξεις ανά δύο ήταν $P(3, 2) = 6$, γιατί κάθε υποσύνολο, π.χ. το $\{\alpha, \beta\}$, εμφανίζεται δύο φορές: $\alpha\beta$ και $\beta\alpha$.
+
+**Παράδειγμα 2.** Οι συνδυασμοί του $\{\alpha, \beta, \gamma, \delta\}$ ανά τρία είναι $\{\alpha, \beta, \gamma\}$, $\{\alpha, \beta, \delta\}$, $\{\alpha, \gamma, \delta\}$, $\{\beta, \gamma, \delta\}$, άρα $C(4, 3) = 4$. Οι διατάξεις είναι $4 \cdot 3 \cdot 2 = 24$, και κάθε υποσύνολο εμφανίζεται $3! = 6$ φορές, όσες οι μεταθέσεις των στοιχείων του.
+
+Η ιδέα γενικεύεται: κάθε συνδυασμός ανά $k$ αντιστοιχεί σε $k!$ διατάξεις, άρα
+
+$$C(n, k) = \frac{P(n, k)}{k!} = \frac{n!}{k!\,(n-k)!} = \binom{n}{k}.$$
+
+Το σύμβολο $\binom{n}{k}$ διαβάζεται «$n$ ανά $k$» και λέγεται **διωνυμικός συντελεστής**, γιατί είναι ο συντελεστής του $x^k$ στο ανάπτυγμα του $(1 + x)^n$. Στη βιβλιογραφία θα το βρείτε και ως ${}_nC_k$ ή $C^n_k$.
+
+### Χρήσιμες ιδιότητες
+
+Υπολογίστε τα $\binom{7}{0}$, $\binom{7}{7}$, $\binom{7}{2}$, $\binom{7}{5}$. Τι παρατηρείτε;
+
+```{r}
+#| label: properties
+c(choose(7, 0), choose(7, 7), choose(7, 2), choose(7, 5))
+```
+
+Ισχύουν $\binom{n}{0} = \binom{n}{n} = 1$ και $\binom{n}{k} = \binom{n}{n-k}$: το να διαλέξουμε τα $k$ στοιχεία που *παίρνουμε* είναι το ίδιο με το να διαλέξουμε τα $n - k$ που *αφήνουμε*. Μια τρίτη ιδιότητα, ο **κανόνας του Pascal**,
+
+$$\binom{n}{k} = \binom{n-1}{k-1} + \binom{n-1}{k},$$
+
+προκύπτει αν σταθεροποιήσουμε ένα στοιχείο: ένα υποσύνολο με $k$ στοιχεία είτε το περιέχει (και διαλέγουμε τα άλλα $k - 1$ από τα $n - 1$) είτε όχι (και διαλέγουμε και τα $k$ από τα $n - 1$). Αν γράψουμε τους διωνυμικούς συντελεστές σε γραμμές, κάθε αριθμός είναι το άθροισμα των δύο από πάνω του. Έτσι σχηματίζεται το **τρίγωνο του Pascal**:
+
+::: {.ix-panel}
+::: {.ix-title}
+Το τρίγωνο του Pascal
+:::
+
+```{ojs}
+//| echo: false
+viewof rows18 = Inputs.range([6, 32], {label: "Γραμμές", step: 1, value: 10})
+viewof parity18 = Inputs.toggle({label: "Χρωματισμός μονών αριθμών", value: false})
+viewof n18 = Inputs.range([0, rows18 - 1], {label: "n", step: 1, value: Math.min(7, rows18 - 1)})
+```
+
+```{ojs}
+//| echo: false
+viewof k18 = Inputs.range([0, n18], {label: "k", step: 1, value: Math.min(2, n18)})
+```
+
+```{ojs}
+//| echo: false
+{
+  const R = rows18, W = 640, cw = W / (R + 1), ch = Math.min(30, cw * 0.9), H = ch * R + 10;
+  const big = n => { let r = [1n]; for (let i = 1; i <= n; i++) { const nx = [1n]; for (let j = 1; j < i; j++) nx.push(r[j - 1] + r[j]); nx.push(1n); r = nx; } return r; };
+  const cells = [];
+  let row = [1n];
+  for (let n = 0; n < R; n++) {
+    if (n > 0) { const nx = [1n]; for (let j = 1; j < n; j++) nx.push(row[j - 1] + row[j]); nx.push(1n); row = nx; }
+    row.forEach((v, k) => cells.push({n, k, v, x: W / 2 + (k - n / 2) * cw, y: 5 + ch * n + ch / 2}));
+  }
+  const role = c => (c.n === n18 && c.k === k18) ? "me" : (c.n === n18 - 1 && (c.k === k18 - 1 || c.k === k18)) ? "parent" : (c.n === n18 && c.k === n18 - k18) ? "mirror" : "";
+  const fill = c => { const r = role(c); if (r === "me") return "#f28e2b"; if (r === "parent") return "#59a14f"; if (r === "mirror") return "#ffd9b0";
+    return parity18 ? (c.v % 2n === 1n ? "#4e79a7" : "#f3f6f9") : "#eef3f9"; };
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H}`).style("width", "100%").style("max-width", W + "px");
+  const g = svg.selectAll("g").data(cells).join("g").attr("transform", c => `translate(${c.x},${c.y})`);
+  g.append("rect").attr("x", -cw / 2 + 1).attr("y", -ch / 2 + 1).attr("width", cw - 2).attr("height", ch - 2).attr("rx", 4).attr("fill", fill);
+  if (R <= 16) g.append("text").attr("text-anchor", "middle").attr("dy", "0.35em").style("font", c => `${Math.min(18, cw * 0.85 / Math.max(2, c.v.toString().length) / 0.6)}px sans-serif`)
+    .attr("fill", c => (parity18 && c.v % 2n === 1n && !role(c)) ? "#fff" : "#222").text(c => c.v.toString());
+  const v = big(n18)[k18], a = n18 > 0 && k18 > 0 ? big(n18 - 1)[k18 - 1] : null, b = n18 > 0 && k18 < n18 ? big(n18 - 1)[k18] : null;
+  const nf = x => x.toLocaleString("el-GR");
+  const rule = n18 === 0 || k18 === 0 || k18 === n18 ? html`Βρίσκεται στην άκρη της γραμμής, άρα ισούται με 1.`
+    : html`Κανόνας του Pascal (πράσινα): ${nf(a)} + ${nf(b)} = <b>${nf(v)}</b>.`;
+  return html`${svg.node()}<div class="ix-note">C(${n18}, ${k18}) = <b>${nf(v)}</b> (πορτοκαλί). ${rule}
+    Συμμετρία (ανοιχτό πορτοκαλί): C(${n18}, ${n18 - k18}) = ${nf(v)}.
+    ${parity18 ? html`<br>Με πολλές γραμμές, οι μονοί αριθμοί σχηματίζουν το τρίγωνο Sierpiński.` : ""}</div>`;
+}
+```
+:::
+
+Ενεργοποιήστε τον χρωματισμό των μονών αριθμών και ανεβάστε τις γραμμές στις 32: εμφανίζεται ένα φράκταλ, το τρίγωνο Sierpiński.
+
+## Συνδυασμοί σε R
+
+Η `choose(n, k)` υπολογίζει το $\binom{n}{k}$ και η `combn(x, k)` γράφει όλους τους συνδυασμούς, έναν σε κάθε στήλη:
+
+```{r}
+#| label: combn
+combn(c("α", "β", "γ", "δ"), 3)
+choose(4, 3)
+```
+
+## Το Λόττο
+
+Οι δυνατές εξάδες του Λόττο είναι
+
+$$\binom{49}{6} = \frac{49 \cdot 48 \cdot 47 \cdot 46 \cdot 45 \cdot 44}{6!} = \text{`r int(choose(49, 6))`},$$
+
+οπότε με μία στήλη η πιθανότητα να πιάσουμε και τους 6 αριθμούς είναι 1 προς `r int(choose(49, 6))`, περίπου $7{,}2 \cdot 10^{-8}$. Αν παίζαμε μία στήλη την εβδομάδα, θα περιμέναμε κατά μέσο όρο `r int(round(choose(49, 6) / 52))` χρόνια.
+
+Για το «πεντάρι» σκεφτόμαστε σε δύο φάσεις, με τη [βασική αρχή απαρίθμησης](../counting-principle/index.qmd). Πρώτα διαλέγουμε ποιοι 5 από τους 6 κληρωμένους αριθμούς είναι στη στήλη μας, με $\binom{6}{5} = 6$ τρόπους. Μετά διαλέγουμε τον 6ο αριθμό της στήλης από τους 43 που δεν κληρώθηκαν, με $\binom{43}{1} = 43$ τρόπους. Άρα υπάρχουν $6 \cdot 43 = 258$ στήλες με πεντάρι. Γενικά, για $k$ επιτυχίες:
+
+$$P(k \text{ επιτυχίες}) = \frac{\binom{6}{k} \binom{43}{6-k}}{\binom{49}{6}}.$$
+
+```{r}
+#| label: lotto
+k <- 0:6
+ways <- choose(6, k) * choose(43, 6 - k)
+data.frame(k, ways, prob = signif(ways / choose(49, 6), 3))
+```
+
+Το τεσσάρι έχει `r int(choose(6, 4) * choose(43, 2))` ευνοϊκές στήλες, δηλαδή πιθανότητα περίπου `r pct(choose(6, 4) * choose(43, 2) / choose(49, 6), 2)`. Διαλέξτε τη δική σας στήλη και κάντε κληρώσεις:
+
+::: {.ix-panel}
+::: {.ix-title}
+Παίξτε Λόττο
+:::
+
+```{ojs}
+//| echo: false
+viewof ticket18 = {
+  const picked = new Set([3, 11, 19, 27, 35, 42]);
+  const wrap = html`<div></div>`;
+  const grid = html`<div style="display:grid;grid-template-columns:repeat(7, 2.6em);gap:3px"></div>`;
+  const info = html`<div class="ix-note"></div>`;
+  const btns = [];
+  const refresh = () => {
+    btns.forEach((b, i) => b.className = picked.has(i + 1) ? "ix-picked-ok" : "");
+    info.innerHTML = picked.size === 6 ? `Η στήλη σας: <b>${[...picked].sort((a, b) => a - b).join(", ")}</b>` : `Διαλέξτε ακόμα <b>${6 - picked.size}</b> αριθμούς.`;
+  };
+  const fire = () => { refresh(); wrap.dispatchEvent(new Event("input", {bubbles: true})); };
+  for (let i = 1; i <= 49; i++) {
+    const b = html`<button style="margin:0;padding:3px 0;width:100%">${i}</button>`;
+    b.onclick = () => { if (picked.has(i)) picked.delete(i); else if (picked.size < 6) picked.add(i); fire(); };
+    btns.push(b); grid.append(b);
+  }
+  const rnd = html`<button>Τυχαία στήλη</button>`;
+  rnd.onclick = () => { picked.clear(); d3.shuffle(d3.range(1, 50)).slice(0, 6).forEach(x => picked.add(x)); fire(); };
+  wrap.append(grid, html`<div style="margin-top:6px">${rnd}</div>`, info);
+  Object.defineProperty(wrap, "value", {get: () => [...picked].sort((a, b) => a - b)});
+  refresh();
+  return wrap;
+}
+viewof nd18 = Inputs.radio(new Map([["1", 1], ["100", 100], ["10.000", 10000], ["100.000", 100000]]), {label: "Κληρώσεις", value: 1})
+viewof go18 = Inputs.button("Κλήρωση")
+```
+
+```{ojs}
+//| echo: false
+{
+  go18;
+  if (ticket18.length !== 6) return html`<div class="ix-note">Η στήλη πρέπει να έχει 6 αριθμούς.</div>`;
+  const t = new Set(ticket18), counts = new Array(7).fill(0), pool = d3.range(1, 50);
+  let last = null;
+  for (let r = 0; r < nd18; r++) {
+    // μερικό ανακάτεμα Fisher–Yates για 6 σφαιρίδια
+    for (let i = 0; i < 6; i++) { const j = i + Math.floor(Math.random() * (49 - i)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+    let m = 0; for (let i = 0; i < 6; i++) if (t.has(pool[i])) m++;
+    counts[m]++;
+    if (r === nd18 - 1) last = pool.slice(0, 6).sort((a, b) => a - b);
+  }
+  const C = (n, k) => { let r = 1; for (let i = 1; i <= k; i++) r = r * (n - k + i) / i; return r; };
+  const theo = d3.range(7).map(k => C(6, k) * C(43, 6 - k) / C(49, 6));
+  const data = d3.range(7).map(k => ({k, obs: counts[k] / nd18, theo: theo[k]}));
+  const balls = last.map(x => html`<span style="display:inline-block;width:2em;height:2em;line-height:2em;text-align:center;border-radius:50%;margin:2px;font-weight:bold;background:${t.has(x) ? "#59a14f" : "#9ecae1"};color:${t.has(x) ? "#fff" : "#1d3c5a"}">${x}</span>`);
+  const chart = Plot.plot({
+    width: 520, height: 220, marginLeft: 50,
+    x: {label: "Επιτυχίες", type: "band"},
+    y: {label: "↑ Σχετική συχνότητα", domain: [0, 0.5], grid: true, tickFormat: "%"},
+    marks: [
+      Plot.barY(data, {x: "k", y: "obs", fill: "#4e79a7", fillOpacity: 0.8}),
+      Plot.tickY(data, {x: "k", y: "theo", stroke: "#f28e2b", strokeWidth: 3})
+    ]
+  });
+  const nf = x => x.toLocaleString("el-GR");
+  const pf = x => x === 0 ? "0" : x < 0.001 ? x.toExponential(1).replace(".", ",") : x.toLocaleString("el-GR", {maximumFractionDigits: 4});
+  return html`<div>Τελευταία κλήρωση: ${balls} ${(m => html`<b>${m}</b> ${m === 1 ? "επιτυχία" : "επιτυχίες"}`)(last.filter(x => t.has(x)).length)}</div>
+    ${chart}
+    <table class="ix-tbl"><tr><th>Επιτυχίες</th><th>Κληρώσεις</th><th>Συχνότητα</th><th>Θεωρητική πιθανότητα</th></tr>
+    ${data.map(d => html`<tr><td>${d.k}</td><td>${nf(counts[d.k])}</td><td>${pf(d.obs)}</td><td>${pf(d.theo)}</td></tr>`)}</table>
+    <div class="ix-note">Μπλε στήλες: σχετικές συχνότητες στις ${nf(nd18)} κληρώσεις. Πορτοκαλί γραμμές: θεωρητικές πιθανότητες. Ακόμα και σε 100.000 κληρώσεις το εξάρι σχεδόν ποτέ δεν εμφανίζεται.</div>`;
+}
+```
+:::
+
+Οι πιθανότητες δεν εξαρτώνται από τη στήλη που διαλέξατε: η 1, 2, 3, 4, 5, 6 έχει ακριβώς τις ίδιες πιθανότητες με οποιαδήποτε άλλη.
+
+## Δύο ακόμα εφαρμογές
+
+**Επιτροπή.** Από 5 άνδρες και 4 γυναίκες σχηματίζεται επιτροπή 3 μελών. Οι δυνατές επιτροπές είναι $\binom{9}{3} = 84$. Πόσες έχουν τουλάχιστον έναν άνδρα και τουλάχιστον μία γυναίκα; Είναι της μορφής (1 άνδρας, 2 γυναίκες) ή (2 άνδρες, 1 γυναίκα):
+
+$$\binom{5}{1}\binom{4}{2} + \binom{5}{2}\binom{4}{1} = 5 \cdot 6 + 10 \cdot 4 = 70.$$
+
+Με το συμπλήρωμα: αφαιρούμε τις επιτροπές μόνο με άνδρες, $\binom{5}{3} = 10$, και μόνο με γυναίκες, $\binom{4}{3} = 4$, και βρίσκουμε πάλι $84 - 14 = 70$.
+
+**Τα 30 νομίσματα.** Στη [βασική αρχή απαρίθμησης](../counting-principle/index.qmd) αφήσαμε ένα ερώτημα: ποια είναι η πιθανότητα να έρθουν 7 «γράμματα» σε 30 ρίψεις; Οι ακολουθίες είναι $2^{30}$. Μια ευνοϊκή ακολουθία καθορίζεται πλήρως από το **ποιες** 7 από τις 30 ρίψεις έφεραν «γράμματα», άρα οι ευνοϊκές είναι $\binom{30}{7} =$ `r int(choose(30, 7))` και
+
+$$P(7 \text{ «γράμματα»}) = \frac{\binom{30}{7}}{2^{30}} \approx \text{`r fmt(choose(30, 7) / 2^30, 4)`}.$$
+
+## Σύνοψη
+
+- **Συνδυασμός** $n$ ανά $k$ είναι ένα υποσύνολο με $k$ στοιχεία: η σειρά δεν μετράει.
+- $\binom{n}{k} = \dfrac{n!}{k!\,(n-k)!} = \dfrac{P(n, k)}{k!}$, γιατί κάθε συνδυασμός αντιστοιχεί σε $k!$ διατάξεις.
+- Ιδιότητες: $\binom{n}{0} = \binom{n}{n} = 1$, $\binom{n}{k} = \binom{n}{n-k}$ και ο κανόνας του Pascal.
+- Η πιθανότητα $k$ επιτυχιών στο Λόττο είναι $\binom{6}{k}\binom{43}{6-k} / \binom{49}{6}$, ένα σχήμα που θα ξαναβρούμε σε πολλά προβλήματα δειγματοληψίας.
+
+## Ερωτήσεις εμπέδωσης
+
+**1. Γρήγορο κουίζ.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz18 = [
+  {q: "Με πόσους τρόπους επιλέγεται ομάδα σκυταλοδρομίας 4 ατόμων από 6 αθλητές (χωρίς να μας ενδιαφέρει η σειρά τρεξίματος);",
+   opts: ["15", "24", "360", "1.296"], ans: 0,
+   why: "Συνδυασμοί 6 ανά 4: C(6, 4) = C(6, 2) = 15. Αν μας ενδιέφερε και η σειρά, θα ήταν P(6, 4) = 360."},
+  {q: "Τα 5 μέλη μιας οικογένειας αγκαλιάζονται όλα μεταξύ τους, ανά δύο. Πόσες αγκαλιές γίνονται;",
+   opts: ["5", "10", "20", "25"], ans: 1,
+   why: "Κάθε αγκαλιά είναι ένα ζευγάρι, χωρίς σειρά: C(5, 2) = 10."},
+  {q: "Ποιο από τα παρακάτω ισούται με C(10, 7);",
+   opts: ["C(10, 3)", "P(10, 7)", "10!/7!", "C(7, 3)"], ans: 0,
+   why: "Λόγω συμμετρίας, C(10, 7) = C(10, 3) = 120."},
+  {q: "Στο Λόττο, ποια στήλη έχει τη μεγαλύτερη πιθανότητα να κερδίσει το εξάρι;",
+   opts: ["1, 2, 3, 4, 5, 6", "Μια «τυχαία» όπως 7, 15, 22, 34, 41, 48", "Οι αριθμοί που κληρώνονται πιο συχνά", "Όλες έχουν την ίδια"], ans: 3,
+   why: "Κάθε εξάδα είναι ένας από τους 13.983.816 ισοπίθανους συνδυασμούς. Κάποιες στήλες απλώς τις παίζουν περισσότεροι, οπότε αν κερδίσουν, το κέρδος μοιράζεται."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz18.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Σωστό.</span> ` : `<span class="ix-no">✗ Όχι ακριβώς.</span> `) + item.why;
+        score.innerHTML = `<b>Σωστές: ${[...done.values()].filter(x => x).length} από ${quiz18.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** Σε 100 κομμάτια ενός προϊόντος τα 8 είναι ελαττωματικά. Επιλέγουμε τυχαία 5. Ποια είναι η πιθανότητα να είναι ακριβώς 3 μη ελαττωματικά; Ποια η πιθανότητα να είναι τουλάχιστον 3;
+
+**3.** Ένα δέμα με 20 σκληρούς δίσκους έχει 4 ελαττωματικούς. Επιλέγουμε τυχαία 2. (α) Με πόσους τρόπους γίνεται η επιλογή; (β) Ποια είναι η πιθανότητα κανένας να μην είναι ελαττωματικός;
+
+**4.** Δείξτε με επιχείρημα μέτρησης ότι $\sum_{k=0}^{n} \binom{n}{k} = 2^n$ και επαληθεύστε το σε R για $n = 10$.
+
+::: {.callout-tip collapse="true"}
+## Απαντήσεις
+
+2. Όλα τα δείγματα είναι $\binom{100}{5} =$ `r int(choose(100, 5))`. Ακριβώς 3 μη ελαττωματικά: $\binom{92}{3}\binom{8}{2} / \binom{100}{5} \approx$ `r fmt(choose(92, 3) * choose(8, 2) / choose(100, 5), 3)`. Τουλάχιστον 3: προσθέτουμε τις περιπτώσεις 3, 4 και 5 και βρίσκουμε `r fmt(sum(choose(92, 3:5) * choose(8, 2:0)) / choose(100, 5), 3)`.
+3. (α) $\binom{20}{2} = 190$. (β) Και οι δύο από τους 16 καλούς: $\binom{16}{2} / \binom{20}{2} = 120/190 \approx 0{,}632$.
+4. Το $2^n$ μετρά όλα τα υποσύνολα ενός συνόλου $n$ στοιχείων: για κάθε στοιχείο αποφασίζουμε «μέσα» ή «έξω» (βασική αρχή απαρίθμησης). Το $\binom{n}{k}$ μετρά όσα έχουν ακριβώς $k$ στοιχεία, και αθροίζοντας για όλα τα $k$ τα μετράμε όλα. Σε R: `sum(choose(10, 0:10)) == 2^10` δίνει `TRUE`.
+:::
+
+---
+
+**Επόμενο άρθρο:** *Το παράδοξο του Bertrand: γιατί το «τυχαία» χρειάζεται μοντέλο.*

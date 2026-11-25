@@ -1,0 +1,263 @@
+---
+title: "Μεταθέσεις και διατάξεις: όταν η σειρά μετράει (και το πρόβλημα των γενεθλίων)"
+description: "Μεταθέσεις, μεταθέσεις με όμοια στοιχεία και διατάξεις με και χωρίς επανάληψη, με διαδραστικό εξερευνητή αναγραμματισμών και προσομοίωση του προβλήματος των γενεθλίων."
+date: 2026-12-21
+categories: [Πιθανότητες, Συνδυαστική, R, Διαδραστικό]
+keywords: [μεταθέσεις, διατάξεις, παραγοντικό, αναγραμματισμοί, μεταθέσεις με επανάληψη, πρόβλημα των γενεθλίων, συνδυαστική]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, decimal.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+int <- function(x) formatC(x, format = "d", big.mark = ".", decimal.mark = ",")
+```
+
+Με τη [βασική αρχή απαρίθμησης](../counting-principle/index.qmd) είδαμε ότι 3 διαφορετικά βραβεία μοιράζονται σε 10 άτομα με $10 \cdot 9 \cdot 8$ τρόπους. Τέτοια γινόμενα εμφανίζονται κάθε φορά που **βάζουμε στοιχεία σε σειρά**, και αξίζει να τα δούμε ως τύπους. Η Συνδυαστική ξεχωρίζει τρεις τρόπους να μετράμε:
+
+- **μεταθέσεις:** βάζουμε σε σειρά *όλα* τα στοιχεία ενός συνόλου,
+- **διατάξεις:** διαλέγουμε $k$ στοιχεία και τα βάζουμε σε σειρά,
+- **συνδυασμοί:** διαλέγουμε $k$ στοιχεία χωρίς να μας ενδιαφέρει η σειρά.
+
+Στις μεταθέσεις και στις διατάξεις **η σειρά έχει σημασία**: το $(\alpha, \beta)$ είναι διαφορετικό από το $(\beta, \alpha)$. Σήμερα βλέπουμε αυτές τις δύο. Οι συνδυασμοί έρχονται στο επόμενο άρθρο.
+
+## Μεταθέσεις
+
+**Μετάθεση** των $n$ στοιχείων ενός συνόλου είναι καθένας από τους τρόπους να τα βάλουμε σε μια σειρά. Η πρώτη θέση συμπληρώνεται με $n$ τρόπους, η δεύτερη με $n - 1$, …, η τελευταία με 1, άρα
+
+$$(n)_n = n \cdot (n-1) \cdots 2 \cdot 1 = n!.$$
+
+Οι μεταθέσεις του $\{\alpha, \beta, \gamma\}$ είναι $3! = 6$: $\alpha\beta\gamma$, $\alpha\gamma\beta$, $\beta\alpha\gamma$, $\beta\gamma\alpha$, $\gamma\alpha\beta$, $\gamma\beta\alpha$. Δέκα φοιτητές κάθονται σε μια σειρά με $10! =$ `r int(factorial(10))` τρόπους. Το παραγοντικό μεγαλώνει εκρηκτικά: μια τράπουλα 52 φύλλων ανακατεύεται με $52! \approx 8 \cdot 10^{67}$ τρόπους, οπότε σχεδόν σίγουρα κάθε καλό ανακάτεμα δίνει μια σειρά που δεν έχει εμφανιστεί ποτέ ξανά.
+
+### Μεταθέσεις με όμοια στοιχεία
+
+Τι γίνεται αν κάποια στοιχεία είναι ίδια; Οι $3! = 6$ μεταθέσεις των γραμμάτων Α, Β, Β, αν ξεχωρίσουμε τα δύο Β ως $\text{Β}_1$ και $\text{Β}_2$, ανά δύο δίνουν την ίδια λέξη. Οι διακριτές λέξεις είναι $6 / 2! = 3$: ΑΒΒ, ΒΑΒ, ΒΒΑ.
+
+Γενικότερα, αν τα $n$ στοιχεία χωρίζονται σε $m$ ομάδες όμοιων στοιχείων με $s_1, s_2, \ldots, s_m$ στοιχεία ($s_1 + \cdots + s_m = n$), οι διακριτές μεταθέσεις είναι
+
+$$\frac{n!}{s_1! \cdot s_2! \cdots s_m!}.$$
+
+Η λέξη ΠΑΝΔΗΜΙΑ έχει 8 γράμματα με το Α δύο φορές, άρα έχει $8!/2! =$ `r int(factorial(8) / 2)` αναγραμματισμούς. Αν η λέξη πρέπει να ξεκινά από Π και να τελειώνει σε Α, μένουν 6 διαφορετικά γράμματα για 6 θέσεις: $6! = 720$. Γράψτε τη δική σας λέξη στον εξερευνητή:
+
+::: {.ix-panel}
+::: {.ix-title}
+Εξερευνητής αναγραμματισμών
+:::
+
+```{ojs}
+//| echo: false
+viewof word17 = Inputs.text({label: "Λέξη", value: "ΠΑΝΔΗΜΙΑ", maxlength: 14})
+viewof shuffle17 = Inputs.button("Τυχαίος αναγραμματισμός")
+```
+
+```{ojs}
+//| echo: false
+{
+  shuffle17;
+  const w = [...word17.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase()].filter(c => /\p{L}/u.test(c));
+  if (w.length === 0) return html`<div class="ix-note">Γράψτε μια λέξη.</div>`;
+  const fact = n => { let r = 1n; for (let i = 2n; i <= BigInt(n); i++) r *= i; return r; };
+  const counts = d3.rollups(w, v => v.length, c => c).sort((a, b) => b[1] - a[1]);
+  const denom = counts.reduce((p, [, s]) => p * fact(s), 1n);
+  const distinct = fact(w.length) / denom;
+  const nf = x => BigInt(x).toLocaleString("el-GR");
+  const sh = d3.shuffle(w.slice()).join("");
+  // όλοι οι διακριτοί αναγραμματισμοί, όταν είναι λίγοι
+  let list = null;
+  if (distinct <= 720n) {
+    const out = [], cnt = new Map(counts);
+    const rec = (pref) => {
+      if (pref.length === w.length) { out.push(pref.join("")); return; }
+      for (const [c, s] of cnt) if (s > 0) { cnt.set(c, s - 1); pref.push(c); rec(pref); pref.pop(); cnt.set(c, s); }
+    };
+    rec([]);
+    list = out;
+  }
+  const chips = counts.map(([c, s]) => html`<span class="ix-chip" style="display:inline-block;border:1px solid ${s > 1 ? "#f28e2b" : "#9ecae1"};background:${s > 1 ? "#fff4e8" : "#f3f8fc"};border-radius:12px;padding:1px 9px;margin:2px">${c} × ${s}</span>`);
+  const rep = counts.filter(([, s]) => s > 1);
+  const formula = rep.length ? `${w.length}! / (${rep.map(([, s]) => s + "!").join(" · ")})` : `${w.length}!`;
+  return html`<div>${chips}</div>
+    <table class="ix-tbl">
+      <tr><td>Γράμματα</td><td><b>${w.length}</b></td></tr>
+      <tr><td>Μεταθέσεις αν όλα ήταν διαφορετικά</td><td><b>${w.length}! = ${nf(fact(w.length))}</b></td></tr>
+      <tr><td>Κάθε λέξη επαναλαμβάνεται</td><td><b>${nf(denom)}</b> φορές</td></tr>
+      <tr><td>Διακριτοί αναγραμματισμοί</td><td><b>${formula} = ${nf(distinct)}</b></td></tr>
+      <tr><td>Ένας τυχαίος</td><td><b>${sh}</b></td></tr>
+    </table>
+    ${list ? html`<div class="ix-note">Όλοι οι αναγραμματισμοί:</div><div style="max-height:160px;overflow-y:auto;font-family:monospace;font-size:0.9em;line-height:1.6;border:1px solid #dde3ea;border-radius:6px;padding:4px 8px">${list.join(" · ")}</div>` : html`<div class="ix-note">Δοκιμάστε μια μικρή λέξη (π.χ. ΑΒΒ ή ΜΑΜΑ) για να δείτε όλους τους αναγραμματισμούς.</div>`}`;
+}
+```
+:::
+
+## Διατάξεις
+
+**Διάταξη** $n$ στοιχείων **ανά $k$** ($k \le n$) είναι καθένας από τους τρόπους να διαλέξουμε $k$ διαφορετικά στοιχεία και να τα βάλουμε σε σειρά. Η πρώτη θέση έχει $n$ επιλογές, η δεύτερη $n - 1$, …, η $k$-οστή $n - k + 1$:
+
+$$P(n, k) = n \cdot (n-1) \cdots (n-k+1) = \frac{n!}{(n-k)!}.$$
+
+Οι διατάξεις του $\{\alpha, \beta, \gamma\}$ ανά δύο είναι $P(3, 2) = 6$: $\alpha\beta$, $\beta\alpha$, $\alpha\gamma$, $\gamma\alpha$, $\beta\gamma$, $\gamma\beta$. Οι μεταθέσεις είναι η ειδική περίπτωση $k = n$, αφού $P(n, n) = n!$.
+
+Αν επιτρέπεται **επανάληψη**, κάθε θέση έχει πάντα $n$ επιλογές και οι διατάξεις είναι $n^k$. Του $\{\alpha, \beta, \gamma\}$ ανά δύο με επανάληψη είναι $3^2 = 9$, γιατί προστίθενται τα $\alpha\alpha$, $\beta\beta$, $\gamma\gamma$.
+
+**Παράδειγμα.** Διαλέγουμε τυχαία έναν κωδικό 4 ψηφίων. Ποια είναι η πιθανότητα να έχει όλα τα ψηφία διαφορετικά; Όλοι οι κωδικοί είναι διατάξεις με επανάληψη, $10^4$. Οι ευνοϊκοί είναι διατάξεις χωρίς επανάληψη, $P(10, 4) = 10 \cdot 9 \cdot 8 \cdot 7$:
+
+```{r}
+#| label: code-distinct
+P <- function(n, k) prod(n:(n - k + 1))
+P(10, 4) / 10^4
+```
+
+Δηλαδή `r pct(P(10, 4) / 10^4)`. Σε R μπορούμε να επαληθεύσουμε τους τύπους και με απαρίθμηση. Για τις διατάξεις του $\{1, \ldots, 5\}$ ανά 2:
+
+```{r}
+#| label: list-arrangements
+g <- expand.grid(first = 1:5, second = 1:5)
+c(with_rep = nrow(g), without_rep = sum(g$first != g$second), formula = P(5, 2))
+```
+
+## Το πρόβλημα των γενεθλίων
+
+Σε μια αίθουσα βρίσκονται 20 άτομα. Ποια είναι η πιθανότητα τουλάχιστον δύο να έχουν γενέθλια την ίδια ημέρα; Αγνοούμε τις 29 Φεβρουαρίου και θεωρούμε τις 365 ημέρες ισοπίθανες.
+
+Όλες οι δυνατές ακολουθίες γενεθλίων είναι $365^{20}$, διατάξεις με επανάληψη. Είναι πιο εύκολο να μετρήσουμε το συμπλήρωμα $A'$: «όλοι έχουν γενέθλια σε διαφορετική ημέρα». Οι ευνοϊκές περιπτώσεις του είναι διατάξεις χωρίς επανάληψη, $P(365, 20)$. Άρα
+
+$$P(A) = 1 - \frac{P(365, 20)}{365^{20}} = 1 - \frac{365 \cdot 364 \cdots 346}{365^{20}}.$$
+
+```{r}
+#| label: birthday
+p_shared <- function(n) 1 - prod((365 - n + 1):365) / 365^n
+p_shared(20)
+# η base R έχει έτοιμη συνάρτηση
+pbirthday(20)
+# προσομοίωση 10.000 αιθουσών
+mean(replicate(10000, any(duplicated(sample(365, 20, replace = TRUE)))))
+```
+
+Η πιθανότητα είναι `r pct(p_shared(20))`: σε 100 ομάδες των 20 ατόμων περιμένουμε περίπου στις 41 να υπάρχουν δύο με κοινά γενέθλια. Η διαίσθηση συνήθως αποτυγχάνει εδώ, γιατί σκεφτόμαστε «κάποιος με τα *δικά μου* γενέθλια». Το πρόβλημα όμως ρωτά για **οποιοδήποτε ζευγάρι**, και 20 άτομα σχηματίζουν 190 ζευγάρια. Ήδη με `r min(which(sapply(1:100, p_shared) > 0.5))` άτομα η πιθανότητα ξεπερνά το 50%.
+
+::: {.ix-panel}
+::: {.ix-title}
+Το πρόβλημα των γενεθλίων
+:::
+
+```{ojs}
+//| echo: false
+viewof n17 = Inputs.range([2, 80], {label: "Άτομα στην αίθουσα", step: 1, value: 20})
+viewof room17 = Inputs.button("Νέα αίθουσα")
+```
+
+```{ojs}
+//| echo: false
+pShared17 = n => { let q = 1; for (let i = 0; i < n; i++) q *= (365 - i) / 365; return 1 - q; }
+{
+  room17;
+  const days = Array.from({length: n17}, () => 1 + Math.floor(365 * Math.random()));
+  const cnt = d3.rollup(days, v => v.length, d => d);
+  const dots = [];
+  const seen = new Map();
+  days.forEach(d => { const k = (seen.get(d) || 0); seen.set(d, k + 1); dots.push({day: d, level: k, shared: cnt.get(d) > 1}); });
+  const nShared = [...cnt.values()].filter(v => v > 1).length;
+  const months = ["Ιαν", "Φεβ", "Μαρ", "Απρ", "Μάι", "Ιούν", "Ιούλ", "Αύγ", "Σεπ", "Οκτ", "Νοέ", "Δεκ"];
+  const starts = [1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335];
+  const strip = Plot.plot({
+    width: 640, height: 90, marginLeft: 10, marginRight: 10,
+    x: {domain: [1, 366], ticks: starts, tickFormat: (d, i) => months[i], label: null},
+    y: {domain: [0, 3], axis: null},
+    marks: [
+      Plot.ruleY([0], {stroke: "#ccc"}),
+      Plot.dot(dots, {x: "day", y: d => d.level + 0.5, r: 4, fill: d => d.shared ? "#f28e2b" : "#4e79a7"})
+    ]
+  });
+  const curve = d3.range(1, 81).map(n => ({n, p: pShared17(n)}));
+  const chart = Plot.plot({
+    width: 640, height: 220, marginLeft: 45,
+    x: {label: "Άτομα →", domain: [1, 80]},
+    y: {label: "↑ P(κοινά γενέθλια)", domain: [0, 1], grid: true, tickFormat: "%"},
+    marks: [
+      Plot.ruleY([0.5], {stroke: "#c62828", strokeDasharray: "4,3"}),
+      Plot.line(curve, {x: "n", y: "p", stroke: "#4e79a7", strokeWidth: 2}),
+      Plot.dot([{n: n17, p: pShared17(n17)}], {x: "n", y: "p", r: 6, fill: "#f28e2b"})
+    ]
+  });
+  const fmtP = x => x.toLocaleString("el-GR", {style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1});
+  return html`${strip}
+    <div class="ix-note">${nShared > 0 ? html`<span style="color:#c25e00"><b>${nShared}</b> ${nShared === 1 ? "ημέρα έχει" : "ημέρες έχουν"} κοινά γενέθλια (πορτοκαλί).</span>` : html`Σε αυτή την αίθουσα όλοι έχουν διαφορετικά γενέθλια.`}
+    Ζευγάρια ατόμων: <b>${(n17 * (n17 - 1) / 2).toLocaleString("el-GR")}</b>.</div>
+    ${chart}
+    <table class="ix-tbl"><tr><td>P(τουλάχιστον δύο με κοινά γενέθλια) για ${n17} άτομα</td><td><b>${fmtP(pShared17(n17))}</b></td></tr></table>`;
+}
+```
+:::
+
+Πατήστε μερικές φορές «Νέα αίθουσα» με 23 άτομα: περίπου στις μισές αίθουσες θα δείτε πορτοκαλί κουκκίδες. Με 50 άτομα, σχεδόν πάντα.
+
+## Σύνοψη
+
+- **Μεταθέσεις** $n$ στοιχείων: $n!$. Με ομάδες όμοιων στοιχείων: $n!/(s_1! \cdots s_m!)$.
+- **Διατάξεις** $n$ ανά $k$: $P(n, k) = n!/(n-k)!$ χωρίς επανάληψη, $n^k$ με επανάληψη.
+- Η σειρά έχει σημασία και στα δύο. Όταν δεν έχει, μιλάμε για συνδυασμούς.
+- Στο **πρόβλημα των γενεθλίων** μετράμε το συμπλήρωμα: με 23 άτομα η πιθανότητα κοινών γενεθλίων ξεπερνά το 50%.
+
+## Ερωτήσεις εμπέδωσης
+
+**1. Γρήγορο κουίζ.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz17 = [
+  {q: "Σε έναν αγώνα δρόμου τρέχουν 8 δρομείς. Με πόσους τρόπους μπορούν να απονεμηθούν χρυσό, αργυρό και χάλκινο μετάλλιο;",
+   opts: ["24", "56", "336", "512"], ans: 2,
+   why: "Διατάξεις 8 ανά 3 χωρίς επανάληψη: P(8, 3) = 8 · 7 · 6 = 336. Η σειρά μετράει, γιατί τα μετάλλια είναι διαφορετικά."},
+  {q: "Πόσους αναγραμματισμούς έχει η λέξη ΜΑΜΑ;",
+   opts: ["4", "6", "12", "24"], ans: 1,
+   why: "4 γράμματα, με το Μ και το Α από δύο φορές: 4! / (2! · 2!) = 24 / 4 = 6. Επαληθεύστε τους στον εξερευνητή."},
+  {q: "Τρία αδέλφια έχουν διαθέσιμα 4 tablet, ένα για τον καθένα. Με πόσους τρόπους μπορούν να τα μοιραστούν;",
+   opts: ["4", "12", "24", "64"], ans: 2,
+   why: "Διατάξεις 4 ανά 3: P(4, 3) = 4 · 3 · 2 = 24."},
+  {q: "Ρίχνουμε ένα ζάρι 6 φορές. Ποια είναι η πιθανότητα να εμφανιστούν και τα 6 νούμερα;",
+   opts: ["1/6", "6!/6⁶ ≈ 1,5%", "1/6⁶", "6/6⁶"], ans: 1,
+   why: "Όλες οι ακολουθίες είναι 6⁶ = 46.656. Οι ευνοϊκές είναι οι μεταθέσεις των 6 νούμερων, 6! = 720. Άρα 720 / 46.656 ≈ 1,54%."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz17.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Σωστό.</span> ` : `<span class="ix-no">✗ Όχι ακριβώς.</span> `) + item.why;
+        score.innerHTML = `<b>Σωστές: ${[...done.values()].filter(x => x).length} από ${quiz17.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** (α) Πόσες «λέξεις» γράφονται με όλα τα γράμματα της λέξης ΦΟΙΤΗΤΗΣ; (β) Πόσες από αυτές ξεκινούν με ΗΗ; (γ) Ποια είναι η πιθανότητα μια τυχαία από αυτές να μην ξεκινά με ΗΗ;
+
+**3.** Δέκα φοιτητές κάθονται τυχαία σε μια σειρά. Ποια είναι η πιθανότητα οι δύο νεότεροι να κάθονται δίπλα-δίπλα;
+
+**4.** Χρησιμοποιήστε την `p_shared()` (ή την `pbirthday()`) για να βρείτε πόσα άτομα χρειάζονται ώστε η πιθανότητα κοινών γενεθλίων να ξεπερνά το 90%.
+
+::: {.callout-tip collapse="true"}
+## Απαντήσεις
+
+2. (α) 8 γράμματα, με το Τ και το Η από δύο φορές: $8!/(2! \cdot 2!) = 10.080$. (β) Μένουν τα Φ, Ο, Ι, Τ, Τ, Σ για 6 θέσεις: $6!/2! = 360$. (γ) $1 - 360/10.080 = 1 - 1/28 = 27/28 \approx 96{,}4\%$.
+3. Οι δύο νεότεροι πιάνουν δύο διπλανές θέσεις: 9 ζεύγη θέσεων, επί 2 για τη σειρά τους μέσα στο ζεύγος. Οι υπόλοιποι 8 κάθονται με $8!$ τρόπους. Άρα $\dfrac{9 \cdot 2 \cdot 8!}{10!} = \dfrac{18}{90} = \dfrac{1}{5}$.
+4. `min(which(sapply(1:100, p_shared) > 0.9))` δίνει `r min(which(sapply(1:100, p_shared) > 0.9))` άτομα.
+:::
+
+---
+
+**Επόμενο άρθρο:** *Συνδυασμοί: όταν η σειρά δεν μετράει.*

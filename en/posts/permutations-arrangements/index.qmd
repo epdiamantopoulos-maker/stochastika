@@ -1,0 +1,263 @@
+---
+title: "Permutations and arrangements: when order matters (and the birthday problem)"
+description: "Permutations, permutations with repeated elements and arrangements with and without repetition, with an interactive anagram explorer and a simulation of the birthday problem."
+date: 2026-12-21
+categories: [Probability, Combinatorics, R, Interactive]
+keywords: [permutations, k-permutations, arrangements, factorial, anagrams, multiset permutations, birthday problem, combinatorics]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+int <- function(x) formatC(x, format = "d", big.mark = ",")
+```
+
+With the [fundamental counting principle](../counting-principle/index.qmd) we saw that 3 different prizes can go to 10 people in $10 \cdot 9 \cdot 8$ ways. Products like this appear whenever we **put things in order**, so they deserve formulas of their own. Combinatorics distinguishes three ways of counting:
+
+- **permutations:** put *all* the elements of a set in order,
+- **arrangements** (k-permutations): choose $k$ elements and put them in order,
+- **combinations:** choose $k$ elements without caring about order.
+
+In permutations and arrangements **order matters**: $(\alpha, \beta)$ differs from $(\beta, \alpha)$. Today we cover these two; combinations come in the next post.
+
+## Permutations
+
+A **permutation** of the $n$ elements of a set is any way of putting them in a row. The first position can be filled in $n$ ways, the second in $n - 1$, …, the last in 1, so
+
+$$(n)_n = n \cdot (n-1) \cdots 2 \cdot 1 = n!.$$
+
+The permutations of $\{\alpha, \beta, \gamma\}$ number $3! = 6$: $\alpha\beta\gamma$, $\alpha\gamma\beta$, $\beta\alpha\gamma$, $\beta\gamma\alpha$, $\gamma\alpha\beta$, $\gamma\beta\alpha$. Ten students can sit in a row in $10! =$ `r int(factorial(10))` ways. The factorial grows explosively: a 52-card deck can be shuffled in $52! \approx 8 \cdot 10^{67}$ ways, so almost surely every good shuffle produces an order that has never appeared before.
+
+### Permutations with repeated elements
+
+What if some elements are identical? If we tell the two Bs of A, B, B apart as $\text{B}_1$ and $\text{B}_2$, the $3! = 6$ permutations give the same word in pairs. There are $6 / 2! = 3$ distinct words: ABB, BAB, BBA.
+
+More generally, if the $n$ elements fall into $m$ groups of identical elements of sizes $s_1, s_2, \ldots, s_m$ ($s_1 + \cdots + s_m = n$), the number of distinct permutations is
+
+$$\frac{n!}{s_1! \cdot s_2! \cdots s_m!}.$$
+
+The word STATISTICS has 10 letters: S three times, T three times, I twice, A and C once. It has $10!/(3! \cdot 3! \cdot 2!) =$ `r int(factorial(10) / (6 * 6 * 2))` anagrams. Type your own word into the explorer:
+
+::: {.ix-panel}
+::: {.ix-title}
+Anagram explorer
+:::
+
+```{ojs}
+//| echo: false
+viewof word17 = Inputs.text({label: "Word", value: "STATISTICS", maxlength: 14})
+viewof shuffle17 = Inputs.button("Random anagram")
+```
+
+```{ojs}
+//| echo: false
+{
+  shuffle17;
+  const w = [...word17.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase()].filter(c => /\p{L}/u.test(c));
+  if (w.length === 0) return html`<div class="ix-note">Type a word.</div>`;
+  const fact = n => { let r = 1n; for (let i = 2n; i <= BigInt(n); i++) r *= i; return r; };
+  const counts = d3.rollups(w, v => v.length, c => c).sort((a, b) => b[1] - a[1]);
+  const denom = counts.reduce((p, [, s]) => p * fact(s), 1n);
+  const distinct = fact(w.length) / denom;
+  const nf = x => BigInt(x).toLocaleString("en-GB");
+  const sh = d3.shuffle(w.slice()).join("");
+  // list every distinct anagram when there are few
+  let list = null;
+  if (distinct <= 720n) {
+    const out = [], cnt = new Map(counts);
+    const rec = (pref) => {
+      if (pref.length === w.length) { out.push(pref.join("")); return; }
+      for (const [c, s] of cnt) if (s > 0) { cnt.set(c, s - 1); pref.push(c); rec(pref); pref.pop(); cnt.set(c, s); }
+    };
+    rec([]);
+    list = out;
+  }
+  const chips = counts.map(([c, s]) => html`<span style="display:inline-block;border:1px solid ${s > 1 ? "#f28e2b" : "#9ecae1"};background:${s > 1 ? "#fff4e8" : "#f3f8fc"};border-radius:12px;padding:1px 9px;margin:2px">${c} × ${s}</span>`);
+  const rep = counts.filter(([, s]) => s > 1);
+  const formula = rep.length ? `${w.length}! / (${rep.map(([, s]) => s + "!").join(" · ")})` : `${w.length}!`;
+  return html`<div>${chips}</div>
+    <table class="ix-tbl">
+      <tr><td>Letters</td><td><b>${w.length}</b></td></tr>
+      <tr><td>Permutations if all were different</td><td><b>${w.length}! = ${nf(fact(w.length))}</b></td></tr>
+      <tr><td>Each word is repeated</td><td><b>${nf(denom)}</b> times</td></tr>
+      <tr><td>Distinct anagrams</td><td><b>${formula} = ${nf(distinct)}</b></td></tr>
+      <tr><td>A random one</td><td><b>${sh}</b></td></tr>
+    </table>
+    ${list ? html`<div class="ix-note">All the anagrams:</div><div style="max-height:160px;overflow-y:auto;font-family:monospace;font-size:0.9em;line-height:1.6;border:1px solid #dde3ea;border-radius:6px;padding:4px 8px">${list.join(" · ")}</div>` : html`<div class="ix-note">Try a short word (e.g. ABB or MAMA) to see every anagram.</div>`}`;
+}
+```
+:::
+
+## Arrangements
+
+An **arrangement** of $n$ elements **taken $k$ at a time** ($k \le n$), also called a $k$-permutation, is any way of choosing $k$ different elements and putting them in order. The first position has $n$ choices, the second $n - 1$, …, the $k$-th $n - k + 1$:
+
+$$P(n, k) = n \cdot (n-1) \cdots (n-k+1) = \frac{n!}{(n-k)!}.$$
+
+The arrangements of $\{\alpha, \beta, \gamma\}$ two at a time number $P(3, 2) = 6$: $\alpha\beta$, $\beta\alpha$, $\alpha\gamma$, $\gamma\alpha$, $\beta\gamma$, $\gamma\beta$. Permutations are the special case $k = n$, since $P(n, n) = n!$.
+
+If **repetition** is allowed, every position always has $n$ choices and there are $n^k$ arrangements. For $\{\alpha, \beta, \gamma\}$ two at a time with repetition there are $3^2 = 9$, since $\alpha\alpha$, $\beta\beta$, $\gamma\gamma$ are added.
+
+**Example.** We pick a random 4-digit code. What is the probability that all its digits differ? All codes are arrangements with repetition, $10^4$. The favourable ones are arrangements without repetition, $P(10, 4) = 10 \cdot 9 \cdot 8 \cdot 7$:
+
+```{r}
+#| label: code-distinct
+P <- function(n, k) prod(n:(n - k + 1))
+P(10, 4) / 10^4
+```
+
+That is `r pct(P(10, 4) / 10^4)`. In R we can also check the formulas by listing. For the arrangements of $\{1, \ldots, 5\}$ two at a time:
+
+```{r}
+#| label: list-arrangements
+g <- expand.grid(first = 1:5, second = 1:5)
+c(with_rep = nrow(g), without_rep = sum(g$first != g$second), formula = P(5, 2))
+```
+
+## The birthday problem
+
+There are 20 people in a room. What is the probability that at least two share a birthday? We ignore 29 February and treat the 365 days as equally likely.
+
+All possible sequences of birthdays number $365^{20}$, arrangements with repetition. It is easier to count the complement $A'$: "everyone has a different birthday". Its favourable cases are arrangements without repetition, $P(365, 20)$. So
+
+$$P(A) = 1 - \frac{P(365, 20)}{365^{20}} = 1 - \frac{365 \cdot 364 \cdots 346}{365^{20}}.$$
+
+```{r}
+#| label: birthday
+p_shared <- function(n) 1 - prod((365 - n + 1):365) / 365^n
+p_shared(20)
+# base R has a ready-made function
+pbirthday(20)
+# simulate 10,000 rooms
+mean(replicate(10000, any(duplicated(sample(365, 20, replace = TRUE)))))
+```
+
+The probability is `r pct(p_shared(20))`: in 100 groups of 20 people we expect about 41 to contain a shared birthday. Intuition usually fails here because we think "someone with *my* birthday". The problem asks about **any pair**, and 20 people form 190 pairs. With just `r min(which(sapply(1:100, p_shared) > 0.5))` people the probability already exceeds 50%.
+
+::: {.ix-panel}
+::: {.ix-title}
+The birthday problem
+:::
+
+```{ojs}
+//| echo: false
+viewof n17 = Inputs.range([2, 80], {label: "People in the room", step: 1, value: 20})
+viewof room17 = Inputs.button("New room")
+```
+
+```{ojs}
+//| echo: false
+pShared17 = n => { let q = 1; for (let i = 0; i < n; i++) q *= (365 - i) / 365; return 1 - q; }
+{
+  room17;
+  const days = Array.from({length: n17}, () => 1 + Math.floor(365 * Math.random()));
+  const cnt = d3.rollup(days, v => v.length, d => d);
+  const dots = [];
+  const seen = new Map();
+  days.forEach(d => { const k = (seen.get(d) || 0); seen.set(d, k + 1); dots.push({day: d, level: k, shared: cnt.get(d) > 1}); });
+  const nShared = [...cnt.values()].filter(v => v > 1).length;
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const starts = [1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335];
+  const strip = Plot.plot({
+    width: 640, height: 90, marginLeft: 10, marginRight: 10,
+    x: {domain: [1, 366], ticks: starts, tickFormat: (d, i) => months[i], label: null},
+    y: {domain: [0, 3], axis: null},
+    marks: [
+      Plot.ruleY([0], {stroke: "#ccc"}),
+      Plot.dot(dots, {x: "day", y: d => d.level + 0.5, r: 4, fill: d => d.shared ? "#f28e2b" : "#4e79a7"})
+    ]
+  });
+  const curve = d3.range(1, 81).map(n => ({n, p: pShared17(n)}));
+  const chart = Plot.plot({
+    width: 640, height: 220, marginLeft: 45,
+    x: {label: "People →", domain: [1, 80]},
+    y: {label: "↑ P(shared birthday)", domain: [0, 1], grid: true, tickFormat: "%"},
+    marks: [
+      Plot.ruleY([0.5], {stroke: "#c62828", strokeDasharray: "4,3"}),
+      Plot.line(curve, {x: "n", y: "p", stroke: "#4e79a7", strokeWidth: 2}),
+      Plot.dot([{n: n17, p: pShared17(n17)}], {x: "n", y: "p", r: 6, fill: "#f28e2b"})
+    ]
+  });
+  const fmtP = x => x.toLocaleString("en-GB", {style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1});
+  return html`${strip}
+    <div class="ix-note">${nShared > 0 ? html`<span style="color:#c25e00"><b>${nShared}</b> ${nShared === 1 ? "day has" : "days have"} a shared birthday (orange).</span>` : html`Everyone in this room has a different birthday.`}
+    Pairs of people: <b>${(n17 * (n17 - 1) / 2).toLocaleString("en-GB")}</b>.</div>
+    ${chart}
+    <table class="ix-tbl"><tr><td>P(at least two share a birthday) for ${n17} people</td><td><b>${fmtP(pShared17(n17))}</b></td></tr></table>`;
+}
+```
+:::
+
+Press "New room" a few times with 23 people: about half of the rooms show orange dots. With 50 people, almost always.
+
+## Key takeaways
+
+- **Permutations** of $n$ elements: $n!$. With groups of identical elements: $n!/(s_1! \cdots s_m!)$.
+- **Arrangements** of $n$ taken $k$ at a time: $P(n, k) = n!/(n-k)!$ without repetition, $n^k$ with repetition.
+- Order matters in both. When it does not, we are talking about combinations.
+- In the **birthday problem** we count the complement: with 23 people the chance of a shared birthday exceeds 50%.
+
+## Review questions
+
+**1. Quick quiz.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz17 = [
+  {q: "Eight runners take part in a race. In how many ways can gold, silver and bronze medals be awarded?",
+   opts: ["24", "56", "336", "512"], ans: 2,
+   why: "Arrangements of 8 taken 3 at a time without repetition: P(8, 3) = 8 · 7 · 6 = 336. Order matters because the medals differ."},
+  {q: "How many anagrams does the word MAMA have?",
+   opts: ["4", "6", "12", "24"], ans: 1,
+   why: "4 letters, with M and A twice each: 4! / (2! · 2!) = 24 / 4 = 6. Check them in the explorer."},
+  {q: "Three siblings share 4 tablets, one each. In how many ways can they do it?",
+   opts: ["4", "12", "24", "64"], ans: 2,
+   why: "Arrangements of 4 taken 3 at a time: P(4, 3) = 4 · 3 · 2 = 24."},
+  {q: "A die is rolled 6 times. What is the probability that all 6 numbers appear?",
+   opts: ["1/6", "6!/6⁶ ≈ 1.5%", "1/6⁶", "6/6⁶"], ans: 1,
+   why: "There are 6⁶ = 46,656 sequences. The favourable ones are the permutations of the 6 numbers, 6! = 720. So 720 / 46,656 ≈ 1.54%."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz17.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz17.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** (a) How many "words" can be written with all the letters of PEPPER? (b) How many of them start with PP? (c) What is the probability that a random one does not start with PP?
+
+**3.** Ten students sit in a row at random. What is the probability that the two youngest sit next to each other?
+
+**4.** Use `p_shared()` (or `pbirthday()`) to find how many people are needed for the probability of a shared birthday to exceed 90%.
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. (a) 6 letters, with P three times and E twice: $6!/(3! \cdot 2!) = 60$. (b) The letters P, E, E, R remain for 4 positions: $4!/2! = 12$. (c) $1 - 12/60 = 4/5 = 80\%$.
+3. The two youngest take two adjacent seats: 9 pairs of seats, times 2 for their order within the pair. The other 8 sit in $8!$ ways. So $\dfrac{9 \cdot 2 \cdot 8!}{10!} = \dfrac{18}{90} = \dfrac{1}{5}$.
+4. `min(which(sapply(1:100, p_shared) > 0.9))` gives `r min(which(sapply(1:100, p_shared) > 0.9))` people.
+:::
+
+---
+
+**Next post:** *Combinations: when order does not matter.*
