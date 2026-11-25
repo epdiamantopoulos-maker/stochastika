@@ -1,0 +1,221 @@
+---
+title: "Worked problems: conditional probability and Bayes"
+description: "Seven worked problems on conditional probability, the multiplication rule, independence, total probability, Bayes' theorem and diagnostic tests, with an answer checker and verification by simulation."
+date: 2027-01-22
+categories: [Probability, Exercises, R, Interactive]
+keywords: [worked problems, conditional probability, Bayes theorem, total probability, independence, reliability, diagnostic test, probability exercises]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# non-ASCII characters in output and plots under a "C" locale
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+This post closes the second unit, from [conditional probability](../conditional-probability/index.qmd) to the [ROC curve](../roc-auc/index.qmd) and [system reliability](../system-reliability/index.qmd). As with the [worked problems of the first unit](../foundations-exercises/index.qmd), solve each problem yourself first, check your answer in the box (fraction, decimal or percentage) and then open the solution.
+
+```{ojs}
+//| echo: false
+// answer checker: accepts a fraction, a decimal or a percentage
+check31 = (exact) => {
+  const inp = html`<input type="text" placeholder="your answer" style="width:9em;padding:3px 6px;border:1px solid #9ecae1;border-radius:5px">`;
+  const btn = html`<button>Check</button>`, fb = html`<span class="ix-note" style="margin-left:8px"></span>`;
+  const parse = s => {
+    s = s.trim().replace(/\s/g, "").replace(",", ".");
+    if (!s) return NaN;
+    if (s.endsWith("%")) return parseFloat(s) / 100;
+    if (s.includes("/")) { const [a, b] = s.split("/").map(Number); return a / b; }
+    return Number(s);
+  };
+  const run = () => {
+    const v = parse(inp.value);
+    if (!Number.isFinite(v)) { fb.innerHTML = "Type a number or a fraction."; return; }
+    const ok = Math.abs(v - exact) <= Math.max(0.002, 0.005 * Math.abs(exact));
+    fb.innerHTML = ok ? `<span class="ix-ok">✓ Correct.</span>` : `<span class="ix-no">✗ Not yet.</span> Recheck your solution or open the one below.`;
+  };
+  btn.onclick = run;
+  inp.onkeydown = e => { if (e.key === "Enter") run(); };
+  return html`<div class="ix-panel" style="padding:8px 12px">${inp} ${btn}${fb}</div>`;
+}
+```
+
+## 1. Two minerals
+
+Samples of a material contain mineral $A$ 40% of the time and mineral $B$ 55% of the time. The probability that $B$ is present given that $A$ is present is 80%. What is the probability that a sample contains at least one of the two? And neither?
+
+```{ojs}
+//| echo: false
+check31(0.63)
+```
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+By the [multiplication rule](../multiplication-rule/index.qmd), $P(A \cap B) = P(B \mid A)\,P(A) = 0.8 \cdot 0.4 = 0.32$. By the addition rule, $P(A \cup B) = 0.4 + 0.55 - 0.32 = 0.63$. Neither: $P(A' \cap B') = 1 - P(A \cup B) = 0.37$.
+:::
+
+## 2. An urn that "remembers"
+
+An urn holds 4 white and 5 black balls. We draw one. If it is white, we put it back together with 3 more white balls. If it is black, we put it back with 2 more black balls. Then we draw a second ball. (a) What is the probability that the second is white? (b) If the second was white, what is the probability that the first was white too? Type (b) in the box.
+
+```{ojs}
+//| echo: false
+check31(77 / 137)
+```
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+Let $W_1$, $W_2$ = {white on the 1st, 2nd draw}. If the 1st was white, the urn holds 7 white and 5 black. If it was black, 4 white and 7 black. (a) By [total probability](../total-probability/index.qmd):
+
+$$P(W_2) = \frac{4}{9} \cdot \frac{7}{12} + \frac{5}{9} \cdot \frac{4}{11} = \frac{7}{27} + \frac{20}{99} = \frac{137}{297} \approx 0.461.$$
+
+(b) By [Bayes' theorem](../bayes-theorem/index.qmd):
+
+$$P(W_1 \mid W_2) = \frac{7/27}{137/297} = \frac{77}{137} \approx 0.562.$$
+
+A white 2nd ball makes a white 1st ball more likely (from 44% to 56%), because a white 1st ball "loads" the urn with white balls.
+:::
+
+## 3. Bacteriuria and pyelonephritis
+
+5% of the pregnant women followed at a clinic have bacteriuria. Of these, 30% develop pyelonephritis, compared with 1% of those without bacteriuria. Find the probability that a pregnant woman (a) has bacteriuria **and** pyelonephritis, (b) has pyelonephritis, (c) has bacteriuria given that she has pyelonephritis. Type (c) in the box.
+
+```{ojs}
+//| echo: false
+check31(30 / 49)
+```
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+Let $B$ = {bacteriuria} and $P$ = {pyelonephritis}. (a) $\Pr(B \cap P) = 0.05 \cdot 0.30 = 0.015$. (b) $\Pr(P) = 0.015 + 0.95 \cdot 0.01 = 0.0245$. (c) $\Pr(B \mid P) = 0.015 / 0.0245 = 30/49 \approx 0.612$. Although only 5% have bacteriuria, 6 in 10 cases of pyelonephritis do.
+:::
+
+## 4. Quality control on a production line
+
+On Line 1 of a factory, 8% of items are defective. An automatic system rejects 95% of the defective items and, by mistake, 4% of the good ones. (a) What is the probability that an item from Line 1 is rejected? (b) If an item from Line 1 was rejected, what is the probability that it really is defective? Type (b) in the box.
+
+```{ojs}
+//| echo: false
+check31(0.076 / 0.1128)
+```
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+Everything is conditioned on $L_1$ = {Line 1}, so we use the rules [with a third event](../bayes-theorem/index.qmd). With $A$ = {defective} and $B$ = {rejected}: (a) $P(B \mid L_1) = 0.95 \cdot 0.08 + 0.04 \cdot 0.92 = 0.076 + 0.0368 = 0.1128$. (b) $P(A \mid B \cap L_1) = 0.076 / 0.1128 \approx 0.674$. Nearly one in three rejected items is good.
+:::
+
+## 5. A test in a small town
+
+In a town of 1,000 people, 10% have disease X. A test has sensitivity 80% and specificity 70%. How many positive results will it give if everyone is tested, and what is its positive predictive value (PPV)?
+
+```{ojs}
+//| echo: false
+check31(8 / 35)
+```
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+With [natural frequencies](../base-rate-fallacy/index.qmd): 100 patients, of whom 80 are detected (and 20 missed). 900 healthy people, of whom 30% test positive: 270. Positive results: $80 + 270 = 350$, and $\text{PPV} = 80/350 = 8/35 \approx 0.229$.
+:::
+
+## 6. Independent, despite appearances
+
+Roll two dice. Let $A$ = {the 1st die is even} and $B$ = {the sum is even}. Compute $P(A \cap B)$. Are $A$ and $B$ independent?
+
+```{ojs}
+//| echo: false
+check31(0.25)
+```
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+$A \cap B$ means the 1st die is even and the sum is even, so the 2nd die is even too: $P(A \cap B) = 9/36 = 1/4$. Since $P(A) = 1/2$ and $P(B) = 18/36 = 1/2$, $P(A \cap B) = P(A)\,P(B)$: the events are [independent](../independence/index.qmd), even though the sum "contains" the 1st die. The reason: whatever the 1st die shows, the sum is even with probability $1/2$, depending on the 2nd.
+
+```{r}
+#| label: ex6
+g <- expand.grid(d1 = 1:6, d2 = 1:6)
+A <- g$d1 %% 2 == 0; B <- (g$d1 + g$d2) %% 2 == 0
+c(P_AB = mean(A & B), product = mean(A) * mean(B))
+```
+:::
+
+## 7. A mixed system
+
+A component $A$ with reliability 0.95 is connected in series with two components $B$ and $C$ in parallel, with reliability 0.8 and 0.7. Failures are independent. What is the reliability of the system?
+
+```{ojs}
+//| echo: false
+check31(0.893)
+```
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+The parallel pair works with probability $1 - 0.2 \cdot 0.3 = 0.94$, and in series with $A$: $R = 0.95 \cdot 0.94 = 0.893$. See the "A in series with (B ∥ C)" layout in the [reliability](../system-reliability/index.qmd) post.
+:::
+
+## Verify by simulation
+
+::: {.ix-panel}
+::: {.ix-title}
+Verify by simulation
+:::
+
+```{ojs}
+//| echo: false
+sims31 = new Map([
+  ["2. White 1st, given white 2nd", {exact: 77 / 137, run: () => {
+    const w1 = Math.random() < 4 / 9;
+    const w2 = Math.random() < (w1 ? 7 / 12 : 4 / 11);
+    return w2 ? w1 : null; }}],
+  ["3. Bacteriuria, given pyelonephritis", {exact: 30 / 49, run: () => {
+    const b = Math.random() < 0.05, p = Math.random() < (b ? 0.3 : 0.01);
+    return p ? b : null; }}],
+  ["4. Defective, given rejected", {exact: 0.076 / 0.1128, run: () => {
+    const d = Math.random() < 0.08, r = Math.random() < (d ? 0.95 : 0.04);
+    return r ? d : null; }}],
+  ["6. P(A ∩ B) with two dice", {exact: 0.25, run: () => {
+    const a = 1 + Math.floor(6 * Math.random()), b = 1 + Math.floor(6 * Math.random());
+    return a % 2 === 0 && (a + b) % 2 === 0; }}],
+  ["7. Reliability of the mixed system", {exact: 0.893, run: () => Math.random() < 0.95 && (Math.random() < 0.8 || Math.random() < 0.7)}]
+])
+viewof ex31 = Inputs.select(sims31, {label: "Problem"})
+viewof n31 = Inputs.select([10000, 100000, 1000000], {label: "Repetitions", value: 100000, format: x => x.toLocaleString("en-GB")})
+viewof go31 = Inputs.button("Simulate")
+```
+
+```{ojs}
+//| echo: false
+{
+  go31;
+  let k = 0, kept = 0;
+  for (let i = 0; i < n31; i++) { const r = ex31.run(); if (r === null) continue; kept++; if (r) k++; }
+  const f = x => x.toLocaleString("en-GB", {minimumFractionDigits: 4, maximumFractionDigits: 4});
+  return html`<table class="ix-tbl">
+    <tr><td>Repetitions kept</td><td><b>${kept.toLocaleString("en-GB")} / ${n31.toLocaleString("en-GB")}</b></td></tr>
+    <tr><td>Estimate</td><td><b>${f(k / kept)}</b></td></tr>
+    <tr><td>Exact value</td><td><b>${f(ex31.exact)}</b></td></tr></table>
+    <div class="ix-note">For conditional probabilities the simulation keeps only the repetitions where the condition occurred, as in the <a href="../conditional-probability/index.html">conditional probability</a> post. That is why rare conditions (problem 3) need many repetitions.</div>`;
+}
+```
+:::
+
+## What to remember
+
+- Before any formula, write in symbols what is **given** (usually $P(\text{effect} \mid \text{cause})$) and what is **asked**.
+- Asked for $P(\text{cause} \mid \text{effect})$? Total probability for the denominator, Bayes for the ratio.
+- **Natural frequencies** ("out of 1,000 people…") are the safest route with diagnostic tests.
+- Independence is **checked** with numbers, not guessed from the description (problem 6).
+
+---
+
+**Next post:** *Random variables and the cumulative distribution function.*

@@ -1,0 +1,200 @@
+---
+title: "Bayes in practice: why a positive test is often wrong (base-rate fallacy)"
+description: "The base-rate fallacy: how a test with 95% sensitivity and 99% specificity has a positive predictive value of only 9% for a rare disease, with an interactive diagram of 1,000 people and the PPV and NPV formulas."
+date: 2027-01-15
+categories: [Probability, Bayes, Diagnostic tests, R, Interactive]
+keywords: [base rate fallacy, base rate neglect, positive predictive value, PPV, NPV, prevalence, Bayes theorem, sensitivity, specificity, natural frequencies, false positives]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# non-ASCII characters in output and plots under a "C" locale
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+ppv <- function(sens, spec, x) sens * x / (sens * x + (1 - spec) * (1 - x))
+npv <- function(sens, spec, x) spec * (1 - x) / (spec * (1 - x) + (1 - sens) * x)
+```
+
+A serious disease affects 1 in 1,000 people. A new test detects 95% of patients (sensitivity 95%) and is wrongly positive in only 1% of healthy people (specificity 99%). You take the test and it comes back positive. How likely is it that you have the disease?
+
+Most people's first thought is somewhere near 95%. The correct answer is about **9%**. The gap comes from forgetting how **rare** the disease is: this is the **base-rate fallacy**.
+
+## Counting people
+
+The clearest way to see it is with **natural frequencies**. Imagine 100,000 people:
+
+- 100 have the disease. The test detects 95%: **95 true positives**.
+- 99,900 are healthy. The test is positive in 1%: **999 false positives**.
+
+In total $95 + 999 = 1{,}094$ people test positive, and only 95 of them are ill:
+
+$$\text{PPV} = \frac{95}{1{,}094} \approx 0.087.$$
+
+The test is good. But the healthy are so much more numerous that even 1% of them far outnumbers the ill.
+
+## The formula
+
+With [Bayes' theorem](../bayes-theorem/index.qmd) and the terms of the [previous post](../sensitivity-specificity/index.qmd), if $x = P(\text{disease})$ is the **prevalence** (the base rate):
+
+$$\text{PPV} = \frac{\text{sensitivity} \cdot x}{\text{sensitivity} \cdot x + (1 - \text{specificity}) \cdot (1 - x)},$$
+
+$$\text{NPV} = \frac{\text{specificity} \cdot (1 - x)}{\text{specificity} \cdot (1 - x) + (1 - \text{sensitivity}) \cdot x}.$$
+
+Sensitivity and specificity are properties of the test. PPV and NPV **also depend on the population** being tested.
+
+```{r}
+#| label: ppv-example
+ppv(sens = 0.95, spec = 0.99, x = 0.001)
+npv(sens = 0.95, spec = 0.99, x = 0.001)
+```
+
+NPV is almost 1: a negative result for a rare disease is very reassuring. A positive one, however, is not enough for a diagnosis.
+
+## Try it
+
+Each square is one person out of 1,000. Change the prevalence, sensitivity and specificity and watch the mix of positive results change.
+
+::: {.ix-panel}
+::: {.ix-title}
+1,000 people, one test
+:::
+
+```{ojs}
+//| echo: false
+viewof x28 = Inputs.select(new Map([["0.1%", 0.001], ["1%", 0.01], ["5%", 0.05], ["10%", 0.1], ["20%", 0.2], ["50%", 0.5]]), {label: "Prevalence", value: 0.01})
+viewof se28 = Inputs.range([0.5, 1], {label: "Sensitivity", step: 0.01, value: 0.95})
+viewof sp28 = Inputs.range([0.5, 1], {label: "Specificity", step: 0.01, value: 0.95})
+```
+
+```{ojs}
+//| echo: false
+{
+  const N = 1000, x = x28;
+  const sick = Math.round(N * x), TP = Math.round(sick * se28), FN = sick - TP;
+  const healthy = N - sick, FP = Math.round(healthy * (1 - sp28)), TN = healthy - FP;
+  const cls = [...Array(TP).fill("TP"), ...Array(FN).fill("FN"), ...Array(FP).fill("FP"), ...Array(TN).fill("TN")];
+  const col = {TP: "#59a14f", FN: "#f28e2b", FP: "#c62828", TN: "#dbe4ee"};
+  const cols = 40, s = 9;
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${cols * s} ${Math.ceil(N / cols) * s}`).style("width", "100%").style("max-width", "420px");
+  svg.selectAll("rect").data(cls).join("rect").attr("x", (d, i) => (i % cols) * s).attr("y", (d, i) => Math.floor(i / cols) * s).attr("width", s - 1.5).attr("height", s - 1.5).attr("rx", 1.5).attr("fill", d => col[d]);
+  const PPV = se28 * x / (se28 * x + (1 - sp28) * (1 - x)), NPV = sp28 * (1 - x) / (sp28 * (1 - x) + (1 - se28) * x);
+  const f = v => v.toLocaleString("en-GB", {style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1});
+  const curve = d3.range(-3, -0.29, 0.02).map(l => { const xx = 10 ** l; return {x: xx, ppv: se28 * xx / (se28 * xx + (1 - sp28) * (1 - xx)), npv: sp28 * (1 - xx) / (sp28 * (1 - xx) + (1 - se28) * xx)}; });
+  const chart = Plot.plot({
+    width: 420, height: 200, marginLeft: 45,
+    x: {type: "log", label: "Prevalence →", tickFormat: t => (100 * t).toLocaleString("en-GB") + "%"},
+    y: {domain: [0, 1], grid: true, tickFormat: t => (100 * t).toLocaleString("en-GB") + "%", label: "↑ PPV (green), NPV (blue)"},
+    marks: [
+      Plot.line(curve, {x: "x", y: "ppv", stroke: "#59a14f", strokeWidth: 2}),
+      Plot.line(curve, {x: "x", y: "npv", stroke: "#4e79a7", strokeWidth: 2}),
+      Plot.dot([{x, y: PPV}], {x: "x", y: "y", r: 5, fill: "#59a14f"}),
+      Plot.ruleX([x], {stroke: "#999", strokeDasharray: "3,3"})
+    ]
+  });
+  return html`<div class="ix-row"><div style="flex:0 1 430px">${svg.node()}
+    <div class="ix-note"><span style="color:#59a14f">■</span> true positives ${TP} &nbsp; <span style="color:#c62828">■</span> false positives ${FP} &nbsp; <span style="color:#f28e2b">■</span> false negatives ${FN} &nbsp; <span style="color:#9fb3c8">■</span> true negatives ${TN}</div></div><div>
+    <table class="ix-tbl">
+      <tr><td>Positive results</td><td><b>${TP + FP}</b></td></tr>
+      <tr><td>PPV = P(disease | positive)</td><td><b>${f(PPV)}</b></td></tr>
+      <tr><td>NPV = P(healthy | negative)</td><td><b>${f(NPV)}</b></td></tr>
+    </table>${chart}</div></div>`;
+}
+```
+:::
+
+With 1% prevalence and a 95%–95% test, the red squares outnumber the green ones five to one. Raise the prevalence to 20%: PPV goes above 80%. **The same test** means very different things in different populations. That is why diagnostic tests are usually applied to people with symptoms or risk factors, where prevalence is higher, rather than at random to everyone.
+
+## Two clinical examples
+
+**Hypertension.** 20% of adults have high blood pressure. An automatic monitor classifies as hypertensive 84% of those who have hypertension and 23% of those with normal pressure, so it has sensitivity 0.84 and specificity 0.77. Then PPV $=$ `r fmt(ppv(0.84, 0.77, 0.2))` and NPV $=$ `r fmt(npv(0.84, 0.77, 0.2))`. A "hypertension" reading is right only about half the time. A "normal" reading is far more reliable.
+
+**Ruling out pulmonary embolism.** In patients with relevant symptoms the prevalence is about 50%, and the doctor wants to **rule out** the disease, so NPV is what matters. The D-dimer test has sensitivity 97% and specificity 41%, compression ultrasound 49% and 96% ([J. Clin. Epidemiol., 2021](https://doi.org/10.1016/j.jclinepi.2020.12.021)):
+
+```{r}
+#| label: pe
+c(D_dimer = npv(0.97, 0.41, 0.5), ultrasound = npv(0.49, 0.96, 0.5))
+```
+
+D-dimer, despite its low specificity, is **better** for ruling out. The question is not which test is "better" in general, but which measure serves the decision.
+
+## Repeating the test
+
+What if the person who tested positive in the opening example takes the test again and is positive again? The posterior after the 1st test, about 8.7%, becomes the **prior** for the 2nd:
+
+```{r}
+#| label: retest
+p1 <- ppv(0.95, 0.99, 0.001)
+p2 <- ppv(0.95, 0.99, p1)
+c(after_first = p1, after_second = p2)
+```
+
+After two positives the probability rises to `r pct(p2, 0)`. This holds only if the two tests are [independent](../independence/index.qmd) given the person's condition. If false positives are due to something stable in the same person, repeating the test adds much less information.
+
+## Key takeaways
+
+- **PPV** depends on sensitivity, specificity **and prevalence**. For a rare disease it can be very small even for a good test.
+- The **base-rate fallacy** is ignoring prevalence and confusing sensitivity with PPV.
+- **Natural frequencies** ("out of 100,000 people…") make the calculation intuitive.
+- The posterior of one test is the prior of the next.
+
+## Review questions
+
+**1. Quick quiz.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz28 = [
+  {q: "Prevalence 5%, sensitivity 80% and 10% positive results among the healthy. What is the PPV?",
+   opts: ["80%", "About 30%", "About 50%", "5%"], ans: 1,
+   why: "PPV = 0.8 · 0.05 / (0.8 · 0.05 + 0.1 · 0.95) = 0.04 / 0.135 ≈ 0.296."},
+  {q: "50% of emails are spam. A filter catches 99% of spam and wrongly flags 5% of normal emails. If an email is flagged, how likely is it to be normal?",
+   opts: ["5%", "About 4.8%", "1%", "50%"], ans: 1,
+   why: "P(normal | flagged) = 0.5 · 0.05 / (0.5 · 0.99 + 0.5 · 0.05) = 0.025 / 0.52 ≈ 0.048."},
+  {q: "If prevalence rises while the test stays the same, what happens to PPV and NPV?",
+   opts: ["Both rise", "PPV rises, NPV falls", "PPV falls, NPV rises", "They do not change"], ans: 1,
+   why: "More patients means more true positives and more false negatives. See the two curves in the interactive."},
+  {q: "Which of these depend on the population being tested?",
+   opts: ["Sensitivity and specificity", "PPV and NPV", "All of them", "None"], ans: 1,
+   why: "Sensitivity and specificity condition on the true condition. PPV and NPV condition on the result and are affected by prevalence."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz28.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz28.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** For the test of the opening example (sensitivity 95%, specificity 99%), how high must the prevalence be for PPV to reach 50%?
+
+**3.** Plot in R the PPV as a function of prevalence for the opening test, with a logarithmic x axis.
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. PPV $= 1/2$ when $0.95\,x = 0.01\,(1 - x)$, that is $x = 0.01/0.96 \approx 1.04\%$. When the prevalence equals the false positive rate, about half of the positives are wrong.
+3. `curve(ppv(0.95, 0.99, x), from = 1e-4, to = 0.5, log = "x", xlab = "Prevalence", ylab = "PPV")`.
+:::
+
+---
+
+**Next post:** *The ROC curve and AUC: choosing a decision threshold.*
