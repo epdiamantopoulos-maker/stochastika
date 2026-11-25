@@ -1,0 +1,282 @@
+---
+title: "Combinations: when order does not matter"
+description: "Combinations of n taken k at a time and the binomial coefficient, with an interactive Pascal's triangle and a lottery simulator that compares simulation with exact probabilities."
+date: 2026-12-23
+categories: [Probability, Combinatorics, R, Interactive]
+keywords: [combinations, binomial coefficient, n choose k, Pascal's triangle, lottery odds, Lotto 6/49, probability, combinatorics]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+int <- function(x) formatC(x, format = "d", big.mark = ",")
+```
+
+In a 6/49 lottery we choose 6 numbers out of 49. If 5, 12, 23, 31, 40, 44 are drawn, the order in which the balls came out does not matter at all. In [permutations and arrangements](../permutations-arrangements/index.qmd) order counted. Here we only care about **which** elements were chosen, and then we speak of **combinations**.
+
+## Definition
+
+A **combination** of the $n$ elements of a set **taken $k$ at a time** is any subset with $k$ elements. Their number is written $C(n, k)$.
+
+**Example 1.** The combinations of $\{\alpha, \beta, \gamma\}$ two at a time are $\{\alpha, \beta\}$, $\{\alpha, \gamma\}$, $\{\beta, \gamma\}$, so $C(3, 2) = 3$. The arrangements two at a time were $P(3, 2) = 6$, because each subset, e.g. $\{\alpha, \beta\}$, appears twice: $\alpha\beta$ and $\beta\alpha$.
+
+**Example 2.** The combinations of $\{\alpha, \beta, \gamma, \delta\}$ three at a time are $\{\alpha, \beta, \gamma\}$, $\{\alpha, \beta, \delta\}$, $\{\alpha, \gamma, \delta\}$, $\{\beta, \gamma, \delta\}$, so $C(4, 3) = 4$. There are $4 \cdot 3 \cdot 2 = 24$ arrangements, and each subset appears $3! = 6$ times, once for each ordering of its elements.
+
+The idea generalises: each combination of $k$ elements corresponds to $k!$ arrangements, so
+
+$$C(n, k) = \frac{P(n, k)}{k!} = \frac{n!}{k!\,(n-k)!} = \binom{n}{k}.$$
+
+The symbol $\binom{n}{k}$ is read "$n$ choose $k$" and is called the **binomial coefficient**, because it is the coefficient of $x^k$ in the expansion of $(1 + x)^n$. You will also see it written ${}_nC_k$ or $C^n_k$.
+
+### Useful properties
+
+Compute $\binom{7}{0}$, $\binom{7}{7}$, $\binom{7}{2}$, $\binom{7}{5}$. What do you notice?
+
+```{r}
+#| label: properties
+c(choose(7, 0), choose(7, 7), choose(7, 2), choose(7, 5))
+```
+
+We have $\binom{n}{0} = \binom{n}{n} = 1$ and $\binom{n}{k} = \binom{n}{n-k}$: choosing the $k$ elements we *take* is the same as choosing the $n - k$ we *leave*. A third property, **Pascal's rule**,
+
+$$\binom{n}{k} = \binom{n-1}{k-1} + \binom{n-1}{k},$$
+
+follows by fixing one element: a $k$-element subset either contains it (and we choose the other $k - 1$ from $n - 1$) or not (and we choose all $k$ from $n - 1$). If we write the binomial coefficients in rows, each number is the sum of the two above it. This gives **Pascal's triangle**:
+
+::: {.ix-panel}
+::: {.ix-title}
+Pascal's triangle
+:::
+
+```{ojs}
+//| echo: false
+viewof rows18 = Inputs.range([6, 32], {label: "Rows", step: 1, value: 10})
+viewof parity18 = Inputs.toggle({label: "Colour odd numbers", value: false})
+viewof n18 = Inputs.range([0, rows18 - 1], {label: "n", step: 1, value: Math.min(7, rows18 - 1)})
+```
+
+```{ojs}
+//| echo: false
+viewof k18 = Inputs.range([0, n18], {label: "k", step: 1, value: Math.min(2, n18)})
+```
+
+```{ojs}
+//| echo: false
+{
+  const R = rows18, W = 640, cw = W / (R + 1), ch = Math.min(30, cw * 0.9), H = ch * R + 10;
+  const big = n => { let r = [1n]; for (let i = 1; i <= n; i++) { const nx = [1n]; for (let j = 1; j < i; j++) nx.push(r[j - 1] + r[j]); nx.push(1n); r = nx; } return r; };
+  const cells = [];
+  let row = [1n];
+  for (let n = 0; n < R; n++) {
+    if (n > 0) { const nx = [1n]; for (let j = 1; j < n; j++) nx.push(row[j - 1] + row[j]); nx.push(1n); row = nx; }
+    row.forEach((v, k) => cells.push({n, k, v, x: W / 2 + (k - n / 2) * cw, y: 5 + ch * n + ch / 2}));
+  }
+  const role = c => (c.n === n18 && c.k === k18) ? "me" : (c.n === n18 - 1 && (c.k === k18 - 1 || c.k === k18)) ? "parent" : (c.n === n18 && c.k === n18 - k18) ? "mirror" : "";
+  const fill = c => { const r = role(c); if (r === "me") return "#f28e2b"; if (r === "parent") return "#59a14f"; if (r === "mirror") return "#ffd9b0";
+    return parity18 ? (c.v % 2n === 1n ? "#4e79a7" : "#f3f6f9") : "#eef3f9"; };
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H}`).style("width", "100%").style("max-width", W + "px");
+  const g = svg.selectAll("g").data(cells).join("g").attr("transform", c => `translate(${c.x},${c.y})`);
+  g.append("rect").attr("x", -cw / 2 + 1).attr("y", -ch / 2 + 1).attr("width", cw - 2).attr("height", ch - 2).attr("rx", 4).attr("fill", fill);
+  if (R <= 16) g.append("text").attr("text-anchor", "middle").attr("dy", "0.35em").style("font", c => `${Math.min(18, cw * 0.85 / Math.max(2, c.v.toString().length) / 0.6)}px sans-serif`)
+    .attr("fill", c => (parity18 && c.v % 2n === 1n && !role(c)) ? "#fff" : "#222").text(c => c.v.toString());
+  const v = big(n18)[k18], a = n18 > 0 && k18 > 0 ? big(n18 - 1)[k18 - 1] : null, b = n18 > 0 && k18 < n18 ? big(n18 - 1)[k18] : null;
+  const nf = x => x.toLocaleString("en-GB");
+  const rule = n18 === 0 || k18 === 0 || k18 === n18 ? html`It sits at the edge of its row, so it equals 1.`
+    : html`Pascal's rule (green): ${nf(a)} + ${nf(b)} = <b>${nf(v)}</b>.`;
+  return html`${svg.node()}<div class="ix-note">C(${n18}, ${k18}) = <b>${nf(v)}</b> (orange). ${rule}
+    Symmetry (light orange): C(${n18}, ${n18 - k18}) = ${nf(v)}.
+    ${parity18 ? html`<br>With many rows, the odd numbers form the Sierpiński triangle.` : ""}</div>`;
+}
+```
+:::
+
+Switch on "Colour odd numbers" and raise the rows to 32: a fractal appears, the Sierpiński triangle.
+
+## Combinations in R
+
+`choose(n, k)` computes $\binom{n}{k}$ and `combn(x, k)` lists every combination, one per column:
+
+```{r}
+#| label: combn
+combn(c("α", "β", "γ", "δ"), 3)
+choose(4, 3)
+```
+
+## The lottery
+
+A 6/49 lottery has
+
+$$\binom{49}{6} = \frac{49 \cdot 48 \cdot 47 \cdot 46 \cdot 45 \cdot 44}{6!} = \text{`r int(choose(49, 6))`}$$
+
+possible tickets, so with one ticket the chance of matching all 6 numbers is 1 in `r int(choose(49, 6))`, about $7.2 \cdot 10^{-8}$. Playing one ticket a week, we would wait on average `r int(round(choose(49, 6) / 52))` years.
+
+For matching 5 we think in two stages, using the [counting principle](../counting-principle/index.qmd). First choose which 5 of the 6 drawn numbers are on our ticket, in $\binom{6}{5} = 6$ ways. Then choose the ticket's 6th number from the 43 not drawn, in $\binom{43}{1} = 43$ ways. So $6 \cdot 43 = 258$ tickets match 5. In general, for $k$ matches:
+
+$$P(k \text{ matches}) = \frac{\binom{6}{k} \binom{43}{6-k}}{\binom{49}{6}}.$$
+
+```{r}
+#| label: lotto
+k <- 0:6
+ways <- choose(6, k) * choose(43, 6 - k)
+data.frame(k, ways, prob = signif(ways / choose(49, 6), 3))
+```
+
+Matching 4 has `r int(choose(6, 4) * choose(43, 2))` favourable tickets, a probability of about `r pct(choose(6, 4) * choose(43, 2) / choose(49, 6), 2)`. Choose your own ticket and run some draws:
+
+::: {.ix-panel}
+::: {.ix-title}
+Play the lottery
+:::
+
+```{ojs}
+//| echo: false
+viewof ticket18 = {
+  const picked = new Set([3, 11, 19, 27, 35, 42]);
+  const wrap = html`<div></div>`;
+  const grid = html`<div style="display:grid;grid-template-columns:repeat(7, 2.6em);gap:3px"></div>`;
+  const info = html`<div class="ix-note"></div>`;
+  const btns = [];
+  const refresh = () => {
+    btns.forEach((b, i) => b.className = picked.has(i + 1) ? "ix-picked-ok" : "");
+    info.innerHTML = picked.size === 6 ? `Your ticket: <b>${[...picked].sort((a, b) => a - b).join(", ")}</b>` : `Choose <b>${6 - picked.size}</b> more numbers.`;
+  };
+  const fire = () => { refresh(); wrap.dispatchEvent(new Event("input", {bubbles: true})); };
+  for (let i = 1; i <= 49; i++) {
+    const b = html`<button style="margin:0;padding:3px 0;width:100%">${i}</button>`;
+    b.onclick = () => { if (picked.has(i)) picked.delete(i); else if (picked.size < 6) picked.add(i); fire(); };
+    btns.push(b); grid.append(b);
+  }
+  const rnd = html`<button>Random ticket</button>`;
+  rnd.onclick = () => { picked.clear(); d3.shuffle(d3.range(1, 50)).slice(0, 6).forEach(x => picked.add(x)); fire(); };
+  wrap.append(grid, html`<div style="margin-top:6px">${rnd}</div>`, info);
+  Object.defineProperty(wrap, "value", {get: () => [...picked].sort((a, b) => a - b)});
+  refresh();
+  return wrap;
+}
+viewof nd18 = Inputs.radio(new Map([["1", 1], ["100", 100], ["10,000", 10000], ["100,000", 100000]]), {label: "Draws", value: 1})
+viewof go18 = Inputs.button("Draw")
+```
+
+```{ojs}
+//| echo: false
+{
+  go18;
+  if (ticket18.length !== 6) return html`<div class="ix-note">The ticket needs 6 numbers.</div>`;
+  const t = new Set(ticket18), counts = new Array(7).fill(0), pool = d3.range(1, 50);
+  let last = null;
+  for (let r = 0; r < nd18; r++) {
+    // partial Fisher–Yates shuffle for 6 balls
+    for (let i = 0; i < 6; i++) { const j = i + Math.floor(Math.random() * (49 - i)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+    let m = 0; for (let i = 0; i < 6; i++) if (t.has(pool[i])) m++;
+    counts[m]++;
+    if (r === nd18 - 1) last = pool.slice(0, 6).sort((a, b) => a - b);
+  }
+  const C = (n, k) => { let r = 1; for (let i = 1; i <= k; i++) r = r * (n - k + i) / i; return r; };
+  const theo = d3.range(7).map(k => C(6, k) * C(43, 6 - k) / C(49, 6));
+  const data = d3.range(7).map(k => ({k, obs: counts[k] / nd18, theo: theo[k]}));
+  const balls = last.map(x => html`<span style="display:inline-block;width:2em;height:2em;line-height:2em;text-align:center;border-radius:50%;margin:2px;font-weight:bold;background:${t.has(x) ? "#59a14f" : "#9ecae1"};color:${t.has(x) ? "#fff" : "#1d3c5a"}">${x}</span>`);
+  const chart = Plot.plot({
+    width: 520, height: 220, marginLeft: 50,
+    x: {label: "Matches", type: "band"},
+    y: {label: "↑ Relative frequency", domain: [0, 0.5], grid: true, tickFormat: "%"},
+    marks: [
+      Plot.barY(data, {x: "k", y: "obs", fill: "#4e79a7", fillOpacity: 0.8}),
+      Plot.tickY(data, {x: "k", y: "theo", stroke: "#f28e2b", strokeWidth: 3})
+    ]
+  });
+  const nf = x => x.toLocaleString("en-GB");
+  const pf = x => x === 0 ? "0" : x < 0.001 ? x.toExponential(1) : x.toLocaleString("en-GB", {maximumFractionDigits: 4});
+  return html`<div>Last draw: ${balls} ${(m => html`<b>${m}</b> ${m === 1 ? "match" : "matches"}`)(last.filter(x => t.has(x)).length)}</div>
+    ${chart}
+    <table class="ix-tbl"><tr><th>Matches</th><th>Draws</th><th>Frequency</th><th>Exact probability</th></tr>
+    ${data.map(d => html`<tr><td>${d.k}</td><td>${nf(counts[d.k])}</td><td>${pf(d.obs)}</td><td>${pf(d.theo)}</td></tr>`)}</table>
+    <div class="ix-note">Blue bars: relative frequencies over ${nf(nd18)} draws. Orange lines: exact probabilities. Even in 100,000 draws, matching all six almost never happens.</div>`;
+}
+```
+:::
+
+The probabilities do not depend on the ticket you chose: 1, 2, 3, 4, 5, 6 has exactly the same chances as any other ticket.
+
+## Two more applications
+
+**A committee.** A 3-member committee is formed from 5 men and 4 women. There are $\binom{9}{3} = 84$ possible committees. How many have at least one man and at least one woman? They are either (1 man, 2 women) or (2 men, 1 woman):
+
+$$\binom{5}{1}\binom{4}{2} + \binom{5}{2}\binom{4}{1} = 5 \cdot 6 + 10 \cdot 4 = 70.$$
+
+With the complement: subtract the all-male committees, $\binom{5}{3} = 10$, and the all-female ones, $\binom{4}{3} = 4$, to get $84 - 14 = 70$ again.
+
+**The 30 coins.** In the [counting principle](../counting-principle/index.qmd) post we left a question open: what is the probability of 7 tails in 30 tosses? There are $2^{30}$ sequences. A favourable sequence is fully determined by **which** 7 of the 30 tosses were tails, so there are $\binom{30}{7} =$ `r int(choose(30, 7))` favourable ones and
+
+$$P(7 \text{ tails}) = \frac{\binom{30}{7}}{2^{30}} \approx \text{`r fmt(choose(30, 7) / 2^30, 4)`}.$$
+
+## Key takeaways
+
+- A **combination** of $n$ taken $k$ at a time is a $k$-element subset: order does not matter.
+- $\binom{n}{k} = \dfrac{n!}{k!\,(n-k)!} = \dfrac{P(n, k)}{k!}$, because each combination corresponds to $k!$ arrangements.
+- Properties: $\binom{n}{0} = \binom{n}{n} = 1$, $\binom{n}{k} = \binom{n}{n-k}$ and Pascal's rule.
+- The probability of $k$ matches in a 6/49 lottery is $\binom{6}{k}\binom{43}{6-k} / \binom{49}{6}$, a pattern we will meet again in many sampling problems.
+
+## Review questions
+
+**1. Quick quiz.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz18 = [
+  {q: "In how many ways can a relay team of 4 be chosen from 6 athletes (ignoring the running order)?",
+   opts: ["15", "24", "360", "1,296"], ans: 0,
+   why: "Combinations of 6 taken 4 at a time: C(6, 4) = C(6, 2) = 15. If the order mattered too, it would be P(6, 4) = 360."},
+  {q: "All 5 members of a family hug each other, two at a time. How many hugs are there?",
+   opts: ["5", "10", "20", "25"], ans: 1,
+   why: "Each hug is an unordered pair: C(5, 2) = 10."},
+  {q: "Which of these equals C(10, 7)?",
+   opts: ["C(10, 3)", "P(10, 7)", "10!/7!", "C(7, 3)"], ans: 0,
+   why: "By symmetry, C(10, 7) = C(10, 3) = 120."},
+  {q: "In a 6/49 lottery, which ticket is most likely to match all six?",
+   opts: ["1, 2, 3, 4, 5, 6", "A 'random-looking' one like 7, 15, 22, 34, 41, 48", "The numbers drawn most often", "They are all equally likely"], ans: 3,
+   why: "Every ticket is one of 13,983,816 equally likely combinations. Some tickets are simply played by more people, so if they win, the prize is shared."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz18.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz18.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** Of 100 items of a product, 8 are defective. We pick 5 at random. What is the probability that exactly 3 are non-defective? That at least 3 are?
+
+**3.** A shipment of 20 hard drives contains 4 defective ones. We pick 2 at random. (a) In how many ways can the sample be taken? (b) What is the probability that neither is defective?
+
+**4.** Show with a counting argument that $\sum_{k=0}^{n} \binom{n}{k} = 2^n$, and check it in R for $n = 10$.
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. There are $\binom{100}{5} =$ `r int(choose(100, 5))` samples. Exactly 3 non-defective: $\binom{92}{3}\binom{8}{2} / \binom{100}{5} \approx$ `r fmt(choose(92, 3) * choose(8, 2) / choose(100, 5), 3)`. At least 3: add the cases 3, 4 and 5 to get `r fmt(sum(choose(92, 3:5) * choose(8, 2:0)) / choose(100, 5), 3)`.
+3. (a) $\binom{20}{2} = 190$. (b) Both from the 16 good ones: $\binom{16}{2} / \binom{20}{2} = 120/190 \approx 0.632$.
+4. $2^n$ counts all subsets of an $n$-element set: for each element we decide "in" or "out" (counting principle). $\binom{n}{k}$ counts those with exactly $k$ elements, and summing over all $k$ counts them all. In R: `sum(choose(10, 0:10)) == 2^10` gives `TRUE`.
+:::
+
+---
+
+**Next post:** *Bertrand's paradox: why "at random" needs a model.*

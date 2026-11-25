@@ -1,0 +1,260 @@
+---
+title: "The fundamental counting principle: counting without listing"
+description: "The fundamental counting principle with an interactive decision tree and a password calculator: when to multiply, when not to, and why an 8-character password beats a PIN."
+date: 2026-12-18
+categories: [Probability, Combinatorics, R, Interactive]
+keywords: [fundamental counting principle, multiplication principle, rule of product, combinatorics, tree diagram, counting, passwords, classical probability]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+int <- function(x) formatC(x, format = "d", big.mark = ",")
+```
+
+[Classical probability](../probability-approaches/index.qmd), $P(A) = N(A)/N(\Omega)$, needs counting. With two coins that is easy: one favourable case out of four. But what about the probability of 7 tails in **30 tosses**? We cannot write the cases down one by one. We need ways to **count without listing**, and that is what **combinatorics** is about. It all starts from one principle.
+
+## The fundamental counting principle
+
+Suppose a procedure runs in $\nu$ successive stages $\varphi_1, \varphi_2, \ldots, \varphi_\nu$. If stage $\varphi_1$ can be done in $\kappa_1$ ways, for each of these stage $\varphi_2$ can be done in $\kappa_2$ ways, …, and for each of all these stage $\varphi_\nu$ can be done in $\kappa_\nu$ ways, then the procedure can be done in
+
+$$\kappa_1 \cdot \kappa_2 \cdots \kappa_\nu \ \text{ways}.$$
+
+**Example.** A code consists of one capital Greek letter (24 choices) and one digit (10 choices). For each letter there are 10 digits, so there are $24 \cdot 10 = 240$ codes.
+
+The principle is easy to see in a **tree diagram**: each stage is a level, each branch a choice, and each path from the root to a leaf one outcome. If every node of a level has the same number of branches, the number of leaves is the product.
+
+::: {.ix-panel}
+::: {.ix-title}
+Tree diagram: a restaurant menu
+:::
+
+```{ojs}
+//| echo: false
+viewof k1 = Inputs.range([1, 4], {label: "Starters", step: 1, value: 2})
+viewof k2 = Inputs.range([1, 4], {label: "Mains", step: 1, value: 3})
+viewof k3 = Inputs.range([1, 3], {label: "Desserts", step: 1, value: 2})
+viewof rule16 = Inputs.toggle({label: "No cake with the fish", value: false})
+viewof pick16 = Inputs.button("Random menu")
+```
+
+```{ojs}
+//| echo: false
+{
+  pick16;
+  const A = ["Salad", "Soup", "Tzatziki", "Mushrooms"].slice(0, k1);
+  const B = ["Fish", "Chicken", "Moussaka", "Pasta"].slice(0, k2);
+  const C = ["Fruit", "Cake", "Ice cream"].slice(0, k3);
+  const dessertsFor = b => (rule16 && b === "Fish") ? C.filter(c => c !== "Cake") : C;
+  const leaves = [];
+  A.forEach(a => B.forEach(b => {
+    const cs = dessertsFor(b);
+    if (cs.length === 0) leaves.push([a, b, null]);
+    else cs.forEach(c => leaves.push([a, b, c]));
+  }));
+  const valid = leaves.filter(l => l[2] !== null);
+  const chosen = valid[Math.floor(Math.random() * valid.length)];
+  const row = 15, H = Math.max(120, leaves.length * row + 20), W = 640;
+  const xs = [30, 170, 330, 490];
+  const ly = i => 15 + i * row + row / 2;
+  // each node sits at the mean height of its leaves
+  const nodeY = (pred) => { const ids = leaves.map((l, i) => pred(l) ? i : -1).filter(i => i >= 0); return d3.mean(ids, ly); };
+  const on = l => chosen && l[0] === chosen[0] && (l.length < 2 || l[1] === chosen[1]) && (l.length < 3 || l[2] === chosen[2]);
+  const lines = [], labels = [];
+  const rootY = d3.mean(leaves, (_, i) => ly(i));
+  A.forEach(a => {
+    const ya = nodeY(l => l[0] === a);
+    lines.push({x1: xs[0], y1: rootY, x2: xs[1], y2: ya, hot: on([a])});
+    labels.push({x: xs[1] + 6, y: ya, t: a, hot: on([a])});
+    B.forEach(b => {
+      const yb = nodeY(l => l[0] === a && l[1] === b);
+      lines.push({x1: xs[1], y1: ya, x2: xs[2], y2: yb, hot: on([a, b])});
+      labels.push({x: xs[2] + 6, y: yb, t: b, hot: on([a, b])});
+      leaves.forEach((l, i) => {
+        if (l[0] !== a || l[1] !== b || l[2] === null) return;
+        lines.push({x1: xs[2], y1: yb, x2: xs[3], y2: ly(i), hot: on(l)});
+        labels.push({x: xs[3] + 6, y: ly(i), t: l[2], hot: on(l)});
+      });
+    });
+  });
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H}`).style("width", "100%").style("max-width", W + "px").style("font", "12px sans-serif");
+  svg.selectAll("line").data(lines).join("line")
+    .attr("x1", d => d.x1).attr("y1", d => d.y1).attr("x2", d => d.x2).attr("y2", d => d.y2)
+    .attr("stroke", d => d.hot ? "#f28e2b" : "#9ecae1").attr("stroke-width", d => d.hot ? 2.5 : 1);
+  svg.append("circle").attr("cx", xs[0]).attr("cy", rootY).attr("r", 5).attr("fill", "#4e79a7");
+  svg.selectAll("text.l").data(labels).join("text").attr("class", "l")
+    .attr("x", d => d.x).attr("y", d => d.y).attr("dy", "0.35em")
+    .attr("fill", d => d.hot ? "#c25e00" : "#333").attr("font-weight", d => d.hot ? "bold" : null).text(d => d.t);
+  ["Starter", "Main", "Dessert"].forEach((t, j) => svg.append("text").attr("x", xs[j + 1]).attr("y", 10).attr("fill", "#4e79a7").attr("font-weight", "bold").text(t));
+  const n = valid.length, prod = k1 * k2 * k3;
+  const msg = rule16 && k3 >= 2 && n !== prod
+    ? html`Leaves: <b>${n}</b>, not ${k1} · ${k2} · ${k3} = ${prod}. After the fish there are fewer desserts, so the number of choices at stage 3 is <b>not the same</b> on every branch and the product does not apply. We count case by case: ${k1} · (${k2 - 1} · ${k3} + 1 · ${k3 - 1}) = ${n}.`
+    : html`Leaves: <b>${n}</b> = ${k1} · ${k2} · ${k3}. Each stage has the same number of choices on every branch, so the counting principle applies.`;
+  return html`${svg.node()}<div class="ix-note">${msg}<br>Random menu: <b>${chosen ? chosen.join(" → ") : "-"}</b></div>`;
+}
+```
+:::
+
+Switch on "No cake with the fish". The tree loses branches only under the fish, and the number of leaves is no longer a product.
+
+### What the principle really requires
+
+The principle does not require the stages to be independent, nor the choices to be the same on every branch. It only requires the **number** of choices at each stage to be the same, whatever the earlier choices were. When we hand out 3 different prizes to 10 people, who is left for the 2nd prize depends on who won the 1st, but there are always 9 candidates. That is why there are $10 \cdot 9 \cdot 8 = 720$ ways. The arrangements of the next post rest on this observation.
+
+## Count and verify in R
+
+For small problems we can build every outcome with `expand.grid()` and count them:
+
+```{r}
+#| label: codes
+# the 24 capital Greek letters (Alpha–Rho, Sigma–Omega)
+greek <- intToUtf8(c(913:929, 931:937), multiple = TRUE)
+codes <- expand.grid(letter = greek, digit = 0:9)
+nrow(codes)
+head(paste0(codes$letter, codes$digit), 12)
+```
+
+Now add a third position holding one of 8 special characters. There are $24 \cdot 10 \cdot 8 =$ `r int(24 * 10 * 8)` codes. What is the probability that a random code does **not** contain the letter Alpha? Without Alpha, the first stage has 23 choices:
+
+```{r}
+#| label: codes-no-alpha
+special <- c("!", "@", "#", "$", "%", "&", "*", "?")
+codes3 <- expand.grid(letter = greek, digit = 0:9, sym = special)
+c(all = nrow(codes3), no_alpha = sum(codes3$letter != "Α"))
+mean(codes3$letter != "Α")
+```
+
+The probability is $23/24 \approx$ `r pct(23 / 24)`. It does not depend on the other positions: the factors $10 \cdot 8$ cancel.
+
+## How safe is a password?
+
+The counting principle explains why long passwords with varied characters are safe. Each position multiplies the number of possibilities by the number of characters allowed there. Try the ready-made patterns or type your own:
+
+::: {.ix-panel}
+::: {.ix-title}
+Password calculator
+:::
+
+```{ojs}
+//| echo: false
+classes16 = ({
+  "G": {n: 24, name: "capital Greek letter", chars: "ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ"},
+  "U": {n: 26, name: "capital Latin letter", chars: "ABCDEFGHIJKLMNOPQRSTUVWXYZ"},
+  "D": {n: 10, name: "digit", chars: "0123456789"},
+  "S": {n: 8, name: "special character", chars: "!@#$%&*?"},
+  "A": {n: 62, name: "Latin letter or digit", chars: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"}
+})
+viewof preset16 = Inputs.select(new Map([
+  ["Greek letter and digit (GD)", "GD"],
+  ["Letter, digit, special (GDS)", "GDS"],
+  ["4-digit PIN (DDDD)", "DDDD"],
+  ["UK-style plate (UUDDUUU)", "UUDDUUU"],
+  ["8-character password (AAAAAAAA)", "AAAAAAAA"]
+]), {label: "Pattern", value: "GD"})
+viewof custom16 = Inputs.text({label: "or your own", placeholder: "e.g. UUDDS", maxlength: 16})
+```
+
+```{ojs}
+//| echo: false
+{
+  const raw = (custom16 || "").toUpperCase().replace(/\s/g, "");
+  const pat = [...(raw || preset16)].filter(c => c in classes16);
+  if (pat.length === 0) return html`<div class="ix-note">Use the symbols G, U, D, S, A.</div>`;
+  const ns = pat.map(c => classes16[c].n);
+  const total = ns.reduce((a, b) => a * b, 1);
+  const ex = pat.map(c => { const s = [...classes16[c].chars]; return s[Math.floor(Math.random() * s.length)]; }).join("");
+  const nf = x => x.toLocaleString("en-GB", {maximumFractionDigits: 0});
+  const secs = total / 1e9;
+  const dur = secs < 1 ? "less than 1 second" : secs < 3600 ? `${nf(secs / 60)} minutes` : secs < 86400 * 365 ? `${nf(secs / 86400)} days` : `${nf(secs / (86400 * 365))} years`;
+  const boxes = pat.map(c => html`<div style="display:inline-block;text-align:center;margin:2px 3px">
+      <div style="border:1px solid #4e79a7;border-radius:5px;width:2.2em;padding:3px 0;font-weight:bold;color:#2c5a8a">${c}</div>
+      <div style="font-size:0.8em;color:#555">${classes16[c].n}</div></div>`);
+  return html`<div>${boxes}</div>
+    <table class="ix-tbl">
+      <tr><td>Product</td><td><b>${ns.join(" · ")}</b></td></tr>
+      <tr><td>Number of codes</td><td><b>${nf(total)}</b></td></tr>
+      <tr><td>A random code</td><td><b>${ex}</b></td></tr>
+      <tr><td>Trying all at 10<sup>9</sup> guesses/sec</td><td><b>${dur}</b></td></tr>
+    </table>
+    <div class="ix-note">G = capital Greek letter (24), U = capital Latin letter (26), D = digit (10), S = special character (8), A = Latin letter or digit (62).</div>`;
+}
+```
+:::
+
+A 4-digit PIN has only $10^4$ = 10,000 possibilities. An 8-character password over 62 symbols has $62^8 \approx 2.18 \cdot 10^{14}$: even at a billion guesses per second, trying them all takes days.
+
+## Back to the 30 coins
+
+Each toss is a stage with 2 outcomes, so 30 tosses give $2^{30} =$ `r int(2^30)` equally likely sequences. That is the denominator. The numerator, the number of sequences with exactly 7 tails, needs one more tool, **combinations**, which we meet two posts from now.
+
+## Key takeaways
+
+- **Fundamental counting principle:** if a procedure runs in successive stages with $\kappa_1, \kappa_2, \ldots, \kappa_\nu$ ways each, the total number of ways is $\kappa_1 \cdot \kappa_2 \cdots \kappa_\nu$.
+- The principle holds when the **number** of choices at each stage does not depend on the earlier choices. The choices themselves may.
+- When the number changes from branch to branch, count **case by case** and add.
+- The tree diagram is the picture of the principle; `expand.grid()` is its R version.
+
+## Review questions
+
+**1. Quick quiz.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz16 = [
+  {q: "How many outcomes does tossing one coin and rolling one die have?",
+   opts: ["8", "12", "36", "64"], ans: 1,
+   why: "2 outcomes for the coin times 6 for the die: 2 · 6 = 12."},
+  {q: "A die is rolled 3 times. How many different sequences of outcomes are there?",
+   opts: ["18", "120", "216", "729"], ans: 2,
+   why: "Each roll has 6 outcomes: 6 · 6 · 6 = 216."},
+  {q: "How many three-digit numbers (100 to 999) are there?",
+   opts: ["900", "999", "1,000", "729"], ans: 0,
+   why: "The first digit cannot be 0, so it has 9 choices, and the other two have 10: 9 · 10 · 10 = 900."},
+  {q: "A die is rolled twice. How many sequences show two different numbers?",
+   opts: ["15", "30", "36", "11"], ans: 1,
+   why: "The 1st roll has 6 choices. The 2nd always has 5, whatever the 1st was: 6 · 5 = 30. The choices depend on the 1st roll; their number does not."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz16.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz16.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** A Greek licence plate has 3 letters from Α, Β, Ε, Ζ, Η, Ι, Κ, Μ, Ν, Ο, Ρ, Τ, Υ, Χ (14 letters) and a 4-digit number (0000 to 9999). How many plates are there? How many if the number cannot start with 0?
+
+**3.** We form a four-digit number from the digits 0, 1, 2, 3, 4 without repetition, with 0 not allowed in the first position. (a) How many such numbers are there? (b) What is the probability that a random one is even?
+
+**4.** Verify your answer to question 3 in R by building all the numbers with `expand.grid()`.
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. $14^3 \cdot 10^4 = 27{,}440{,}000$. If the number cannot start with 0: $14^3 \cdot 9 \cdot 10^3 = 24{,}696{,}000$.
+3. (a) First position: 4 choices (not 0). The other three positions take 4, 3 and 2 of the remaining digits: $4 \cdot 4 \cdot 3 \cdot 2 = 96$. (b) Here the order of the stages matters. Start from the last digit and count case by case. Ending in 0: $4 \cdot 3 \cdot 2 = 24$. Ending in 2 or 4: the first position has 3 choices (not 0, not the last digit) and the middle ones $3 \cdot 2$, so $2 \cdot 3 \cdot 3 \cdot 2 = 36$. In total $60$, and the probability is $60/96 = 0.625$.
+4. `g <- expand.grid(a = 0:4, b = 0:4, c = 0:4, d = 0:4)`, keep the rows with `ok <- apply(g, 1, function(r) length(unique(r)) == 4) & g$a != 0` (96 rows) and compute `mean(g$d[ok] %% 2 == 0)`, which gives 0.625.
+:::
+
+---
+
+**Next post:** *Permutations and arrangements: when order matters (and the birthday problem).*
