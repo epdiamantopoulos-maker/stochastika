@@ -1,0 +1,263 @@
+---
+title: "Η αναμενόμενη τιμή: το κέντρο βάρους μιας κατανομής"
+description: "Ο ορισμός της αναμενόμενης (μέσης) τιμής E(X) για διακριτές και συνεχείς τυχαίες μεταβλητές, η ερμηνεία της ως κέντρο βάρους, οι ιδιότητες γραμμικότητας και η ανισότητα του Jensen, με λυμένες ασκήσεις, διαδραστική «τραμπάλα» και R."
+date: 2027-02-03
+image: thumbnail.png
+categories: [Πιθανότητες, Τυχαίες μεταβλητές, R, Διαδραστικό]
+keywords: [αναμενόμενη τιμή, μέση τιμή, expected value, E(X), κέντρο βάρους, γραμμικότητα, ανισότητα Jensen, E(g(X)), ασκήσεις αναμενόμενης τιμής]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# ελληνικοί χαρακτήρες στα γραφήματα και σε locale "C"
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, decimal.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+Η [σ.μ.π.](../probability-mass-function/index.qmd) και η [σ.π.π.](../probability-density-function/index.qmd) περιγράφουν πλήρως μια κατανομή, αλλά συχνά θέλουμε έναν μόνο αριθμό που να λέει «πού βρίσκεται» η τυχαία μεταβλητή. Ο πιο σημαντικός τέτοιος αριθμός είναι η **αναμενόμενη τιμή**. Θα δούμε ότι είναι το σημείο όπου η κατανομή «ισορροπεί», όπως μια τραμπάλα στο υπομόχλιό της.
+
+## Ορισμός
+
+Η **αναμενόμενη τιμή** ή **μέση τιμή** (expected value) μιας διακριτής τυχαίας μεταβλητής $X$ με σ.μ.π. $f_X$ είναι
+
+$$E(X) = \sum_{x_i} x_i\, f_X(x_i),$$
+
+δηλαδή ο σταθμισμένος μέσος των τιμών της, με βάρη τις πιθανότητές τους. Για μια συνεχή τ.μ. με σ.π.π. $f_X$, το άθροισμα γίνεται ολοκλήρωμα:
+
+$$E(X) = \int_{-\infty}^{\infty} x\, f_X(x)\,dx.$$
+
+Η αναμενόμενη τιμή συμβολίζεται και $\mu$ ή $\mu_X$. Υπάρχει όταν το άθροισμα ή το ολοκλήρωμα συγκλίνει απόλυτα, δηλαδή όταν $\sum |x_i| f_X(x_i) < \infty$ ή $\int |x| f_X(x)\,dx < \infty$. Αυτό ισχύει πάντα όταν η $X$ έχει πεπερασμένο πλήθος τιμών, αλλά όχι πάντα. Η σ.μ.π. $f(x) = \frac{1}{x(x+1)}$, $x = 1, 2, \ldots$, αθροίζει σε 1, όμως $\sum x f(x) = \sum \frac{1}{x+1} = \infty$: η $X$ δεν έχει αναμενόμενη τιμή.
+
+## Τρία παραδείγματα
+
+**Παράδειγμα 1: ζάρι.** Για το αποτέλεσμα της ρίψης ενός ζαριού, $f_X(x) = 1/6$ για $x = 1, \ldots, 6$, άρα
+
+$$E(X) = 1 \cdot \tfrac16 + 2 \cdot \tfrac16 + \cdots + 6 \cdot \tfrac16 = \tfrac{21}{6} = 3{,}5.$$
+
+Η αναμενόμενη τιμή **δεν** είναι απαραίτητα μια τιμή που παίρνει η $X$: κανένα ζάρι δεν φέρνει 3,5.
+
+**Παράδειγμα 2: άπειρες τιμές.** Για τη σ.μ.π. $f(x) = \frac14 \left(\frac34\right)^x$, $x = 0, 1, 2, \ldots$, χρησιμοποιούμε τη σειρά $\sum_{n \ge 1} n q^{n-1} = \frac{1}{(1-q)^2}$, που προκύπτει παραγωγίζοντας τη γεωμετρική σειρά:
+
+$$E(X) = \frac14 \sum_{n \ge 1} n \left(\frac34\right)^n = \frac{3}{16} \sum_{n \ge 1} n \left(\frac34\right)^{n-1} = \frac{3}{16} \cdot \frac{1}{(1 - 3/4)^2} = 3.$$
+
+**Παράδειγμα 3: συνεχής τ.μ.** Για $f(x) = 3x^2$ στο $[0, 1]$:
+
+$$E(X) = \int_0^1 x \cdot 3x^2\,dx = 3 \int_0^1 x^3\,dx = \frac34.$$
+
+Η πυκνότητα είναι μεγαλύτερη κοντά στο 1, γι' αυτό η μέση τιμή βρίσκεται δεξιά του μέσου $1/2$ του διαστήματος.
+
+## Η αναμενόμενη τιμή ως κέντρο βάρους
+
+Φανταστείτε κάθε τιμή $x_i$ ως ένα βαρίδι με μάζα $f_X(x_i)$ πάνω σε μια αβαρή ράβδο. Αν στηρίξουμε τη ράβδο σε ένα σημείο $g$, η ροπή που τη γέρνει είναι $\sum (x_i - g)\, f_X(x_i) = E(X) - g$. Η ροπή μηδενίζεται, και η ράβδος ισορροπεί, μόνο όταν $g = E(X)$. Η αναμενόμενη τιμή είναι λοιπόν το **κέντρο βάρους** της κατανομής.
+
+Διαλέξτε μια κατανομή και μετακινήστε το υπομόχλιο μέχρι να ισορροπήσει η ράβδος. Στη «δική σας σ.μ.π.» ρυθμίστε τα βάρη και δείτε πώς μια μικρή μάζα μακριά μετακινεί το κέντρο βάρους περισσότερο από μια μεγάλη μάζα κοντά.
+
+::: {.ix-panel}
+::: {.ix-title}
+Η τραμπάλα της αναμενόμενης τιμής
+:::
+
+```{ojs}
+//| echo: false
+dists35 = new Map([
+  ["Ζάρι: f(x) = 1/6, x = 1, …, 6", {type: "d", xs: [1, 2, 3, 4, 5, 6], p: x => 1 / 6}],
+  ["f(x) = (1/4)(3/4)^x, x = 0, 1, 2, …", {type: "d", xs: d3.range(0, 200), p: x => 0.25 * 0.75 ** x, shown: 15}],
+  ["Δική σας σ.μ.π. στα 0, 1, …, 5", {type: "custom"}],
+  ["Σ.π.π. f(x) = 3x², 0 ≤ x ≤ 1", {type: "c", lo: 0, hi: 1, f: x => 3 * x * x}],
+  ["Σ.π.π. f(x) = x³/4, 0 ≤ x ≤ 2", {type: "c", lo: 0, hi: 2, f: x => x ** 3 / 4}],
+  ["Σ.π.π. τριγωνική στο (−1, 1)", {type: "c", lo: -1, hi: 1, f: x => 1 - Math.abs(x)}],
+  ["Σ.π.π. f(x) = (x + 1)/2, −1 < x < 1", {type: "c", lo: -1, hi: 1, f: x => (x + 1) / 2}]
+])
+viewof d35 = Inputs.select(dists35, {label: "Κατανομή"})
+viewof w35 = {
+  const init = [1, 3, 5, 2, 1, 4];
+  const rs = init.map((v, i) => Inputs.range([0, 10], {step: 1, value: v, label: `βάρος του ${i}`}));
+  const wrap = html`<div>${d35.type === "custom" ? html`${rs}<div class="ix-note">Τα βάρη διαιρούνται με το άθροισμά τους, ώστε οι πιθανότητες να αθροίζουν σε 1.</div>` : html``}</div>`;
+  Object.defineProperty(wrap, "value", {get: () => rs.map(r => r.value)});
+  rs.forEach(r => r.addEventListener("input", () => wrap.dispatchEvent(new Event("input", {bubbles: true}))));
+  return wrap;
+}
+```
+
+```{ojs}
+//| echo: false
+model35 = {
+  if (d35.type === "c") {
+    const {lo, hi, f} = d35, n = 2000, h = (hi - lo) / n;
+    // κανόνας του Simpson για το ∫ x f(x) dx
+    let s = 0;
+    for (let i = 0; i <= n; i++) { const x = lo + i * h, w = i === 0 || i === n ? 1 : i % 2 ? 4 : 2; s += w * x * f(x); }
+    return {type: "c", lo, hi, f, mean: s * h / 3, dom: [lo - (hi - lo) * 0.08, hi + (hi - lo) * 0.08]};
+  }
+  let xs, ps;
+  if (d35.type === "custom") { const t = d3.sum(w35) || 1; xs = d3.range(6); ps = w35.map(w => w / t); }
+  else { xs = d35.xs; ps = xs.map(d35.p); }
+  const mean = d3.sum(xs, (x, i) => x * ps[i]), shown = d35.shown || xs.length;
+  return {type: "d", xs, ps, mean, shown, dom: [xs[0] - 0.6, xs[shown - 1] + 0.6]};
+}
+viewof g35 = Inputs.range(model35.dom, {step: 0.01, value: model35.dom[0] + 0.3 * (model35.dom[1] - model35.dom[0]), label: "Υπομόχλιο g"})
+```
+
+```{ojs}
+//| echo: false
+{
+  const m = model35, g = g35, W = 460, H = 266, base = 150;
+  const xs = d3.scaleLinear().domain(m.dom).range([20, W - 20]);
+  const torque = m.mean - g;
+  const ang = Math.max(-7, Math.min(7, 25 * torque / (m.dom[1] - m.dom[0])));
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H}`).style("width", "100%").style("max-width", "580px");
+  const beam = svg.append("g").attr("transform", `rotate(${ang}, ${xs(g)}, ${base})`);
+  if (m.type === "d") {
+    const top = d3.max(m.ps.slice(0, m.shown)), hs = 110 / top;
+    m.xs.slice(0, m.shown).forEach((x, i) => {
+      const hgt = m.ps[i] * hs, w = Math.min(26, (W - 40) / m.shown * 0.55);
+      beam.append("rect").attr("x", xs(x) - w / 2).attr("y", base - 3 - hgt).attr("width", w).attr("height", hgt).attr("fill", "#4e79a7");
+      svg.append("text").attr("x", xs(x)).attr("y", 222).attr("text-anchor", "middle").style("font", "10px sans-serif").attr("fill", "#666").text(x);
+    });
+    if (m.shown < m.xs.length) svg.append("text").attr("x", W - 22).attr("y", 20).attr("text-anchor", "end").style("font", "11px sans-serif").attr("fill", "#666").text("… συνεχίζει για μεγαλύτερα x");
+  } else {
+    const pts = d3.range(m.lo, m.hi, (m.hi - m.lo) / 200).concat([m.hi]);
+    const top = d3.max(pts, m.f), hs = 110 / top;
+    beam.append("path").attr("d", d3.area().x(x => xs(x)).y0(base - 3).y1(x => base - 3 - m.f(x) * hs)(pts)).attr("fill", "#4e79a7").attr("opacity", 0.75);
+    xs.ticks(6).forEach(t => svg.append("text").attr("x", xs(t)).attr("y", 222).attr("text-anchor", "middle").style("font", "10px sans-serif").attr("fill", "#666").text(String(t).replace(".", ",").replace("-", "−")));
+  }
+  beam.append("rect").attr("x", 14).attr("y", base - 3).attr("width", W - 28).attr("height", 5).attr("rx", 2).attr("fill", "#555");
+  svg.append("path").attr("d", `M${xs(g)},${base + 3} l-11,20 h22 z`).attr("fill", "#f28e2b");
+  svg.append("path").attr("d", `M${xs(m.mean)},${234} l-6,10 h12 z`).attr("fill", "#59a14f");
+  svg.append("text").attr("x", xs(m.mean)).attr("y", H - 2).attr("text-anchor", "middle").style("font", "11px sans-serif").attr("fill", "#59a14f").text("E(X)");
+  const fm = v => (Math.abs(v) < 5e-4 ? 0 : v).toFixed(3).replace(".", ",").replace("-", "−");
+  const ok = Math.abs(torque) < 0.02 * (m.dom[1] - m.dom[0]);
+  return html`<div>${svg.node()}
+    <table class="ix-tbl">
+      <tr><td>Υπομόχλιο g</td><td>${fm(g)}</td></tr>
+      <tr><td>Ροπή E(X) − g</td><td>${fm(torque)} ${ok ? html`<span class="ix-ok">✓ ισορροπία</span>` : torque > 0 ? "(γέρνει δεξιά)" : "(γέρνει αριστερά)"}</td></tr>
+      <tr><td>E(X)</td><td><b>${fm(m.mean)}</b></td></tr>
+    </table></div>`;
+}
+```
+:::
+
+Στο ζάρι η ράβδος ισορροπεί στο 3,5 και στη γεωμετρική στο 3, παρόλο που οι περισσότερες στήλες είναι αριστερά του: η μακριά «ουρά» προς τα δεξιά έχει μεγάλη ροπή. Στη σ.π.π. $3x^2$ το σημείο ισορροπίας είναι το $0{,}75$.
+
+## Η αναμενόμενη τιμή μιας συνάρτησης της X
+
+Αν $Y = g(X)$, η $E(Y)$ υπολογίζεται είτε από τη σ.μ.π. της $Y$ είτε, απευθείας, από τη σ.μ.π. της $X$:
+
+$$E\big(g(X)\big) = \sum_{x_i} g(x_i)\, f_X(x_i), \qquad E\big(g(X)\big) = \int_{-\infty}^{\infty} g(x)\, f_X(x)\,dx.$$
+
+**Άσκηση 1.** Αν $X$ είναι το αποτέλεσμα της ρίψης ενός ζαριού, βρείτε την αναμενόμενη τιμή της $Y = X^2$.
+
+Η $Y$ παίρνει τις τιμές $1, 4, 9, 16, 25, 36$, καθεμιά με πιθανότητα $1/6$, άρα
+
+$$E(X^2) = \frac{1 + 4 + 9 + 16 + 25 + 36}{6} = \frac{91}{6} \approx 15{,}17.$$
+
+Παρατηρήστε ότι $E(X^2) \ne \big(E(X)\big)^2 = 3{,}5^2 = 12{,}25$. Γενικά $E\big(g(X)\big) \ne g\big(E(X)\big)$. Το πότε η μία είναι μεγαλύτερη από την άλλη το λέει η ανισότητα του Jensen παρακάτω.
+
+## Ιδιότητες
+
+Για κάθε $\lambda \in \mathbb{R}$ και για τυχαίες μεταβλητές $X$, $Y$ με αναμενόμενη τιμή:
+
+1. $E(\lambda X) = \lambda E(X)$.
+2. $E(X + Y) = E(X) + E(Y)$, χωρίς καμία προϋπόθεση ανεξαρτησίας.
+3. $E(\lambda) = \lambda$: μια σταθερά «αναμένεται» να είναι ο εαυτός της.
+4. **Ανισότητα του Jensen.** Αν η $g$ είναι κυρτή, $E\big(g(X)\big) \ge g\big(E(X)\big)$.
+5. Αν η $g$ είναι κοίλη, $E\big(g(X)\big) \le g\big(E(X)\big)$.
+
+Οι 1–3 μαζί λένε ότι η αναμενόμενη τιμή είναι **γραμμική**: $E(aX + bY + c) = aE(X) + bE(Y) + c$. Στην Άσκηση 1, η $g(x) = x^2$ είναι κυρτή και πράγματι $91/6 \ge 12{,}25$.
+
+## Σε R
+
+```{r}
+#| label: ev-r
+x <- 1:6
+f <- rep(1/6, 6)
+# E(X) και E(X^2) για το ζάρι
+c(EX = sum(x * f), EX2 = sum(x^2 * f))
+# η γεωμετρική του Παραδείγματος 2: αρκετοί όροι της σειράς
+k <- 0:500
+sum(k * 0.25 * 0.75^k)
+# η συνεχής του Παραδείγματος 3
+integrate(function(x) x * 3 * x^2, 0, 1)$value
+# ο μέσος όρος πολλών ρίψεων πλησιάζει την E(X)
+m <- mean(sample(1:6, 1e5, replace = TRUE))
+m
+```
+
+Η τελευταία γραμμή δίνει `r fmt(m, 3)`, κοντά στο 3,5. Γιατί συμβαίνει αυτό, και πόσο κοντά, είναι το θέμα του επόμενου άρθρου.
+
+## Σύνοψη
+
+- $E(X) = \sum x_i f_X(x_i)$ για διακριτή και $E(X) = \int x f_X(x)\,dx$ για συνεχή τ.μ., όταν συγκλίνουν απόλυτα.
+- Είναι το κέντρο βάρους της κατανομής και δεν χρειάζεται να είναι τιμή της $X$.
+- $E\big(g(X)\big) = \sum g(x_i) f_X(x_i)$, αλλά γενικά $E\big(g(X)\big) \ne g\big(E(X)\big)$.
+- Η $E$ είναι γραμμική, και για κυρτή $g$ ισχύει $E\big(g(X)\big) \ge g\big(E(X)\big)$ (Jensen).
+
+## Ερωτήσεις εμπέδωσης
+
+**1. Γρήγορο κουίζ.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz35 = [
+  {q: "Η X παίρνει τις τιμές 0 και 1 με f(0) = f(1) = 1/2. Πόση είναι η E(X);",
+   opts: ["1/2", "1", "0", "Δεν ορίζεται, γιατί η X δεν παίρνει την τιμή 1/2"], ans: 0,
+   why: "E(X) = 0 · 1/2 + 1 · 1/2 = 1/2. Η αναμενόμενη τιμή δεν χρειάζεται να είναι τιμή της X."},
+  {q: "Αν E(X) = 2 και E(Y) = 1, πόση είναι η E(2X − Y);",
+   opts: ["3", "4", "5", "Χρειάζεται να είναι ανεξάρτητες"], ans: 0,
+   why: "Από τη γραμμικότητα: E(2X − Y) = 2E(X) − E(Y) = 4 − 1 = 3. Η ανεξαρτησία δεν χρειάζεται."},
+  {q: "Αν E(X) = 3, ποια σχέση ισχύει πάντα για την E(X²);",
+   opts: ["E(X²) ≥ 9", "E(X²) = 9", "E(X²) ≤ 9"], ans: 0,
+   why: "Η x² είναι κυρτή, άρα από την ανισότητα του Jensen E(X²) ≥ (E(X))² = 9. Ισότητα έχουμε μόνο όταν η X είναι σταθερή."},
+  {q: "Προσθέτουμε 10 σε κάθε τιμή της X. Τι γίνεται η αναμενόμενη τιμή;",
+   opts: ["Αυξάνεται κατά 10", "Μένει ίδια", "Πολλαπλασιάζεται επί 10"], ans: 0,
+   why: "E(X + 10) = E(X) + 10: όλη η κατανομή μετατοπίζεται, μαζί και το κέντρο βάρους της."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz35.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Σωστό.</span> ` : `<span class="ix-no">✗ Όχι ακριβώς.</span> `) + item.why;
+        score.innerHTML = `<b>Σωστές: ${[...done.values()].filter(x => x).length} από ${quiz35.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** Η $X$ είναι μια θετική τ.μ. με $E(X) = 1$. Τι πρόσημο έχει η $E(\ln X)$;
+
+**3.** Η συνεχής τ.μ. $X$ έχει σ.π.π. $f(x) = x^3/4$ για $x \in [0, 2]$ και $0$ αλλού. Βρείτε την $E(X)$.
+
+**4.** Η $X$ έχει την τριγωνική σ.π.π. $f(x) = x + 1$ για $x \in (-1, 0]$ και $f(x) = 1 - x$ για $x \in [0, 1)$. Βρείτε την $E(X)$.
+
+**5.** Η $X$ έχει συνάρτηση κατανομής $F(x) = (x + 1)^2/4$ για $x \in (-1, 1)$. Βρείτε την $E(X)$.
+
+Ελέγξτε τις απαντήσεις 3–5 στην τραμπάλα.
+
+::: {.callout-tip collapse="true"}
+## Απαντήσεις
+
+2. Η $\ln$ είναι κοίλη, άρα από την ανισότητα του Jensen $E(\ln X) \le \ln E(X) = \ln 1 = 0$. Η $E(\ln X)$ είναι λοιπόν μη θετική, και μάλιστα αρνητική εκτός αν $X = 1$ με πιθανότητα 1.
+3. $E(X) = \int_0^2 x \cdot \frac{x^3}{4}\,dx = \left[\frac{x^5}{20}\right]_0^2 = \frac{32}{20} = 1{,}6$.
+4. Η σ.π.π. είναι συμμετρική γύρω από το 0, $f(-x) = f(x)$, άρα το κέντρο βάρους είναι το $E(X) = 0$. Με ολοκληρώματα: $\int_{-1}^0 x(x + 1)\,dx + \int_0^1 x(1 - x)\,dx = -\frac16 + \frac16 = 0$.
+5. Πρώτα η σ.π.π.: $f(x) = F'(x) = (x + 1)/2$ στο $(-1, 1)$. Τότε $E(X) = \int_{-1}^1 x \frac{x + 1}{2}\,dx = \frac12 \int_{-1}^1 (x^2 + x)\,dx = \frac12 \cdot \frac23 = \frac13$.
+:::
+
+---
+
+**Επόμενο άρθρο:** *Ο νόμος των μεγάλων αριθμών και η E(X) ως άθροισμα ουρών.*

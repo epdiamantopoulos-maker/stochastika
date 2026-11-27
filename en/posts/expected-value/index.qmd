@@ -1,0 +1,263 @@
+---
+title: "Expected value: a distribution's centre of mass"
+description: "The definition of the expected value (mean) E(X) for discrete and continuous random variables, its meaning as a centre of mass, linearity and Jensen's inequality, with worked problems, an interactive see-saw and R."
+date: 2027-02-03
+image: thumbnail.png
+categories: [Probability, Random variables, R, Interactive]
+keywords: [expected value, mean of a random variable, E(X), centre of mass, linearity of expectation, Jensen's inequality, E(g(X)), LOTUS, expected value problems]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# non-ASCII characters in plots under a "C" locale
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+The [pmf](../probability-mass-function/index.qmd) and the [pdf](../probability-density-function/index.qmd) describe a distribution completely, but we often want a single number that says "where" the random variable sits. The most important such number is the **expected value**. We will see that it is the point where the distribution balances, like a see-saw on its pivot.
+
+## Definition
+
+The **expected value** or **mean** of a discrete random variable $X$ with pmf $f_X$ is
+
+$$E(X) = \sum_{x_i} x_i\, f_X(x_i),$$
+
+the weighted average of its values, with their probabilities as weights. For a continuous random variable with pdf $f_X$, the sum becomes an integral:
+
+$$E(X) = \int_{-\infty}^{\infty} x\, f_X(x)\,dx.$$
+
+The expected value is also written $\mu$ or $\mu_X$. It exists when the sum or the integral converges absolutely, that is, when $\sum |x_i| f_X(x_i) < \infty$ or $\int |x| f_X(x)\,dx < \infty$. That is automatic when $X$ has finitely many values, but not in general. The pmf $f(x) = \frac{1}{x(x+1)}$, $x = 1, 2, \ldots$, sums to 1, yet $\sum x f(x) = \sum \frac{1}{x+1} = \infty$: this $X$ has no expected value.
+
+## Three examples
+
+**Example 1: a die.** For the outcome of a die roll, $f_X(x) = 1/6$ for $x = 1, \ldots, 6$, so
+
+$$E(X) = 1 \cdot \tfrac16 + 2 \cdot \tfrac16 + \cdots + 6 \cdot \tfrac16 = \tfrac{21}{6} = 3.5.$$
+
+The expected value need **not** be a value that $X$ takes: no die ever shows 3.5.
+
+**Example 2: infinitely many values.** For the pmf $f(x) = \frac14 \left(\frac34\right)^x$, $x = 0, 1, 2, \ldots$, we use the series $\sum_{n \ge 1} n q^{n-1} = \frac{1}{(1-q)^2}$, obtained by differentiating the geometric series:
+
+$$E(X) = \frac14 \sum_{n \ge 1} n \left(\frac34\right)^n = \frac{3}{16} \sum_{n \ge 1} n \left(\frac34\right)^{n-1} = \frac{3}{16} \cdot \frac{1}{(1 - 3/4)^2} = 3.$$
+
+**Example 3: a continuous random variable.** For $f(x) = 3x^2$ on $[0, 1]$:
+
+$$E(X) = \int_0^1 x \cdot 3x^2\,dx = 3 \int_0^1 x^3\,dx = \frac34.$$
+
+The density is larger near 1, which is why the mean lies to the right of the midpoint $1/2$.
+
+## Expected value as a centre of mass
+
+Think of each value $x_i$ as a weight of mass $f_X(x_i)$ on a weightless rod. If we rest the rod on a pivot at $g$, the torque that tilts it is $\sum (x_i - g)\, f_X(x_i) = E(X) - g$. The torque vanishes, and the rod balances, only when $g = E(X)$. The expected value is the **centre of mass** of the distribution.
+
+Choose a distribution and move the pivot until the rod balances. With "your own pmf", adjust the weights and see how a small mass far away moves the centre of mass more than a large mass close by.
+
+::: {.ix-panel}
+::: {.ix-title}
+The expected-value see-saw
+:::
+
+```{ojs}
+//| echo: false
+dists35 = new Map([
+  ["Die: f(x) = 1/6, x = 1, …, 6", {type: "d", xs: [1, 2, 3, 4, 5, 6], p: x => 1 / 6}],
+  ["f(x) = (1/4)(3/4)^x, x = 0, 1, 2, …", {type: "d", xs: d3.range(0, 200), p: x => 0.25 * 0.75 ** x, shown: 15}],
+  ["Your own pmf on 0, 1, …, 5", {type: "custom"}],
+  ["pdf: f(x) = 3x², 0 ≤ x ≤ 1", {type: "c", lo: 0, hi: 1, f: x => 3 * x * x}],
+  ["pdf: f(x) = x³/4, 0 ≤ x ≤ 2", {type: "c", lo: 0, hi: 2, f: x => x ** 3 / 4}],
+  ["pdf: triangular on (−1, 1)", {type: "c", lo: -1, hi: 1, f: x => 1 - Math.abs(x)}],
+  ["pdf: f(x) = (x + 1)/2, −1 < x < 1", {type: "c", lo: -1, hi: 1, f: x => (x + 1) / 2}]
+])
+viewof d35 = Inputs.select(dists35, {label: "Distribution"})
+viewof w35 = {
+  const init = [1, 3, 5, 2, 1, 4];
+  const rs = init.map((v, i) => Inputs.range([0, 10], {step: 1, value: v, label: `weight of ${i}`}));
+  const wrap = html`<div>${d35.type === "custom" ? html`${rs}<div class="ix-note">The weights are divided by their total, so that the probabilities sum to 1.</div>` : html``}</div>`;
+  Object.defineProperty(wrap, "value", {get: () => rs.map(r => r.value)});
+  rs.forEach(r => r.addEventListener("input", () => wrap.dispatchEvent(new Event("input", {bubbles: true}))));
+  return wrap;
+}
+```
+
+```{ojs}
+//| echo: false
+model35 = {
+  if (d35.type === "c") {
+    const {lo, hi, f} = d35, n = 2000, h = (hi - lo) / n;
+    // Simpson's rule for ∫ x f(x) dx
+    let s = 0;
+    for (let i = 0; i <= n; i++) { const x = lo + i * h, w = i === 0 || i === n ? 1 : i % 2 ? 4 : 2; s += w * x * f(x); }
+    return {type: "c", lo, hi, f, mean: s * h / 3, dom: [lo - (hi - lo) * 0.08, hi + (hi - lo) * 0.08]};
+  }
+  let xs, ps;
+  if (d35.type === "custom") { const t = d3.sum(w35) || 1; xs = d3.range(6); ps = w35.map(w => w / t); }
+  else { xs = d35.xs; ps = xs.map(d35.p); }
+  const mean = d3.sum(xs, (x, i) => x * ps[i]), shown = d35.shown || xs.length;
+  return {type: "d", xs, ps, mean, shown, dom: [xs[0] - 0.6, xs[shown - 1] + 0.6]};
+}
+viewof g35 = Inputs.range(model35.dom, {step: 0.01, value: model35.dom[0] + 0.3 * (model35.dom[1] - model35.dom[0]), label: "Pivot g"})
+```
+
+```{ojs}
+//| echo: false
+{
+  const m = model35, g = g35, W = 460, H = 266, base = 150;
+  const xs = d3.scaleLinear().domain(m.dom).range([20, W - 20]);
+  const torque = m.mean - g;
+  const ang = Math.max(-7, Math.min(7, 25 * torque / (m.dom[1] - m.dom[0])));
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H}`).style("width", "100%").style("max-width", "580px");
+  const beam = svg.append("g").attr("transform", `rotate(${ang}, ${xs(g)}, ${base})`);
+  if (m.type === "d") {
+    const top = d3.max(m.ps.slice(0, m.shown)), hs = 110 / top;
+    m.xs.slice(0, m.shown).forEach((x, i) => {
+      const hgt = m.ps[i] * hs, w = Math.min(26, (W - 40) / m.shown * 0.55);
+      beam.append("rect").attr("x", xs(x) - w / 2).attr("y", base - 3 - hgt).attr("width", w).attr("height", hgt).attr("fill", "#4e79a7");
+      svg.append("text").attr("x", xs(x)).attr("y", 222).attr("text-anchor", "middle").style("font", "10px sans-serif").attr("fill", "#666").text(x);
+    });
+    if (m.shown < m.xs.length) svg.append("text").attr("x", W - 22).attr("y", 20).attr("text-anchor", "end").style("font", "11px sans-serif").attr("fill", "#666").text("… continues for larger x");
+  } else {
+    const pts = d3.range(m.lo, m.hi, (m.hi - m.lo) / 200).concat([m.hi]);
+    const top = d3.max(pts, m.f), hs = 110 / top;
+    beam.append("path").attr("d", d3.area().x(x => xs(x)).y0(base - 3).y1(x => base - 3 - m.f(x) * hs)(pts)).attr("fill", "#4e79a7").attr("opacity", 0.75);
+    xs.ticks(6).forEach(t => svg.append("text").attr("x", xs(t)).attr("y", 222).attr("text-anchor", "middle").style("font", "10px sans-serif").attr("fill", "#666").text(String(t).replace("-", "−")));
+  }
+  beam.append("rect").attr("x", 14).attr("y", base - 3).attr("width", W - 28).attr("height", 5).attr("rx", 2).attr("fill", "#555");
+  svg.append("path").attr("d", `M${xs(g)},${base + 3} l-11,20 h22 z`).attr("fill", "#f28e2b");
+  svg.append("path").attr("d", `M${xs(m.mean)},${234} l-6,10 h12 z`).attr("fill", "#59a14f");
+  svg.append("text").attr("x", xs(m.mean)).attr("y", H - 2).attr("text-anchor", "middle").style("font", "11px sans-serif").attr("fill", "#59a14f").text("E(X)");
+  const fm = v => (Math.abs(v) < 5e-4 ? 0 : v).toFixed(3).replace("-", "−");
+  const ok = Math.abs(torque) < 0.02 * (m.dom[1] - m.dom[0]);
+  return html`<div>${svg.node()}
+    <table class="ix-tbl">
+      <tr><td>Pivot g</td><td>${fm(g)}</td></tr>
+      <tr><td>Torque E(X) − g</td><td>${fm(torque)} ${ok ? html`<span class="ix-ok">✓ balanced</span>` : torque > 0 ? "(tilts right)" : "(tilts left)"}</td></tr>
+      <tr><td>E(X)</td><td><b>${fm(m.mean)}</b></td></tr>
+    </table></div>`;
+}
+```
+:::
+
+For the die the rod balances at 3.5, and for the geometric pmf at 3, even though most bars lie to its left: the long right tail has a large torque. For the pdf $3x^2$ the balance point is $0.75$.
+
+## The expected value of a function of X
+
+If $Y = g(X)$, $E(Y)$ can be computed either from the pmf of $Y$ or directly from the pmf of $X$:
+
+$$E\big(g(X)\big) = \sum_{x_i} g(x_i)\, f_X(x_i), \qquad E\big(g(X)\big) = \int_{-\infty}^{\infty} g(x)\, f_X(x)\,dx.$$
+
+**Problem 1.** If $X$ is the outcome of a die roll, find the expected value of $Y = X^2$.
+
+$Y$ takes the values $1, 4, 9, 16, 25, 36$, each with probability $1/6$, so
+
+$$E(X^2) = \frac{1 + 4 + 9 + 16 + 25 + 36}{6} = \frac{91}{6} \approx 15.17.$$
+
+Note that $E(X^2) \ne \big(E(X)\big)^2 = 3.5^2 = 12.25$. In general $E\big(g(X)\big) \ne g\big(E(X)\big)$. Jensen's inequality below says which one is larger.
+
+## Properties
+
+For every $\lambda \in \mathbb{R}$ and random variables $X$, $Y$ with an expected value:
+
+1. $E(\lambda X) = \lambda E(X)$.
+2. $E(X + Y) = E(X) + E(Y)$, with no independence assumption.
+3. $E(\lambda) = \lambda$: a constant is "expected" to be itself.
+4. **Jensen's inequality.** If $g$ is convex, $E\big(g(X)\big) \ge g\big(E(X)\big)$.
+5. If $g$ is concave, $E\big(g(X)\big) \le g\big(E(X)\big)$.
+
+Properties 1–3 together say that expectation is **linear**: $E(aX + bY + c) = aE(X) + bE(Y) + c$. In Problem 1, $g(x) = x^2$ is convex and indeed $91/6 \ge 12.25$.
+
+## In R
+
+```{r}
+#| label: ev-r
+x <- 1:6
+f <- rep(1/6, 6)
+# E(X) and E(X^2) for the die
+c(EX = sum(x * f), EX2 = sum(x^2 * f))
+# the geometric pmf of Example 2: enough terms of the series
+k <- 0:500
+sum(k * 0.25 * 0.75^k)
+# the continuous example 3
+integrate(function(x) x * 3 * x^2, 0, 1)$value
+# the average of many rolls approaches E(X)
+m <- mean(sample(1:6, 1e5, replace = TRUE))
+m
+```
+
+The last line gives `r fmt(m, 3)`, close to 3.5. Why this happens, and how close it gets, is the topic of the next post.
+
+## Summary
+
+- $E(X) = \sum x_i f_X(x_i)$ for a discrete and $E(X) = \int x f_X(x)\,dx$ for a continuous random variable, when they converge absolutely.
+- It is the centre of mass of the distribution and need not be a value of $X$.
+- $E\big(g(X)\big) = \sum g(x_i) f_X(x_i)$, but in general $E\big(g(X)\big) \ne g\big(E(X)\big)$.
+- $E$ is linear, and for convex $g$, $E\big(g(X)\big) \ge g\big(E(X)\big)$ (Jensen).
+
+## Review questions
+
+**1. Quick quiz.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz35 = [
+  {q: "X takes the values 0 and 1 with f(0) = f(1) = 1/2. What is E(X)?",
+   opts: ["1/2", "1", "0", "Undefined, because X never equals 1/2"], ans: 0,
+   why: "E(X) = 0 · 1/2 + 1 · 1/2 = 1/2. The expected value need not be a value of X."},
+  {q: "If E(X) = 2 and E(Y) = 1, what is E(2X − Y)?",
+   opts: ["3", "4", "5", "Only if they are independent"], ans: 0,
+   why: "By linearity: E(2X − Y) = 2E(X) − E(Y) = 4 − 1 = 3. Independence is not needed."},
+  {q: "If E(X) = 3, which relation always holds for E(X²)?",
+   opts: ["E(X²) ≥ 9", "E(X²) = 9", "E(X²) ≤ 9"], ans: 0,
+   why: "x² is convex, so by Jensen's inequality E(X²) ≥ (E(X))² = 9. Equality holds only when X is constant."},
+  {q: "We add 10 to every value of X. What happens to the expected value?",
+   opts: ["It increases by 10", "It stays the same", "It is multiplied by 10"], ans: 0,
+   why: "E(X + 10) = E(X) + 10: the whole distribution shifts, and its centre of mass with it."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz35.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz35.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** $X$ is a positive random variable with $E(X) = 1$. What is the sign of $E(\ln X)$?
+
+**3.** The continuous random variable $X$ has pdf $f(x) = x^3/4$ for $x \in [0, 2]$ and $0$ elsewhere. Find $E(X)$.
+
+**4.** $X$ has the triangular pdf $f(x) = x + 1$ for $x \in (-1, 0]$ and $f(x) = 1 - x$ for $x \in [0, 1)$. Find $E(X)$.
+
+**5.** $X$ has CDF $F(x) = (x + 1)^2/4$ for $x \in (-1, 1)$. Find $E(X)$.
+
+Check answers 3–5 on the see-saw.
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. $\ln$ is concave, so by Jensen's inequality $E(\ln X) \le \ln E(X) = \ln 1 = 0$. So $E(\ln X)$ is non-positive, and in fact negative unless $X = 1$ with probability 1.
+3. $E(X) = \int_0^2 x \cdot \frac{x^3}{4}\,dx = \left[\frac{x^5}{20}\right]_0^2 = \frac{32}{20} = 1.6$.
+4. The pdf is symmetric about 0, $f(-x) = f(x)$, so its centre of mass is $E(X) = 0$. With integrals: $\int_{-1}^0 x(x + 1)\,dx + \int_0^1 x(1 - x)\,dx = -\frac16 + \frac16 = 0$.
+5. First the pdf: $f(x) = F'(x) = (x + 1)/2$ on $(-1, 1)$. Then $E(X) = \int_{-1}^1 x \frac{x + 1}{2}\,dx = \frac12 \int_{-1}^1 (x^2 + x)\,dx = \frac12 \cdot \frac23 = \frac13$.
+:::
+
+---
+
+**Next post:** *The law of large numbers and E(X) as a sum of tail probabilities.*

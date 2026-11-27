@@ -1,0 +1,285 @@
+---
+title: "Συνεχείς τυχαίες μεταβλητές και συνάρτηση πυκνότητας: γιατί P(X = x) = 0"
+description: "Γιατί μια συνεχής τυχαία μεταβλητή χρειάζεται συνάρτηση πυκνότητας πιθανότητας (σ.π.π., pdf) αντί για σ.μ.π., πώς η πιθανότητα γίνεται εμβαδόν, πώς συνδέονται η σ.π.π. και η συνάρτηση κατανομής και γιατί P(X = x) = 0, με διαδραστικά και R."
+date: 2027-02-01
+image: thumbnail.png
+categories: [Πιθανότητες, Τυχαίες μεταβλητές, R, Διαδραστικό]
+keywords: [συνάρτηση πυκνότητας πιθανότητας, σ.π.π., pdf, probability density function, συνεχής τυχαία μεταβλητή, συνάρτηση κατανομής, εμβαδόν, ολοκλήρωμα, P(X = x) = 0]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# ελληνικοί χαρακτήρες στα γραφήματα και σε locale "C"
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, decimal.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+Το ύψος ενός φοιτητή, ο χρόνος μέχρι να χαλάσει μια λάμπα, η θερμοκρασία το μεσημέρι: όλες αυτές οι τυχαίες μεταβλητές παίρνουν τιμές σε ένα ολόκληρο διάστημα. Για αυτές η [συνάρτηση μάζας πιθανότητας](../probability-mass-function/index.qmd) δεν λειτουργεί: η πιθανότητα να είναι κάποιος *ακριβώς* 1,75 m είναι μηδέν. Η [συνάρτηση κατανομής](../cumulative-distribution-function/index.qmd) όμως εξακολουθεί να έχει νόημα, και από αυτήν ξεκινάμε.
+
+## Γιατί δεν αρκεί η σ.μ.π.
+
+Έστω $X$ μια **συνεχής** τυχαία μεταβλητή, δηλαδή μια μεταβλητή με τιμές σε ένα διάστημα $(\alpha, \beta) \subseteq \mathbb{R}$. Η συνάρτηση κατανομής της ορίζεται όπως πάντα, $F_X(x) = P(X \le x)$. Στη διακριτή περίπτωση γράφαμε $F_X(x) = \sum_{k \le x} P(X = k)$. Εδώ αυτό δεν γίνεται, για δύο λόγους:
+
+- οι τιμές $k \le x$ είναι **μη αριθμήσιμες**, άρα δεν υπάρχει άθροισμα πάνω σε αυτές,
+- και ακόμα κι αν υπήρχε, θα ήταν άθροισμα μηδενικών, αφού για μια συνεχή τ.μ. $P(X = k) = 0$ για **κάθε** $k \in \mathbb{R}$.
+
+Η λύση είναι να αντικαταστήσουμε το άθροισμα με **ολοκλήρωμα**.
+
+## Ορισμός
+
+**Συνάρτηση πυκνότητας πιθανότητας** (σ.π.π., probability density function, pdf) λέγεται κάθε συνάρτηση $f : \mathbb{R} \to \mathbb{R}$ με
+
+1. $f(x) \ge 0$ (σχεδόν παντού),
+2. $\displaystyle\int_{-\infty}^{\infty} f(x)\,dx = 1$.
+
+Κάθε σ.π.π. ορίζει μια συνάρτηση κατανομής για μια συνεχή τ.μ. $X$:
+
+$$F_X(x) = P(X \le x) = \int_{-\infty}^{x} f(t)\,dt.$$
+
+Αντίστροφα, αν η $F_X$ είναι συνεχώς διαφορίσιμη, η σ.π.π. της $X$ είναι η παράγωγός της, $f_X(x) = F_X'(x)$.
+
+Από τον ορισμό προκύπτουν τρεις συνέπειες:
+
+- **Πιθανότητα σημαίνει εμβαδόν:** $$P(a \le X \le b) = \int_a^b f(x)\,dx = F(b) - F(a).$$
+- **$P(X = x) = 0$:** ένα σημείο είναι διάστημα με μηδενικό πλάτος, άρα έχει μηδενικό εμβαδόν. Γι' αυτό, σε αντίθεση με τη διακριτή περίπτωση, το $<$ και το $\le$ δίνουν την ίδια πιθανότητα: $P(a < X < b) = P(a \le X \le b)$.
+- **Η $f(x)$ δεν είναι πιθανότητα.** Μπορεί να είναι μεγαλύτερη από 1. Πιθανότητα είναι το $f(x)\,h$, κατά προσέγγιση, για ένα μικρό διάστημα πλάτους $h$ γύρω από το $x$.
+
+## Παράδειγμα: $f(x) = 3x^2$ στο $[0, 1]$
+
+Έστω $f(x) = 3x^2$ για $x \in [0, 1]$ και $f(x) = 0$ αλλού.
+
+**(α) Είναι σ.π.π.** Ισχύει $f(x) \ge 0$, και $\int_0^1 3x^2\,dx = \big[x^3\big]_0^1 = 1$.
+
+**(β) Συνάρτηση κατανομής.** Για $0 \le x \le 1$ είναι $F(x) = \int_0^x 3t^2\,dt = x^3$, οπότε
+
+$$F(x) = \begin{cases} 0, & x < 0, \\ x^3, & 0 \le x \le 1, \\ 1, & x > 1. \end{cases}$$
+
+**(γ) Πιθανότητες.** Στο διαδραστικό που ακολουθεί μπορείτε να δείτε κάθε μία ως εμβαδόν.
+
+- $P(X < 0) = 0$ και $P(X > 3) = 0$, γιατί εκεί $f = 0$.
+- $P(X < 1/2)$ και $P(X \le 1/2)$ είναι ίσες: $F(1/2) = 1/8$.
+- $P(X \ge 1/2) = 1 - 1/8 = 7/8$.
+
+**Μια άγνωστη σταθερά.** Για ποιο $c$ είναι η $f(x) = x^3/4$, $x \in [0, c]$, σ.π.π.; Αρκεί $\int_0^c x^3/4\,dx = c^4/16 = 1$, άρα $c = 2$. Παρατηρήστε ότι $f(2) = 2 > 1$: πυκνότητα μεγαλύτερη από 1, χωρίς κανένα πρόβλημα.
+
+## Το εμβαδόν κάτω από την f και το ύψος της F
+
+Διαλέξτε μια σ.π.π. και ένα διάστημα $[a, b]$. Πάνω, η πιθανότητα είναι το χρωματισμένο εμβαδόν. Κάτω, η ίδια πιθανότητα είναι η διαφορά $F(b) - F(a)$, το πορτοκαλί ευθύγραμμο τμήμα. Φέρτε το $b$ πολύ κοντά στο $a$: το εμβαδόν και το τμήμα μικραίνουν μαζί προς το μηδέν.
+
+::: {.ix-panel}
+::: {.ix-title}
+Πιθανότητα ως εμβαδόν και ως διαφορά της F
+:::
+
+```{ojs}
+//| echo: false
+pdfs34 = new Map([
+  ["f(x) = 3x², 0 ≤ x ≤ 1", {lo: 0, hi: 1, f: x => 3 * x * x, F: x => x ** 3, Ft: "x³"}],
+  ["f(x) = x³/4, 0 ≤ x ≤ 2", {lo: 0, hi: 2, f: x => x ** 3 / 4, F: x => x ** 4 / 16, Ft: "x⁴/16"}],
+  ["Τριγωνική: x + 1 στο (−1, 0], 1 − x στο [0, 1)", {lo: -1, hi: 1, f: x => 1 - Math.abs(x),
+     F: x => x <= 0 ? (x + 1) ** 2 / 2 : 1 - (1 - x) ** 2 / 2, Ft: "(x + 1)²/2 ή 1 − (1 − x)²/2"}],
+  ["f(x) = (x + 1)/2, −1 < x < 1", {lo: -1, hi: 1, f: x => (x + 1) / 2, F: x => (x + 1) ** 2 / 4, Ft: "(x + 1)²/4"}]
+])
+viewof d34 = Inputs.select(pdfs34, {label: "Σ.π.π."})
+viewof ab34 = {
+  const {lo, hi} = d34, pad = (hi - lo) / 4;
+  const a = Inputs.range([lo - pad, hi + pad], {step: 0.01, value: lo + (hi - lo) / 2, label: "a"});
+  const b = Inputs.range([lo - pad, hi + pad], {step: 0.01, value: hi, label: "b"});
+  const wrap = html`<div>${a}${b}</div>`;
+  Object.defineProperty(wrap, "value", {get: () => [Math.min(a.value, b.value), Math.max(a.value, b.value)]});
+  for (const el of [a, b]) el.addEventListener("input", () => wrap.dispatchEvent(new Event("input", {bubbles: true})));
+  return wrap;
+}
+```
+
+```{ojs}
+//| echo: false
+{
+  const {lo, hi} = d34, pad = (hi - lo) / 4, [a, b] = ab34;
+  const f = x => x < lo || x > hi ? 0 : d34.f(x), F = x => x <= lo ? 0 : x >= hi ? 1 : d34.F(x);
+  const W = 440, H1 = 170, H2 = 140, L = 34, R = W - 10;
+  const xs = d3.scaleLinear().domain([lo - pad, hi + pad]).range([L, R]);
+  const fmax = d3.max(d3.range(lo, hi + 1e-9, (hi - lo) / 200), f);
+  const y1 = d3.scaleLinear().domain([0, fmax * 1.1]).range([H1 - 20, 10]);
+  const y2 = d3.scaleLinear().domain([0, 1.05]).range([H1 + H2 - 20, H1 + 14]);
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H1 + H2}`).style("width", "100%").style("max-width", "560px");
+  const lab = (x, y, t, anchor = "end", col = "#666") => svg.append("text").attr("x", x).attr("y", y).attr("dy", "0.35em")
+    .attr("text-anchor", anchor).style("font", "10px sans-serif").attr("fill", col).text(t);
+  const num = v => String(+v.toFixed(2)).replace(".", ",").replace("-", "−");
+  y1.ticks(4).forEach(t => { svg.append("line").attr("x1", L).attr("x2", R).attr("y1", y1(t)).attr("y2", y1(t)).attr("stroke", "#eee"); lab(L - 4, y1(t), num(t)); });
+  [0, 0.5, 1].forEach(t => { svg.append("line").attr("x1", L).attr("x2", R).attr("y1", y2(t)).attr("y2", y2(t)).attr("stroke", "#eee"); lab(L - 4, y2(t), num(t)); });
+  // εμβαδόν
+  const s = Math.max(a, lo), e = Math.min(b, hi);
+  if (e > s) {
+    const pts = d3.range(s, e, (e - s) / 120).concat([e]);
+    svg.append("path").attr("d", d3.area().x(x => xs(x)).y0(y1(0)).y1(x => y1(f(x)))(pts)).attr("fill", "#f28e2b").attr("opacity", 0.55);
+  }
+  const sp = d3.range(lo, hi, (hi - lo) / 300).concat([hi]);
+  svg.append("path").attr("d", d3.line().x(x => xs(x)).y(x => y1(d34.f(x)))(sp)).attr("fill", "none").attr("stroke", "#4e79a7").attr("stroke-width", 2);
+  svg.append("line").attr("x1", xs(lo - pad)).attr("x2", xs(lo)).attr("y1", y1(0)).attr("y2", y1(0)).attr("stroke", "#4e79a7").attr("stroke-width", 2);
+  svg.append("line").attr("x1", xs(hi)).attr("x2", xs(hi + pad)).attr("y1", y1(0)).attr("y2", y1(0)).attr("stroke", "#4e79a7").attr("stroke-width", 2);
+  svg.append("line").attr("x1", L).attr("x2", R).attr("y1", y1(0)).attr("y2", y1(0)).attr("stroke", "#333").attr("stroke-width", 0.6);
+  lab(R, 14, "f(x)", "end", "#4e79a7");
+  // F
+  const fp = d3.range(lo - pad, hi + pad, (hi - lo + 2 * pad) / 300).concat([hi + pad]);
+  svg.append("path").attr("d", d3.line().x(x => xs(x)).y(x => y2(F(x)))(fp)).attr("fill", "none").attr("stroke", "#59a14f").attr("stroke-width", 2);
+  for (const [x, c] of [[a, "#888"], [b, "#888"]]) {
+    svg.append("line").attr("x1", xs(x)).attr("x2", xs(x)).attr("y1", y1(0)).attr("y2", y2(F(x))).attr("stroke", c).attr("stroke-dasharray", "3 3");
+    svg.append("line").attr("x1", L).attr("x2", xs(x)).attr("y1", y2(F(x))).attr("y2", y2(F(x))).attr("stroke", c).attr("stroke-dasharray", "2 3");
+  }
+  svg.append("line").attr("x1", xs(b) + 4).attr("x2", xs(b) + 4).attr("y1", y2(F(a))).attr("y2", y2(F(b))).attr("stroke", "#f28e2b").attr("stroke-width", 4);
+  lab(R, y2(0.12), "F(x)", "end", "#59a14f");
+  xs.ticks(6).forEach(t => lab(xs(t), H1 + H2 - 8, num(t), "middle"));
+  const fm = v => v.toFixed(4).replace(".", ",");
+  return html`<div>${svg.node()}
+    <table class="ix-tbl">
+      <tr><td>F(x) στο διάστημα των τιμών</td><td>${d34.Ft}</td></tr>
+      <tr><td>F(${num(b)}) − F(${num(a)})</td><td>${fm(F(b))} − ${fm(F(a))}</td></tr>
+      <tr><td>P(${num(a)} ≤ X ≤ ${num(b)}) = P(${num(a)} &lt; X &lt; ${num(b)})</td><td><b>${fm(F(b) - F(a))}</b></td></tr>
+      <tr><td>Μέγιστη τιμή της f</td><td>${num(fmax)} ${fmax > 1 ? html`<span class="ix-note">(&gt; 1: η f δεν είναι πιθανότητα)</span>` : ""}</td></tr>
+    </table></div>`;
+}
+```
+:::
+
+Με $f(x) = 3x^2$, $a = 0$ και $b = 0{,}5$ βλέπετε το $1/8 = 0{,}125$ του παραδείγματος. Με $a = 0{,}5$ και $b = 1$ βλέπετε το $7/8$. Με τη σ.π.π. $x^3/4$ η καμπύλη ξεπερνά το 1, αλλά το συνολικό εμβαδόν μένει 1.
+
+## Γιατί P(X = x) = 0
+
+Πάρτε ένα σημείο $x_0$ και ένα μικρό διάστημα $(x_0, x_0 + h]$. Η πιθανότητά του είναι $F(x_0 + h) - F(x_0)$, και όσο το $h$ μικραίνει τείνει στο $0$, γιατί η $F$ είναι συνεχής. Ο λόγος όμως
+
+$$\frac{P(x_0 < X \le x_0 + h)}{h} = \frac{F(x_0 + h) - F(x_0)}{h} \;\longrightarrow\; F'(x_0) = f(x_0)$$
+
+δεν μηδενίζεται: τείνει στην πυκνότητα. Αυτό εξηγεί και το όνομα. Η $f(x_0)$ είναι «πιθανότητα ανά μονάδα μήκους», όπως η πυκνότητα ενός υλικού είναι μάζα ανά μονάδα όγκου. Ένα σημείο έχει μηδενικό μήκος, άρα μηδενική πιθανότητα, ακόμα κι αν η πυκνότητα εκεί είναι μεγάλη.
+
+::: {.ix-panel}
+::: {.ix-title}
+Πιθανότητα ενός μικρού διαστήματος και πυκνότητα
+:::
+
+```{ojs}
+//| echo: false
+viewof d34b = Inputs.select(pdfs34, {label: "Σ.π.π."})
+viewof x34 = Inputs.range([0, 1], {step: 0.01, value: 0.6, label: "Θέση του x₀ μέσα στο διάστημα τιμών"})
+```
+
+```{ojs}
+//| echo: false
+{
+  const {lo, hi} = d34b, x0 = lo + x34 * (hi - lo) * 0.9;
+  const F = x => x <= lo ? 0 : x >= hi ? 1 : d34b.F(x), f0 = d34b.f(x0);
+  const hs = [0.1, 0.01, 0.001, 0.0001, 0.00001];
+  const fm = (v, d) => v.toLocaleString("el-GR", {minimumFractionDigits: d, maximumFractionDigits: d});
+  const rows = hs.map(h => { const p = F(x0 + h) - F(x0);
+    return html`<tr><td>${fm(h, Math.round(-Math.log10(h)))}</td><td>${fm(p, 8)}</td><td>${fm(p / h, 4)}</td></tr>`; });
+  return html`<table class="ix-tbl">
+    <tr><th>h</th><th>P(x₀ &lt; X ≤ x₀ + h)</th><th>P / h</th></tr>${rows}
+    <tr><td>h → 0</td><td><b>0</b></td><td><b>f(x₀) = ${fm(f0, 4)}</b></td></tr></table>
+    <div class="ix-note">x₀ = ${fm(x0, 3)}. Η πιθανότητα της δεύτερης στήλης τείνει στο 0, ενώ ο λόγος της τρίτης τείνει στην πυκνότητα f(x₀).</div>`;
+}
+```
+:::
+
+## Σε R
+
+Η `integrate()` υπολογίζει ολοκληρώματα αριθμητικά, οπότε μπορούμε να ελέγξουμε τις δύο ιδιότητες και να βρούμε πιθανότητες. Για να δούμε τη σ.π.π. «στην πράξη», παράγουμε 10.000 τιμές της $X$ με $f(x) = 3x^2$. Ένας τρόπος είναι η $X = U^{1/3}$, με $U$ ομοιόμορφη στο $[0, 1]$, γιατί $P(U^{1/3} \le x) = P(U \le x^3) = x^3 = F(x)$. Θα δούμε αυτή τη μέθοδο αναλυτικά σε επόμενο άρθρο.
+
+```{r}
+#| label: pdf-r
+#| fig-width: 6
+#| fig-height: 3.2
+#| fig-alt: "Ιστόγραμμα πυκνότητας 10.000 προσομοιωμένων τιμών με σ.π.π. 3x² στο [0, 1], με την καμπύλη 3x² από πάνω. Το ιστόγραμμα ακολουθεί την καμπύλη."
+f <- function(x) 3 * x^2
+integrate(f, 0, 1)$value
+# P(X <= 1/2) και P(X >= 1/2)
+c(integrate(f, 0, 0.5)$value, integrate(f, 0.5, 1)$value)
+x <- runif(10000)^(1/3)
+mean(x <= 0.5)
+par(mar = c(4, 4, 1, 1))
+hist(x, breaks = 30, freq = FALSE, col = "#9ecae1", border = "white",
+     main = "", xlab = "x", ylab = "πυκνότητα", las = 1)
+curve(f, 0, 1, add = TRUE, col = "#4e79a7", lwd = 2)
+```
+
+Το ποσοστό των προσομοιωμένων τιμών κάτω από το $0{,}5$ είναι `r fmt(mean(x <= 0.5), 4)`, κοντά στο $1/8 = 0{,}125$. Το ιστόγραμμα με `freq = FALSE` έχει συνολικό εμβαδόν 1, όπως η σ.π.π., και γι' αυτό ακολουθεί την καμπύλη.
+
+## Σύνοψη
+
+- Μια συνεχής τ.μ. έχει $P(X = x) = 0$ για κάθε $x$, άρα η κατανομή της δεν περιγράφεται με σ.μ.π.
+- Η σ.π.π. είναι μια μη αρνητική συνάρτηση με $\int_{-\infty}^{\infty} f = 1$, και η πιθανότητα ενός διαστήματος είναι το **εμβαδόν** κάτω από αυτήν.
+- $F(x) = \int_{-\infty}^x f(t)\,dt$ και $f = F'$. Επομένως $P(a \le X \le b) = F(b) - F(a)$, με $<$ ή $\le$.
+- Η $f(x)$ είναι πιθανότητα ανά μονάδα μήκους, όχι πιθανότητα, και μπορεί να ξεπερνά το 1.
+
+## Ερωτήσεις εμπέδωσης
+
+**1. Γρήγορο κουίζ.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz34 = [
+  {q: "Η X είναι συνεχής με σ.π.π. f. Ποια σχέση ισχύει πάντα;",
+   opts: ["P(X < 1) = P(X ≤ 1)", "P(X = 1) = f(1)", "f(x) ≤ 1 για κάθε x", "P(X ≤ 1) = f(1)"], ans: 0,
+   why: "P(X = 1) = 0, οπότε η προσθήκη ή αφαίρεση ενός σημείου δεν αλλάζει την πιθανότητα. Η f(1) είναι πυκνότητα, όχι πιθανότητα, και μπορεί να ξεπερνά το 1."},
+  {q: "Για ποιο c είναι η f(x) = c·x στο [0, 2] σ.π.π.;",
+   opts: ["1/2", "1", "2", "1/4"], ans: 0,
+   why: "∫₀² c·x dx = 2c = 1, άρα c = 1/2."},
+  {q: "Αν F(x) = x² για 0 ≤ x ≤ 1, ποια είναι η σ.π.π.;",
+   opts: ["f(x) = 2x στο [0, 1]", "f(x) = x³/3 στο [0, 1]", "f(x) = x² στο [0, 1]", "f(x) = 2 στο [0, 1]"], ans: 0,
+   why: "Η σ.π.π. είναι η παράγωγος της F: f(x) = F'(x) = 2x."},
+  {q: "Η f(x) = 3x² στο [0, 1] έχει f(1) = 3. Τι σημαίνει αυτό;",
+   opts: ["Δεν είναι σ.π.π., γιατί ξεπερνά το 1", "Κοντά στο 1 η πιθανότητα ανά μονάδα μήκους είναι 3: P(1 − h < X ≤ 1) ≈ 3h", "P(X = 1) = 3"], ans: 1,
+   why: "Μια πυκνότητα μπορεί να ξεπερνά το 1. Πιθανότητα δίνει το γινόμενο f(x)·h για ένα μικρό πλάτος h, και εδώ P(1 − h < X ≤ 1) = 1 − (1 − h)³ ≈ 3h."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz34.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Σωστό.</span> ` : `<span class="ix-no">✗ Όχι ακριβώς.</span> `) + item.why;
+        score.innerHTML = `<b>Σωστές: ${[...done.values()].filter(x => x).length} από ${quiz34.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** Δίνεται η $f(x) = x + 1$ για $x \in (-1, 0]$, $f(x) = 1 - x$ για $x \in [0, 1)$ και $f(x) = 0$ αλλού.
+
+(α) Δείξτε ότι η $f$ είναι σ.π.π.
+(β) Βρείτε τη συνάρτηση κατανομής της $X$.
+(γ) Βρείτε τη συνάρτηση κατανομής της $Y = 2X + 1$.
+
+**3.** Δίνεται η $F(x) = (x + 1)^2/4$ για $x \in (-1, 1)$, με $F(x) = 0$ για $x \le -1$ και $F(x) = 1$ για $x \ge 1$.
+
+(α) Δείξτε ότι η $F$ είναι συνάρτηση κατανομής μιας συνεχούς τ.μ.
+(β) Βρείτε την αντίστοιχη σ.π.π.
+
+Ελέγξτε τα αποτελέσματά σας στο πρώτο διαδραστικό, με την τριγωνική σ.π.π. και την $(x + 1)/2$.
+
+::: {.callout-tip collapse="true"}
+## Απαντήσεις
+
+2. (α) Η $f$ είναι μη αρνητική, και το γράφημά της είναι τρίγωνο με βάση 2 και ύψος 1, άρα $\int f = \tfrac12 \cdot 2 \cdot 1 = 1$.
+(β) Για $-1 < x \le 0$: $F(x) = \int_{-1}^x (t + 1)\,dt = (x + 1)^2/2$. Για $0 \le x < 1$: $F(x) = \tfrac12 + \int_0^x (1 - t)\,dt = 1 - (1 - x)^2/2$. Επίσης $F(x) = 0$ για $x \le -1$ και $F(x) = 1$ για $x \ge 1$.
+(γ) $F_Y(y) = P(2X + 1 \le y) = P\big(X \le \tfrac{y - 1}{2}\big) = F_X\big(\tfrac{y - 1}{2}\big)$. Η $Y$ παίρνει τιμές στο $(-1, 3)$, με $F_Y(y) = (y + 1)^2/8$ για $-1 < y \le 1$ και $F_Y(y) = 1 - (3 - y)^2/8$ για $1 \le y < 3$.
+3. (α) Η $F$ είναι συνεχής (αφού $F(-1) = 0$ και $F(1) = 1$ από τον τύπο), αύξουσα στο $(-1, 1)$, με όρια 0 και 1 στο $-\infty$ και στο $+\infty$.
+(β) $f(x) = F'(x) = (x + 1)/2$ για $-1 < x < 1$ και $f(x) = 0$ αλλού.
+:::
+
+---
+
+**Επόμενο άρθρο:** *Η αναμενόμενη τιμή: το κέντρο βάρους μιας κατανομής.*
