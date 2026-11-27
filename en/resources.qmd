@@ -1,0 +1,42 @@
+---
+title: "Resources"
+description: "Selected free books, courses, interactive tools and data sources for probability, statistics and R."
+toc: false
+---
+
+A short, curated list of free resources that complement the Stochastika posts. All are free and come from universities, public institutions or established open projects.
+
+## Free books
+
+- [**OpenIntro Statistics**](https://www.openintro.org/book/os/): an introductory statistics textbook with many examples based on real data. The PDF is free.
+- [**Introduction to Probability**, Grinstead & Snell](https://chance.dartmouth.edu/teaching_aids/books_articles/probability_book/book.html): a classic introductory probability text from Dartmouth College, freely available, with exercises and simulations.
+- [**NIST/SEMATECH e-Handbook of Statistical Methods**](https://www.itl.nist.gov/div898/handbook/): an online handbook from the US National Institute of Standards and Technology (NIST), focused on statistics in engineering and quality control.
+
+## University courses
+
+- [**Statistics 110: Probability**, Harvard](https://stat110.hsites.harvard.edu/): Joe Blitzstein's lectures on video, with exercises and solutions.
+- [**6.041SC Probabilistic Systems Analysis and Applied Probability**, MIT OpenCourseWare](https://ocw.mit.edu/courses/6-041sc-probabilistic-systems-analysis-and-applied-probability-fall-2013/): a complete probability course for engineers, with videos and solved problems.
+- [**STAT 414: Introduction to Probability Theory**, Penn State](https://online.stat.psu.edu/stat414/): detailed probability notes organised in short lessons.
+
+## Interactive learning
+
+- [**Seeing Theory**, Brown University](https://seeing-theory.brown.edu/): a visual, interactive introduction to probability and statistics. The site is archived and no longer updated, but remains available and useful.
+
+## R
+
+- [**CRAN**](https://cran.r-project.org/): the official source for downloading R and its packages.
+- [**R for Data Science** (2nd edition)](https://r4ds.hadley.nz/): a free online book on data wrangling and visualisation with R.
+
+## Greek sources
+
+- [**Kallipos**](https://kallipos.gr/): free Greek academic textbooks, many of them on probability and statistics.
+- [**ELSTAT**](https://www.statistics.gr/): the Hellenic Statistical Authority, the source of official statistics for Greece.
+
+## Data and questions
+
+- [**Our World in Data**](https://ourworldindata.org/): data and charts on health, the economy, the environment and much more, ideal for exercises.
+- [**Cross Validated**](https://stats.stackexchange.com/): a question-and-answer community for statistics.
+
+---
+
+Know a resource we should add? Write to us at [info@stochastika.com](mailto:info@stochastika.com).
