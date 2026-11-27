@@ -1,0 +1,266 @@
+---
+title: "Skewness and kurtosis: the shape of a distribution"
+description: "The skewness and kurtosis coefficients of a random variable: definitions as standardized moments, interpretation, the worked table for a die, excess kurtosis, with an interactive widget and R."
+date: 2027-02-12
+image: thumbnail.png
+categories: [Probability, Random variables, R, Interactive]
+keywords: [skewness, kurtosis, excess kurtosis, standardized moments, coefficient of skewness, shape of a distribution, heavy tails, kurtosis is not peakedness]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# non-ASCII characters in plots under a "C" locale
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+# standardized moments of a discrete distribution
+shape <- function(x, f) {
+  mu <- sum(x * f); s <- sqrt(sum((x - mu)^2 * f))
+  c(mean = mu, sd = s, skew = sum(((x - mu) / s)^3 * f), kurt = sum(((x - mu) / s)^4 * f))
+}
+die <- shape(1:6, rep(1/6, 6))
+```
+
+The [expected value](../expected-value/index.qmd) says where a distribution sits and the [standard deviation](../variance/index.qmd) how far it spreads. Yet two distributions can share the same mean and standard deviation and look nothing alike: one symmetric, the other with a long right tail. For **shape** we need two more numbers: **skewness** and **kurtosis**.
+
+## Definitions
+
+Let $X$ have $\mu = E(X)$ and $\sigma^2 = \operatorname{Var}(X) > 0$. We use its [standardized](../variance/index.qmd) form $Z = (X - \mu)/\sigma$, which depends neither on location nor on the units of measurement.
+
+**Skewness:**
+
+$$\operatorname{skew}(X) = \gamma = \frac{E\big[(X - \mu)^3\big]}{\sigma^3} = E\left[\left(\frac{X - \mu}{\sigma}\right)^3\right].$$
+
+**Kurtosis:**
+
+$$\operatorname{kurt}(X) = \alpha = \frac{E\big[(X - \mu)^4\big]}{\sigma^4} = E\left[\left(\frac{X - \mu}{\sigma}\right)^4\right].$$
+
+Because they are defined through $Z$, both coefficients are **pure numbers**: they do not change if we measure in metres or centimetres, or if we shift the distribution.
+
+## Interpretation
+
+**Skewness.** In $E(Z^3)$ deviations keep their sign, and large ones count far more, because of the cube.
+
+- $\gamma > 0$: a long tail to the **right** (salaries, waiting times).
+- $\gamma < 0$: a long tail to the **left** (e.g. marks in an easy exam).
+- A symmetric distribution has $\gamma = 0$. The converse is not always true: some non-symmetric distributions have $\gamma = 0$.
+
+**Kurtosis.** In $E(Z^4)$ values near the centre ($|Z| < 1$) contribute very little, while values in the tails ($|Z| > 2$) contribute a great deal. Kurtosis therefore measures mainly **how heavy the tails are**, that is, how frequent extreme values are relative to the standard deviation. It used to be read as how "peaked" the distribution is, but that reading is misleading ([Westfall, 2014](https://econpapers.repec.org/RePEc:taf:amstat:v:68:y:2014:i:3:p:191-195)).
+
+- Always $\alpha \ge 1$, and in fact $\alpha \ge \gamma^2 + 1$.
+- For the normal distribution, which we will meet in a later post, $\alpha = 3$. That is why many books and programs report the **excess kurtosis** $\alpha - 3$. Whenever you read a kurtosis value, check which definition is in use.
+- $\alpha > 3$: heavier tails than the normal. $\alpha < 3$: lighter, as in distributions with bounded values.
+
+## Worked problem: a die
+
+**Problem.** If $X$ is the outcome of a die roll, find $\gamma$ and $\alpha$.
+
+With $\mu = 3.5$ we tabulate the deviations. Each row has probability $1/6$.
+
+| $x$ | $x - \mu$ | $(x - \mu)^2$ | $(x - \mu)^3$ | $(x - \mu)^4$ |
+|:-:|:-:|:-:|:-:|:-:|
+| 1 | −2.5 | 6.25 | −15.625 | 39.0625 |
+| 2 | −1.5 | 2.25 | −3.375 | 5.0625 |
+| 3 | −0.5 | 0.25 | −0.125 | 0.0625 |
+| 4 | 0.5 | 0.25 | 0.125 | 0.0625 |
+| 5 | 1.5 | 2.25 | 3.375 | 5.0625 |
+| 6 | 2.5 | 6.25 | 15.625 | 39.0625 |
+| **Sum** | 0 | 17.5 | 0 | 88.375 |
+
+The expected values are the sums times $1/6$:
+
+- $\sigma^2 = 17.5/6 = 35/12 \approx 2.917$, so $\sigma \approx 1.708$.
+- $E(X - \mu)^3 = 0$, so $\gamma = 0$, as symmetry suggests.
+- $E(X - \mu)^4 = 88.375/6 \approx 14.729$, so
+
+$$\alpha = \frac{14.729}{(35/12)^2} = \frac{2121}{1225} \approx 1.731, \qquad \alpha - 3 \approx -1.269.$$
+
+Careful: the column sum of $(x - \mu)^2$, 17.5, is **not** the variance; it must first be weighted by the probabilities. The negative excess kurtosis says the die has very light tails: no value is more than $1.5\sigma$ from the centre.
+
+## Shapes of distributions
+
+Choose a distribution and see both coefficients. The grey dashed curve is the normal distribution with the same mean and standard deviation, for comparison. In the family $x^{a-1}(1-x)^{b-1}$ change $a$ and $b$: with $a < b$ the tail is on the right and $\gamma > 0$, with $a > b$ on the left and $\gamma < 0$, and with $a = b$ the distribution is symmetric.
+
+::: {.ix-panel}
+::: {.ix-title}
+Skewness and kurtosis
+:::
+
+```{ojs}
+//| echo: false
+dists38 = new Map([
+  ["Die", {type: "d", xs: d3.range(1, 7), p: x => 1 / 6}],
+  ["Sum of two dice", {type: "d", xs: d3.range(2, 13), p: x => (6 - Math.abs(x - 7)) / 36}],
+  ["Coin: X = 1 for heads", {type: "d", xs: [0, 1], p: x => 0.5}],
+  ["f(x) = (1/4)(3/4)^x, x = 0, 1, 2, …", {type: "d", xs: d3.range(0, 400), p: x => 0.25 * 0.75 ** x, shown: 18}],
+  ["Your own pmf on 0, 1, …, 5", {type: "custom"}],
+  ["pdf 3x² on [0, 1]", {type: "c", lo: 0, hi: 1, f: x => 3 * x * x}],
+  ["pdf 2(1 − x) on [0, 1]", {type: "c", lo: 0, hi: 1, f: x => 2 * (1 - x)}],
+  ["pdf uniform on [0, 1]", {type: "c", lo: 0, hi: 1, f: x => 1}],
+  ["pdf triangular on (−1, 1)", {type: "c", lo: -1, hi: 1, f: x => 1 - Math.abs(x)}],
+  ["Family ∝ x^(a−1)(1 − x)^(b−1) on [0, 1]", {type: "beta"}]
+])
+viewof d38 = Inputs.select(dists38, {label: "Distribution"})
+viewof w38 = {
+  const isC = d38.type === "custom", isB = d38.type === "beta";
+  const init = isB ? [2, 5] : [1, 2, 6, 9, 2, 1];
+  const rs = isB ? [Inputs.range([1, 8], {step: 0.5, value: 2, label: "a"}), Inputs.range([1, 8], {step: 0.5, value: 5, label: "b"})]
+                 : init.map((v, i) => Inputs.range([0, 20], {step: 1, value: v, label: `weight of ${i}`}));
+  const wrap = html`<div>${isC || isB ? rs : html``}</div>`;
+  Object.defineProperty(wrap, "value", {get: () => rs.map(r => r.value)});
+  rs.forEach(r => r.addEventListener("input", () => wrap.dispatchEvent(new Event("input", {bubbles: true}))));
+  return wrap;
+}
+```
+
+```{ojs}
+//| echo: false
+{
+  let type = d38.type, lo, hi, f, x0, ps, shown;
+  if (type === "beta") { const [a, b] = w38; type = "c"; lo = 0; hi = 1; f = x => x <= 0 || x >= 1 ? 0 : x ** (a - 1) * (1 - x) ** (b - 1); }
+  else if (type === "c") ({lo, hi, f} = d38);
+  else if (type === "custom") { const t = d3.sum(w38) || 1; type = "d"; x0 = d3.range(6); ps = w38.map(w => w / t); }
+  else { x0 = d38.xs; ps = x0.map(d38.p); shown = d38.shown; }
+  let E;
+  if (type === "c") {
+    const n = 4000, h = (hi - lo) / n, g = d3.range(n + 1).map(i => lo + i * h);
+    // Simpson's rule, with normalization
+    const S = fn => g.reduce((s, x, i) => s + (i === 0 || i === n ? 1 : i % 2 ? 4 : 2) * fn(x) * f(x), 0) * h / 3;
+    const Z = S(x => 1), f0 = f;
+    f = x => f0(x) / Z; E = S;
+  } else E = fn => d3.sum(x0, (x, i) => fn(x) * ps[i]);
+  const mu = E(x => x), sd = Math.sqrt(E(x => (x - mu) ** 2));
+  const g3 = E(x => ((x - mu) / sd) ** 3), a4 = E(x => ((x - mu) / sd) ** 4);
+  const W = 460, H = 200, L = 34, R = W - 12;
+  const dom = type === "c" ? [lo - (hi - lo) * 0.25, hi + (hi - lo) * 0.25] : [x0[0] - 1, x0[(shown || x0.length) - 1] + 1];
+  const xs = d3.scaleLinear().domain(dom).range([L, R]);
+  const nd = x => Math.exp(-0.5 * ((x - mu) / sd) ** 2) / (sd * Math.sqrt(2 * Math.PI));
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H}`).style("width", "100%").style("max-width", "580px");
+  const pts = d3.range(dom[0], dom[1], (dom[1] - dom[0]) / 300).concat([dom[1]]);
+  let top;
+  if (type === "c") {
+    const inner = pts.filter(x => x > lo && x < hi);
+    top = Math.max(d3.max(inner, f), nd(mu)) * 1.1;
+    const ys = d3.scaleLinear().domain([0, Math.min(top, 6)]).range([H - 20, 10]).clamp(true);
+    svg.append("path").attr("d", d3.area().x(x => xs(x)).y0(ys(0)).y1(x => ys(f(x)))([lo, ...inner, hi])).attr("fill", "#9ecae1");
+    svg.append("path").attr("d", d3.line().x(x => xs(x)).y(x => ys(nd(x)))(pts)).attr("fill", "none").attr("stroke", "#888").attr("stroke-dasharray", "4 3");
+    svg.append("line").attr("x1", xs(mu)).attr("x2", xs(mu)).attr("y1", 10).attr("y2", ys(0)).attr("stroke", "#4e79a7").attr("stroke-width", 2);
+    svg.append("line").attr("x1", L).attr("x2", R).attr("y1", ys(0)).attr("y2", ys(0)).attr("stroke", "#333");
+  } else {
+    const vis = x0.slice(0, shown || x0.length);
+    top = Math.max(d3.max(ps), nd(mu)) * 1.1;
+    const ys = d3.scaleLinear().domain([0, top]).range([H - 20, 10]);
+    const bw = Math.min(24, (R - L) / (dom[1] - dom[0]) * 0.6);
+    vis.forEach((x, i) => svg.append("rect").attr("x", xs(x) - bw / 2).attr("width", bw).attr("y", ys(ps[i])).attr("height", ys(0) - ys(ps[i])).attr("fill", "#9ecae1"));
+    svg.append("path").attr("d", d3.line().x(x => xs(x)).y(x => ys(nd(x)))(pts)).attr("fill", "none").attr("stroke", "#888").attr("stroke-dasharray", "4 3");
+    svg.append("line").attr("x1", xs(mu)).attr("x2", xs(mu)).attr("y1", 10).attr("y2", ys(0)).attr("stroke", "#4e79a7").attr("stroke-width", 2);
+    svg.append("line").attr("x1", L).attr("x2", R).attr("y1", ys(0)).attr("y2", ys(0)).attr("stroke", "#333");
+  }
+  xs.ticks(8).forEach(t => svg.append("text").attr("x", xs(t)).attr("y", H - 5).attr("text-anchor", "middle").style("font", "10px sans-serif").attr("fill", "#666").text(String(t).replace("-", "−")));
+  const fm = v => (Math.abs(v) < 5e-4 ? 0 : v).toFixed(3).replace("-", "−");
+  const sk = Math.abs(g3) < 0.01 ? "symmetric or nearly so" : g3 > 0 ? "tail to the right" : "tail to the left";
+  const ku = Math.abs(a4 - 3) < 0.1 ? "tails roughly like the normal" : a4 > 3 ? "heavier tails than the normal" : "lighter tails than the normal";
+  return html`<div>${svg.node()}
+    <table class="ix-tbl">
+      <tr><td>μ, σ</td><td>${fm(mu)}, ${fm(sd)}</td></tr>
+      <tr><td>Skewness γ</td><td><b>${fm(g3)}</b> (${sk})</td></tr>
+      <tr><td>Kurtosis α</td><td><b>${fm(a4)}</b></td></tr>
+      <tr><td>Excess kurtosis α − 3</td><td>${fm(a4 - 3)} (${ku})</td></tr>
+    </table></div>`;
+}
+```
+:::
+
+A few observations worth checking in the widget:
+
+- The geometric pmf has $\gamma \approx 2.02$ and $\alpha \approx 9.08$: strong skewness and a very heavy right tail.
+- $3x^2$ has $\gamma \approx -0.86$, while $2(1 - x)$ has $\gamma = 2\sqrt2/5 \approx 0.566$.
+- The coin has $\alpha = 1$, the smallest possible kurtosis: $Z$ takes only the values $\pm 1$, so $Z^4 = 1$.
+- $3x^2$ has $\alpha \approx 3.10$, almost the same as the normal, although its shape looks nothing like a normal curve. Kurtosis is a single number and does not describe the whole shape.
+
+## Summary of the geometric features
+
+- The expected value, the median and the mode describe the **centre** of the distribution.
+- The variance and the standard deviation describe its **spread**.
+- Skewness $\gamma$ shows whether there is a long tail on the right ($\gamma > 0$) or on the left ($\gamma < 0$).
+- Kurtosis $\alpha$ measures how **heavy** the tails are, i.e. how likely extreme values are relative to $\sigma$.
+
+## In R
+
+```{r}
+#| label: shape-r
+shape(1:6, rep(1/6, 6))
+# the geometric pmf (1/4)(3/4)^x (enough terms)
+x <- 0:2000
+shape(x, 0.25 * 0.75^x)
+# from data: 100,000 rolls and the sample coefficients
+s <- sample(1:6, 1e5, replace = TRUE)
+z <- (s - mean(s)) / sd(s)
+c(skew = mean(z^3), kurt = mean(z^4))
+```
+
+For the die R gives $\alpha =$ `r fmt(die["kurt"], 4)`, which is $2121/1225$. Base R has no built-in functions for sample skewness and kurtosis but, as you see, both take one line from the standardized $z$.
+
+## Review questions
+
+**1. Quick quiz.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz38 = [
+  {q: "Waiting times at a checkout have many small values and a few very large ones. What is the sign of the skewness?",
+   opts: ["Positive", "Negative", "Zero"], ans: 0,
+   why: "The long tail is on the right, and the large positive deviations dominate E(Z³)."},
+  {q: "X is measured in metres and has γ = 0.8. If we measure it in centimetres (Y = 100X), what is the skewness?",
+   opts: ["0.8", "80", "8,000", "0.008"], ans: 0,
+   why: "Skewness is defined through the standardized Z, which is the same for X and Y = 100X. Shape coefficients have no units."},
+  {q: "A program reports \"kurtosis = 0\" for a sample. What does it most likely mean?",
+   opts: ["Excess kurtosis 0, i.e. α = 3 like the normal", "That the distribution has no tails", "That all values are equal"], ans: 0,
+   why: "Since α ≥ 1 always, 0 can only be the excess kurtosis α − 3. That is why we must check which definition is used."},
+  {q: "Which distribution has the smallest possible kurtosis, α = 1?",
+   opts: ["Two equally likely values, e.g. a 0/1 coin", "The uniform on [0, 1]", "The normal"], ans: 0,
+   why: "For two equally likely values Z takes only the values ±1, so Z⁴ = 1 always. The uniform has α = 1.8 and the normal α = 3."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz38.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz38.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** Show that for $Y = \lambda X + \beta$ with $\lambda > 0$ we have $\gamma_Y = \gamma_X$ and $\alpha_Y = \alpha_X$. What changes when $\lambda < 0$?
+
+**3.** $X$ takes the values 0 and 1 with $P(X = 1) = p$. Find its skewness for $p = 1/2$ and for $p = 0.9$. Check in the widget with "your own pmf" (weights only on 0 and 1).
+
+**4.** Find the kurtosis of the uniform distribution on $[0, 1]$.
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. $E(Y) = \lambda\mu + \beta$ and $\sigma_Y = |\lambda|\sigma$, so $\frac{Y - E(Y)}{\sigma_Y} = \frac{\lambda}{|\lambda|} \cdot \frac{X - \mu}{\sigma}$. For $\lambda > 0$ the standardized $Z$ is the same, and so are both coefficients. For $\lambda < 0$, $Z$ changes sign: the skewness changes sign (the tail flips to the other side), while the kurtosis stays the same, because $(-Z)^4 = Z^4$.
+3. $\mu = p$, $\sigma^2 = p(1 - p)$ and $E(X - p)^3 = p(1-p)^3 - (1-p)p^3 = p(1-p)(1 - 2p)$, so $\gamma = \dfrac{1 - 2p}{\sqrt{p(1-p)}}$. For $p = 1/2$, $\gamma = 0$. For $p = 0.9$, $\gamma = -0.8/0.3 \approx -2.67$: the rare value 0 is a "tail" to the left.
+4. $\mu = 1/2$, $\sigma^2 = 1/12$ and $E(X - 1/2)^4 = \int_0^1 (x - 1/2)^4\,dx = 1/80$. So $\alpha = \dfrac{1/80}{1/144} = 1.8$ and $\alpha - 3 = -1.2$.
+:::
+
+---
+
+**Next post:** *Moments and the moment-generating function.*
