@@ -54,6 +54,8 @@ mjx-container[display="true"] { display: block; max-width: 100%; overflow-x: aut
 html[lang="el"] .navbar-nav.ms-auto .nav-item:has(> a.nav-link[href$="en/resources.html"]),
 html[lang="el"] .navbar-nav.ms-auto .nav-item:has(> a.nav-link[href$="en/about.html"]),
 html[lang="en"] .navbar-nav.ms-auto .nav-item:has(> a.nav-link[href$="el/resources.html"]),
+html[lang="el"] .navbar-nav.ms-auto .nav-item:has(> a.nav-link[href$="en/index.xml"]),
+html[lang="en"] .navbar-nav.ms-auto .nav-item:has(> a.nav-link[href$="el/index.xml"]),
 html[lang="en"] .navbar-nav.ms-auto .nav-item:has(> a.nav-link[href$="el/about.html"]) { display: none; }
 
 /* Υποσέλιδο: κείμενο ανά γλώσσα (ορίζεται στο _quarto.yml, page-footer) */

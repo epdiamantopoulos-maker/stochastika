@@ -24,6 +24,10 @@ The content is based on the teaching material of **Epameinondas Diamantopoulos**
 
 AI assistance is used to draft the posts, code and interactive elements. Every post is reviewed and approved by the author before publication.
 
+## Follow new posts
+
+New posts appear every Monday, Wednesday and Friday. To follow them, add the [RSS feed](index.xml) (`https://www.stochastika.com/en/index.xml`) to a feed reader such as Feedly or Inoreader, or click the <i class="bi bi-rss"></i> icon at the top right.
+
 ## Contact
 
 For comments, corrections or topic suggestions: [info@stochastika.com](mailto:info@stochastika.com)
