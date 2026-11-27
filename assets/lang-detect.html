@@ -1,0 +1,22 @@
+<script>
+// Αρχική σελίδα: μεταφορά στη γλώσσα του επισκέπτη.
+// 1. Αν έχει διαλέξει γλώσσα (κλικ σε «Ελληνικά/English»), αυτή.
+// 2. Αλλιώς η γλώσσα του browser/συστήματος: ελληνικά → /el/, οτιδήποτε άλλο → /en/.
+// Με ?lang=all η αρχική μένει ως έχει (δίγλωσση).
+(function () {
+  if (/[?&]lang=all\b/.test(location.search)) return;
+  var lang = null;
+  try { lang = localStorage.getItem("st-lang"); } catch (e) {}
+  if (lang !== "el" && lang !== "en") {
+    var prefs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ""];
+    lang = "en";
+    for (var i = 0; i < prefs.length; i++) {
+      var p = String(prefs[i]).toLowerCase();
+      if (p.indexOf("el") === 0) { lang = "el"; break; }
+      if (p.indexOf("en") === 0) { lang = "en"; break; }
+    }
+  }
+  var base = location.pathname.replace(/index\.html$/, "");
+  location.replace(base + lang + "/index.html");
+})();
+</script>

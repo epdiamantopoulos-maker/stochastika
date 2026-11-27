@@ -1,6 +1,14 @@
 <script>
 // Εναλλαγή γλώσσας: τα άρθρα έχουν το ίδιο όνομα φακέλου στα el/ και en/,
 // οπότε οι σύνδεσμοι γλώσσας της μπάρας οδηγούν στο αντίστοιχο άρθρο.
+// Η επιλογή γλώσσας (κλικ σε «Ελληνικά/English») αποθηκεύεται, ώστε η
+// αρχική σελίδα να οδηγεί εκεί την επόμενη φορά (βλ. lang-detect.html).
+document.addEventListener("click", function (ev) {
+  var a = ev.target.closest && ev.target.closest(".navbar-nav.me-auto a.nav-link, .st-hero a.btn");
+  if (!a) return;
+  var m = (a.getAttribute("href") || "").match(/(?:^|\/)(el|en)\//);
+  if (m) { try { localStorage.setItem("st-lang", m[1]); } catch (e) {} }
+});
 (function () {
   var path = window.location.pathname;
   var m = path.match(/^(.*\/)(el|en)(\/.*)$/);

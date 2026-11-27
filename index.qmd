@@ -4,6 +4,7 @@ lang: el
 toc: false
 page-layout: article
 title-block-banner: false
+include-in-header: assets/lang-detect.html
 listing:
   - id: latest-el
     contents: el/posts
