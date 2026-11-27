@@ -27,6 +27,10 @@ website:
       - href: en/index.qmd
         text: "English"
     right:
+      - href: el/resources.qmd
+        text: "Πόροι"
+      - href: en/resources.qmd
+        text: "Resources"
       - href: el/about.qmd
         text: "Σχετικά"
       - href: en/about.qmd

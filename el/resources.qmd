@@ -1,0 +1,42 @@
+---
+title: "Πόροι"
+description: "Επιλεγμένα ελεύθερα βιβλία, μαθήματα, διαδραστικά εργαλεία και πηγές δεδομένων για Πιθανότητες, Στατιστική και R."
+toc: false
+---
+
+Μια μικρή, επιλεγμένη λίστα με ελεύθερες πηγές που συμπληρώνουν τα άρθρα του Stochastika. Όλες είναι δωρεάν και προέρχονται από πανεπιστήμια, δημόσιους οργανισμούς ή καθιερωμένα ανοιχτά έργα. Οι περισσότερες είναι στα αγγλικά.
+
+## Ελεύθερα βιβλία
+
+- [**OpenIntro Statistics**](https://www.openintro.org/book/os/): εισαγωγικό βιβλίο Στατιστικής με πολλά παραδείγματα από πραγματικά δεδομένα. Το PDF διατίθεται δωρεάν.
+- [**Introduction to Probability**, Grinstead & Snell](https://chance.dartmouth.edu/teaching_aids/books_articles/probability_book/book.html): κλασικό εισαγωγικό βιβλίο Πιθανοτήτων από το Dartmouth College, ελεύθερα διαθέσιμο, με ασκήσεις και προσομοιώσεις.
+- [**NIST/SEMATECH e-Handbook of Statistical Methods**](https://www.itl.nist.gov/div898/handbook/): ηλεκτρονικό εγχειρίδιο του αμερικανικού Εθνικού Ινστιτούτου Προτύπων και Τεχνολογίας (NIST), με έμφαση στις εφαρμογές της Στατιστικής στη μηχανική και στον έλεγχο ποιότητας.
+
+## Πανεπιστημιακά μαθήματα
+
+- [**Statistics 110: Probability**, Harvard](https://stat110.hsites.harvard.edu/): οι διαλέξεις του Joe Blitzstein σε βίντεο, μαζί με ασκήσεις και λύσεις.
+- [**6.041SC Probabilistic Systems Analysis and Applied Probability**, MIT OpenCourseWare](https://ocw.mit.edu/courses/6-041sc-probabilistic-systems-analysis-and-applied-probability-fall-2013/): πλήρες μάθημα Πιθανοτήτων για μηχανικούς, με βίντεο και λυμένα προβλήματα.
+- [**STAT 414: Introduction to Probability Theory**, Penn State](https://online.stat.psu.edu/stat414/): αναλυτικές σημειώσεις Πιθανοτήτων, οργανωμένες σε σύντομες ενότητες.
+
+## Διαδραστική εκμάθηση
+
+- [**Seeing Theory**, Brown University](https://seeing-theory.brown.edu/): οπτική, διαδραστική εισαγωγή στις Πιθανότητες και τη Στατιστική. Ο ιστότοπος έχει αρχειοθετηθεί και δεν ενημερώνεται, παραμένει όμως διαθέσιμος και χρήσιμος.
+
+## R
+
+- [**CRAN**](https://cran.r-project.org/): η επίσημη πηγή για να κατεβάσετε την R και τα πακέτα της.
+- [**R for Data Science** (2η έκδοση)](https://r4ds.hadley.nz/): ελεύθερο online βιβλίο για επεξεργασία και οπτικοποίηση δεδομένων με την R.
+
+## Ελληνικές πηγές
+
+- [**Κάλλιπος**](https://kallipos.gr/): ελεύθερα ελληνικά ακαδημαϊκά συγγράμματα, μεταξύ τους και πολλά για Πιθανότητες και Στατιστική.
+- [**ΕΛΣΤΑΤ**](https://www.statistics.gr/): η Ελληνική Στατιστική Αρχή, πηγή επίσημων στατιστικών δεδομένων για την Ελλάδα.
+
+## Δεδομένα και ερωτήσεις
+
+- [**Our World in Data**](https://ourworldindata.org/): δεδομένα και γραφήματα για την υγεία, την οικονομία, το περιβάλλον και πολλά άλλα, ιδανικά για ασκήσεις.
+- [**Cross Validated**](https://stats.stackexchange.com/): κοινότητα ερωτήσεων και απαντήσεων για τη Στατιστική.
+
+---
+
+Έχετε να προτείνετε μια πηγή; Γράψτε μας στο [info@stochastika.com](mailto:info@stochastika.com).
