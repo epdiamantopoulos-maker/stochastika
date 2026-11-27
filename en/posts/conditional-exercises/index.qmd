@@ -219,4 +219,4 @@ viewof go31 = Inputs.button("Simulate")
 
 ---
 
-**Next post:** *Random variables and the cumulative distribution function.*
+**Next post:** *Random variables: from experiments to numbers.*

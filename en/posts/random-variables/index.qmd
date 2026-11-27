@@ -1,0 +1,228 @@
+---
+title: "Random variables: from experiments to numbers"
+description: "What a random variable is: a function from the sample space to the real numbers. Types of random variables, the event {X = x}, and why two different random variables can have the same distribution, with an interactive diagram for three coin tosses."
+date: 2027-01-25
+image: thumbnail.png
+categories: [Probability, Random variables, R, Interactive]
+keywords: [random variable, sample space, discrete random variable, continuous random variable, probability distribution, identically distributed, preimage, coin tosses]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# non-ASCII characters in plots under a "C" locale
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+Toss a coin three times. The sample space has 8 outcomes, from HHH to TTT. Usually, though, we do not care about the whole sequence but about **a number** computed from it: how many heads came up, how much we won on a bet, on which toss the first head appeared. Random variables are how we move from the outcomes of an experiment to numbers we can calculate with.
+
+## Definition
+
+A **random variable** is a numerical quantity whose value is determined by the outcome of a random experiment. Equivalently, and more precisely: if $\Omega$ is the sample space of an experiment, a random variable is any function
+
+$$X : \Omega \to A \subseteq \mathbb{R}.$$
+
+For three tosses, $X$ = {number of heads} assigns a number to every outcome: $X(\text{HTH}) = 2$, $X(\text{TTT}) = 0$, $X(\text{HHH}) = 3$. Random variables are written with capital letters ($X$, $Y$, $Z$) and their values with lower-case letters ($x$, $y$, $z$).
+
+The name is misleading: a random variable is **neither random nor a variable**. It is a perfectly fixed function. The randomness lies in which $\omega \in \Omega$ the experiment produces. Once that is known, the value $X(\omega)$ is certain.
+
+## Types of random variables
+
+The variables we meet in practice fall into two broad groups:
+
+- **Qualitative** (categorical): sex, place of residence, marital status. Their values are categories with no numerical meaning. If the categories have a natural order (e.g. "never, sometimes, often") they are **ordinal**, otherwise **nominal**.
+- **Numerical** (quantitative), which are further split into:
+  - **discrete**, with finitely or countably many values: number of children in a family, number of calls to a call centre, number of heads in three tosses,
+  - **continuous**, with values in an interval of $\mathbb{R}$: time, length, weight.
+
+A qualitative variable can be made numerical by **coding**. If we pick a student at random and record their sex, with $\Omega$ = {Boy, Girl}, we can define $X(\text{Boy}) = 1$ and $X(\text{Girl}) = 0$. These numbers are labels, though: a "mean sex" of 0.6 just says that 60% are boys, and some features of the distribution, such as the median, have no clear meaning.
+
+In the next posts we deal with numerical random variables: first discrete ones, then continuous ones.
+
+## The event $\{X = x\}$
+
+A random variable lets us write events with numbers. The expression $\{X = x\}$ is the set of outcomes that $X$ sends to the value $x$ (its *preimage*):
+
+$$\{X = x\} = \{\omega \in \Omega : X(\omega) = x\}.$$
+
+For the number of heads, $\{X = 2\} = \{\text{HHT}, \text{HTH}, \text{THH}\}$, so with a fair coin $P(X = 2) = 3/8$. Events such as $\{X \le x\}$ or $\{a < X \le b\}$ are defined the same way. The probability of a value is the sum of the probabilities of all outcomes that lead to it. The collection of the probabilities $P(X = x)$ is the **distribution** of $X$.
+
+In the diagram below, each outcome of the three tosses is "sent" by an arrow to the value of the random variable. Choose a random variable and click a value on the axis or a bar: the outcomes that make up the event $\{X = x\}$ light up. Change the probability of heads too, to see what happens when the coin is not fair.
+
+::: {.ix-panel}
+::: {.ix-title}
+A random variable as a function $\Omega \to \mathbb{R}$
+:::
+
+```{ojs}
+//| echo: false
+rvs31 = new Map([
+  ["Number of heads", s => [...s].filter(c => c === "H").length],
+  ["Number of tails", s => [...s].filter(c => c === "T").length],
+  ["Winnings: +€1 per head, −€1 per tail", s => [...s].reduce((t, c) => t + (c === "H" ? 1 : -1), 0)],
+  ["Longest run of heads", s => Math.max(...s.split("T").map(r => r.length))],
+  ["Toss of the first head (0 if none)", s => s.indexOf("H") + 1],
+  ["1 if all tosses agree, else 0", s => (s === "HHH" || s === "TTT") ? 1 : 0]
+])
+viewof X31 = Inputs.select(rvs31, {label: "Random variable X"})
+viewof p31 = Inputs.range([0.05, 0.95], {step: 0.05, value: 0.5, label: "P(H) on each toss"})
+```
+
+```{ojs}
+//| echo: false
+{
+  const outs = ["HHH", "HHT", "HTH", "HTT", "THH", "THT", "TTH", "TTT"];
+  const pr = s => [...s].reduce((t, c) => t * (c === "H" ? p31 : 1 - p31), 1);
+  const rows = outs.map(s => ({s, x: X31(s), p: pr(s)}));
+  const vals = [...new Set(rows.map(r => r.x))].sort((a, b) => a - b);
+  const pmf = vals.map(v => ({v, p: d3.sum(rows.filter(r => r.x === v), r => r.p)}));
+  const f = (v, d = 3) => v.toFixed(d);
+  const W = 420, H = 330, bx = i => 18 + i * 49, lo = Math.min(...vals, 0), hi = Math.max(...vals, 1);
+  const xs = d3.scaleLinear().domain([lo - 0.5, hi + 0.5]).range([40, W - 30]);
+  const yAxis = 170, ys = d3.scaleLinear().domain([0, 1]).range([H - 22, yAxis + 26]);
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H}`).style("width", "100%").style("max-width", "560px");
+  svg.append("text").attr("x", 8).attr("y", 12).style("font", "12px sans-serif").attr("fill", "#555").text("Ω");
+  const links = svg.append("g"), boxes = svg.append("g");
+  const lk = links.selectAll("line").data(rows).join("line")
+    .attr("x1", (r, i) => bx(i) + 22).attr("y1", 62).attr("x2", r => xs(r.x)).attr("y2", yAxis - 4)
+    .attr("stroke", "#9ecae1").attr("stroke-width", 1.6);
+  const bg = boxes.selectAll("g").data(rows).join("g").attr("transform", (r, i) => `translate(${bx(i)},20)`);
+  const br = bg.append("rect").attr("width", 44).attr("height", 40).attr("rx", 6).attr("fill", "#fff").attr("stroke", "#4e79a7").attr("stroke-width", 1.5);
+  bg.append("text").attr("x", 22).attr("y", 17).attr("text-anchor", "middle").style("font", "bold 12px sans-serif").attr("fill", "#222").text(r => r.s);
+  bg.append("text").attr("x", 22).attr("y", 32).attr("text-anchor", "middle").style("font", "10px sans-serif").attr("fill", "#666").text(r => f(r.p));
+  svg.append("line").attr("x1", 30).attr("x2", W - 20).attr("y1", yAxis).attr("y2", yAxis).attr("stroke", "#333");
+  svg.append("text").attr("x", W - 14).attr("y", yAxis + 4).style("font", "12px sans-serif").text("ℝ");
+  const bars = svg.append("g").selectAll("rect").data(pmf).join("rect")
+    .attr("x", d => xs(d.v) - 13).attr("width", 26).attr("y", d => ys(d.p)).attr("height", d => ys(0) - ys(d.p))
+    .attr("fill", "#4e79a7").style("cursor", "pointer");
+  svg.append("line").attr("x1", 30).attr("x2", W - 20).attr("y1", ys(0)).attr("y2", ys(0)).attr("stroke", "#999");
+  svg.append("g").selectAll("text").data(pmf).join("text").attr("x", d => xs(d.v)).attr("y", d => ys(d.p) - 4)
+    .attr("text-anchor", "middle").style("font", "10px sans-serif").attr("fill", "#333").text(d => f(d.p));
+  const ticks = svg.append("g").selectAll("g").data(pmf).join("g").attr("transform", d => `translate(${xs(d.v)},${yAxis})`).style("cursor", "pointer");
+  ticks.append("circle").attr("r", 11).attr("fill", "#fff").attr("stroke", "#4e79a7").attr("stroke-width", 1.5);
+  ticks.append("text").attr("dy", "0.35em").attr("text-anchor", "middle").style("font", "bold 11px sans-serif").text(d => d.v);
+  svg.append("text").attr("x", 8).attr("y", yAxis + 40).style("font", "11px sans-serif").attr("fill", "#555").text("P(X = x)");
+  const info = html`<div class="ix-note">Click a value x on the axis or a bar.</div>`;
+  const pick = v => {
+    br.attr("fill", r => r.x === v ? "#f28e2b" : "#fff");
+    lk.attr("stroke", r => r.x === v ? "#f28e2b" : "#dbe9f3").attr("stroke-width", r => r.x === v ? 2.6 : 1.2);
+    bars.attr("fill", d => d.v === v ? "#f28e2b" : "#4e79a7");
+    ticks.select("circle").attr("fill", d => d.v === v ? "#f28e2b" : "#fff");
+    const pre = rows.filter(r => r.x === v);
+    info.innerHTML = `{X = ${v}} = {${pre.map(r => r.s).join(", ")}}<br>P(X = ${v}) = ${pre.map(r => f(r.p)).join(" + ")} = <b>${f(d3.sum(pre, r => r.p))}</b>`;
+  };
+  bars.on("click", (e, d) => pick(d.v)); ticks.on("click", (e, d) => pick(d.v));
+  const tot = d3.sum(pmf, d => d.p);
+  return html`<div>${svg.node()}${info}<div class="ix-note">Values of X: {${vals.join(", ")}}. Sum of all P(X = x): ${f(tot)}.</div></div>`;
+}
+```
+:::
+
+Notice that **many outcomes can lead to the same value**, but each outcome is sent to exactly one value, as with any function. That is why the probabilities of all values always add up to 1: every outcome is counted exactly once.
+
+## Equal random variables and equal distributions
+
+Two random variables are **equal** when they are equal as functions $\Omega \to \mathbb{R}$, that is, $X(\omega) = Y(\omega)$ for every $\omega \in \Omega$. But two random variables can have **the same distribution without being equal**.
+
+In the diagram, compare "Number of heads" with "Number of tails" for $P(H) = 0.5$. The bars are identical: $1/8, 3/8, 3/8, 1/8$. The two functions differ, though: at HHH the first gives 3 and the second 0. Such random variables are called **identically distributed**. If you change $P(H)$ to 0.7, the two distributions no longer match: being identically distributed depends on the probabilities, whereas equality is a property of the functions themselves.
+
+An even simpler example from the lecture slides: if $X$ takes the values $-1$ and $1$ with probability $0.5$ each and $Y = -X$, then $Y \neq X$ (whenever $X = 1$, $Y = -1$), yet $P(Y = -1) = P(X = 1) = 0.5$ and $P(Y = 1) = P(X = -1) = 0.5$.
+
+## In R
+
+In R we build the sample space, apply the random variable to every outcome and add up the probabilities for each value:
+
+```{r}
+#| label: rv-r
+omega <- expand.grid(t1 = c("H", "T"), t2 = c("H", "T"), t3 = c("H", "T"),
+                     stringsAsFactors = FALSE)
+p <- 0.5
+# the r.v. X: number of heads in each row of omega
+X <- rowSums(omega == "H")
+prob <- p^X * (1 - p)^(3 - X)
+data.frame(omega = apply(omega, 1, paste, collapse = ""), X, prob)
+tapply(prob, X, sum)
+```
+
+The last line is the distribution of $X$. The same distribution comes out of a simulation: run the experiment many times and count how often each value appears.
+
+```{r}
+#| label: rv-sim
+n <- 10000
+heads <- replicate(n, sum(sample(c("H", "T"), 3, replace = TRUE) == "H"))
+round(table(heads) / n, 3)
+```
+
+The relative frequencies are close to $1/8 = 0.125$ and $3/8 = 0.375$, as expected.
+
+## Summary
+
+- A random variable is a function $X : \Omega \to \mathbb{R}$ that assigns a number to each outcome of the experiment. The randomness lies in which outcome occurs.
+- Numerical random variables are discrete (countably many values) or continuous (values in an interval). Qualitative variables become numerical through coding.
+- $\{X = x\} = \{\omega : X(\omega) = x\}$, and $P(X = x)$ is the sum of the probabilities of those outcomes.
+- Equal random variables have the same distribution, but not conversely: random variables with the same distribution are called identically distributed.
+
+## Review questions
+
+**1. Quick quiz.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz31 = [
+  {q: "Two dice are rolled and X = {the sum}. What is the event {X = 4}?",
+   opts: ["{(2, 2)}", "{(1, 3), (2, 2), (3, 1)}", "{(1, 3), (2, 2)}", "{4}"], ans: 1,
+   why: "It is every pair with sum 4: (1, 3), (2, 2), (3, 1). So P(X = 4) = 3/36."},
+  {q: "Which of these variables is continuous?",
+   opts: ["Number of calls in an hour", "Waiting time at a checkout", "Number of heads in 10 tosses", "A grade on an integer 0–10 scale"], ans: 1,
+   why: "Time takes values in an interval. The other three take isolated, countable values."},
+  {q: "Three tosses of a fair coin, X = {number of heads}, Y = {number of tails}. Which is true?",
+   opts: ["X = Y", "X and Y have the same distribution, but X ≠ Y", "They do not have the same distribution", "Y = −X"], ans: 1,
+   why: "Both take 0, 1, 2, 3 with probabilities 1/8, 3/8, 3/8, 1/8, but e.g. X(HHH) = 3 while Y(HHH) = 0. In fact Y = 3 − X."},
+  {q: "Can two different outcomes ω₁ ≠ ω₂ have the same value X(ω₁) = X(ω₂)?",
+   opts: ["Yes", "No, because X is a function", "Only if X is continuous"], ans: 0,
+   why: "A function may send several points to the same value (e.g. HHT, HTH, THH → 2). What it cannot do is send one point to two values."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz31.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz31.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** Two dice are rolled and $X$ = {the larger of the two results}. Which values does $X$ take? Find the event $\{X = 2\}$ and $P(X = 2)$.
+
+**3.** In the diagram, choose "Winnings: +€1 per head, −€1 per tail". Express this random variable in terms of $X$ = {number of heads}. What is the probability of not losing money with a fair coin?
+
+**4.** With a fair coin, show that "Toss of the first head" and "Longest run of heads" are identically distributed but not equal. Check it in the diagram.
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. $X$ takes the values $1, 2, \ldots, 6$. $\{X = 2\} = \{(1, 2), (2, 1), (2, 2)\}$, so $P(X = 2) = 3/36 = 1/12$.
+3. If $X$ is the number of heads, the number of tails is $3 - X$ and the winnings are $X - (3 - X) = 2X - 3$. We do not lose when $2X - 3 \ge 0$, i.e. $X \ge 2$, with probability $3/8 + 1/8 = 1/2$.
+4. "Toss of the first head" is 0 only at TTT, 1 at every outcome starting with H (4 outcomes), 2 at THH and THT, and 3 at TTH: probabilities $1/8, 4/8, 2/8, 1/8$. "Longest run" is 0 at TTT, 3 at HHH, 2 at HHT and THH, and 1 at the other 4: again $1/8, 4/8, 2/8, 1/8$. The distributions agree, but the functions differ: at THT the first gives 2 and the second 1.
+:::
+
+---
+
+**Next post:** *The probability mass function: the distribution of a discrete random variable.*

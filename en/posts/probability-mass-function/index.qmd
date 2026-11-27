@@ -1,0 +1,269 @@
+---
+title: "The probability mass function: the distribution of a discrete random variable"
+description: "The definition and the two properties of the probability mass function (pmf), how to check whether a function is a pmf, how to find an unknown normalising constant and how to compute probabilities of events, with an interactive calculator and R."
+date: 2027-01-27
+image: thumbnail.png
+categories: [Probability, Random variables, R, Interactive]
+keywords: [probability mass function, pmf, discrete random variable, probability distribution, normalizing constant, geometric series, dgeom, sample in R]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# non-ASCII characters in plots under a "C" locale
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+In the [previous post](../random-variables/index.qmd) we saw that a random variable $X$ sends each outcome of an experiment to a number, and that $P(X = x)$ is the probability of all the outcomes that lead to the value $x$. When $X$ is discrete, these probabilities, one for each value, describe its distribution completely. The function that collects them is the **probability mass function**.
+
+## Definition and properties
+
+The **probability mass function** (pmf) of a discrete random variable $X$ is the function $f_X : \mathbb{R} \to [0, 1]$ given by
+
+$$f_X(x) = P(X = x).$$
+
+Every pmf has two properties:
+
+1. $0 \le f_X(x) \le 1$ for every $x \in \mathbb{R}$,
+2. $\displaystyle\sum_x f_X(x) = 1$, where the sum runs over all values of $X$.
+
+The converse also holds: any function with these two properties on a finite or countable set of values is the pmf of some discrete random variable. The pmf is also written $p_X(x)$, or just $f(x)$ or $p(x)$ when there is no risk of confusion. The word "mass" is used only for discrete random variables: probability sits on isolated points, like point masses. The corresponding notion for continuous random variables is the probability **density** function.
+
+From the pmf we can compute the probability of **any** event involving $X$: add up the mass of the values that belong to it,
+
+$$P(X \in B) = \sum_{x \in B} f_X(x).$$
+
+**Example.** For the result of rolling a die, $f_X(x) = 1/6$ for $x = 1, 2, \ldots, 6$ and $f_X(x) = 0$ for any other $x$. The probability of rolling at least 5 is $f_X(5) + f_X(6) = 1/3$.
+
+## Is it a pmf? Two examples
+
+**Example 1.** We show that
+
+$$f(x) = \frac{1}{4} \left( \frac{3}{4} \right)^x, \quad x = 0, 1, 2, \ldots$$
+
+is a pmf. The first property holds since $0 < f(x) \le 1/4$. For the second we use the geometric series $\sum_{x \ge 0} q^x = 1/(1 - q)$ for $|q| < 1$:
+
+$$\sum_{x=0}^{\infty} \frac{1}{4} \left( \frac{3}{4} \right)^x = \frac{1}{4} \cdot \frac{1}{1 - 3/4} = 1.$$
+
+If $X$ has this pmf, then
+
+$$P(0 \le X \le 3) = \frac{1}{4} \left( 1 + \frac{3}{4} + \frac{9}{16} + \frac{27}{64} \right) = 1 - \left( \frac{3}{4} \right)^4 = \frac{175}{256} \approx 0.684.$$
+
+This pmf is positive at infinitely many values, which decrease quickly. $X$ counts, for example, the failures before the first success in repeated trials with success probability $1/4$: for $X = x$, the first $x$ trials must fail and the next one succeed.
+
+**Example 2.** For which constant $c$ is $f(x) = c x^2$, $x = 1, 2, 3$, a pmf? From the second property:
+
+$$c \cdot 1 + c \cdot 4 + c \cdot 9 = 14c = 1 \quad \Rightarrow \quad c = \frac{1}{14}.$$
+
+With $c = 1/14$ the first property holds as well, since the values $1/14$, $4/14$, $9/14$ all lie in $[0, 1]$. The constant that makes the sum equal to 1 is called the **normalising constant**.
+
+## A probability calculator for a pmf
+
+Pick a function and an event. The bars in the event are coloured, and its probability is the sum of their heights. For $c x^2$, move the slider and watch the check on the second property: only one value of $c$ gives a pmf.
+
+::: {.ix-panel}
+::: {.ix-title}
+Probability mass function and probabilities of events
+:::
+
+```{ojs}
+//| echo: false
+pmfs32 = new Map([
+  ["Die: f(x) = 1/6, x = 1, …, 6", {id: "die"}],
+  ["f(x) = (1/4)(3/4)^x, x = 0, 1, 2, …", {id: "geo"}],
+  ["f(x) = c·x², x = 1, 2, 3", {id: "cx2"}],
+  ["Fans: number among 3 residents, p = 0.8", {id: "fans"}],
+  ["f(x) = 2^(−x), x = 1, 2, 3, …", {id: "half"}]
+])
+viewof d32 = Inputs.select(pmfs32, {label: "Function"})
+viewof k32 = Inputs.range([5, 30], {step: 1, value: 10, label: "For c·x² only: c = 1/k, k ="})
+viewof ev32 = Inputs.radio(["a ≤ X ≤ b", "X even", "X odd", "X multiple of 3"], {value: "a ≤ X ≤ b", label: "Event"})
+```
+
+```{ojs}
+//| echo: false
+sup32 = {
+  const id = d32.id, bin = (n, k) => k < 0 || k > n ? 0 : [...Array(k).keys()].reduce((t, i) => t * (n - i) / (i + 1), 1);
+  if (id === "die") return {xs: d3.range(1, 7), f: x => 1 / 6, shown: 6, inf: false};
+  if (id === "geo") return {xs: d3.range(0, 120), f: x => 0.25 * 0.75 ** x, shown: 16, inf: true};
+  if (id === "cx2") return {xs: [1, 2, 3], f: x => x * x / k32, shown: 3, inf: false};
+  if (id === "fans") return {xs: [0, 1, 2, 3], f: x => bin(3, x) * 0.8 ** x * 0.2 ** (3 - x), shown: 4, inf: false};
+  return {xs: d3.range(1, 120), f: x => 2 ** -x, shown: 15, inf: true};
+}
+viewof ab32 = {
+  const xs = sup32.xs.slice(0, sup32.shown), lo = xs[0], hi = xs[xs.length - 1];
+  const a = Inputs.range([lo, hi], {step: 1, value: lo, label: "a"});
+  const b = Inputs.range([lo, hi], {step: 1, value: Math.min(hi, lo + 3), label: "b"});
+  const wrap = html`<div>${ev32 === "a ≤ X ≤ b" ? html`${a}${b}` : html``}</div>`;
+  Object.defineProperty(wrap, "value", {get: () => [a.value, b.value]});
+  a.addEventListener("input", () => wrap.dispatchEvent(new Event("input", {bubbles: true})));
+  b.addEventListener("input", () => wrap.dispatchEvent(new Event("input", {bubbles: true})));
+  return wrap;
+}
+```
+
+```{ojs}
+//| echo: false
+{
+  const {xs, f, shown, inf} = sup32, [a, b] = ab32;
+  const inB = x => ev32 === "a ≤ X ≤ b" ? (x >= Math.min(a, b) && x <= Math.max(a, b)) :
+                   ev32 === "X even" ? x % 2 === 0 : ev32 === "X odd" ? Math.abs(x % 2) === 1 : x % 3 === 0;
+  const all = xs.map(x => ({x, p: f(x), in: inB(x)})), vis = all.slice(0, shown);
+  const total = d3.sum(all, d => d.p), pB = d3.sum(all.filter(d => d.in), d => d.p);
+  const fm = (v, d = 4) => v.toFixed(d);
+  const W = 440, H = 220, top = Math.max(0.3, d3.max(vis, d => d.p) * 1.15);
+  const xsc = d3.scaleBand().domain(vis.map(d => d.x)).range([34, W - 8]).padding(0.18);
+  const ysc = d3.scaleLinear().domain([0, top]).range([H - 24, 14]);
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H}`).style("width", "100%").style("max-width", "560px");
+  ysc.ticks(4).forEach(t => {
+    svg.append("line").attr("x1", 34).attr("x2", W - 8).attr("y1", ysc(t)).attr("y2", ysc(t)).attr("stroke", "#eee");
+    svg.append("text").attr("x", 30).attr("y", ysc(t)).attr("dy", "0.35em").attr("text-anchor", "end").style("font", "10px sans-serif").attr("fill", "#666").text(String(t));
+  });
+  svg.selectAll("rect.b").data(vis).join("rect").attr("x", d => xsc(d.x)).attr("width", xsc.bandwidth())
+    .attr("y", d => ysc(Math.min(d.p, top))).attr("height", d => ysc(0) - ysc(Math.min(d.p, top)))
+    .attr("fill", d => d.in ? "#f28e2b" : "#4e79a7");
+  svg.selectAll("text.x").data(vis).join("text").attr("x", d => xsc(d.x) + xsc.bandwidth() / 2).attr("y", H - 8)
+    .attr("text-anchor", "middle").style("font", "10px sans-serif").text(d => d.x);
+  svg.append("line").attr("x1", 34).attr("x2", W - 8).attr("y1", ysc(0)).attr("y2", ysc(0)).attr("stroke", "#333");
+  if (inf) svg.append("text").attr("x", W - 10).attr("y", 26).attr("text-anchor", "end").style("font", "11px sans-serif").attr("fill", "#666").text("… continues for larger x");
+  const okRange = all.every(d => d.p >= 0 && d.p <= 1), okSum = Math.abs(total - 1) < 1e-9;
+  const evText = ev32 === "a ≤ X ≤ b" ? `${Math.min(a, b)} ≤ X ≤ ${Math.max(a, b)}` : ev32;
+  return html`<div>${svg.node()}
+    <table class="ix-tbl">
+      <tr><td>Property 1: 0 ≤ f(x) ≤ 1</td><td>${okRange ? html`<span class="ix-ok">✓</span>` : html`<span class="ix-no">✗ some f(x) > 1</span>`}</td></tr>
+      <tr><td>Property 2: Σ f(x)</td><td><b>${fm(total)}</b> ${okSum ? html`<span class="ix-ok">✓</span>` : html`<span class="ix-no">✗ must be 1</span>`}</td></tr>
+      <tr><td>P(${evText})</td><td><b>${fm(pB)}</b></td></tr>
+    </table>
+    ${okRange && okSum ? "" : html`<div class="ix-note">With this value of c the function is <b>not</b> a pmf, so the "probability" of the event is meaningless.</div>`}
+  </div>`;
+}
+```
+:::
+
+With the pmf $(1/4)(3/4)^x$ and $a = 0$, $b = 3$ you get the $0.684$ of Example 1. For $c x^2$, $k = 14$ is the only setting whose sum is 1. The "Fans" option is the example that follows.
+
+## From the sample space to the pmf
+
+80% of the residents of a town support the local football team. We pick 3 residents at random and let $X$ = {the number who support the team}. To find the pmf of $X$ we start, as in the previous post, from the sample space. Writing S for a supporter and N for a non-supporter, there are 8 outcomes, from SSS to NNN. The choices are independent, so e.g. $P(\text{SNS}) = 0.8 \cdot 0.2 \cdot 0.8 = 0.128$. Grouping by value:
+
+| $x$ | Outcomes with $X = x$ | $f_X(x)$ |
+|:-:|:-|:-:|
+| 0 | NNN | $0.2^3 = 0.008$ |
+| 1 | SNN, NSN, NNS | $3 \cdot 0.8 \cdot 0.2^2 = 0.096$ |
+| 2 | SSN, SNS, NSS | $3 \cdot 0.8^2 \cdot 0.2 = 0.384$ |
+| 3 | SSS | $0.8^3 = 0.512$ |
+
+The values add up to 1. The form $\binom{3}{x} 0.8^x\, 0.2^{3-x}$ is the **binomial distribution**, which will get a post of its own.
+
+## In R
+
+In R a pmf with finitely many values is just two vectors: the values and their probabilities. With them we check the properties, compute probabilities and run simulations.
+
+```{r}
+#| label: pmf-r
+x <- 1:3
+f <- x^2 / 14
+c(all_in_01 = all(f >= 0 & f <= 1), total = sum(f))
+# P(X >= 2)
+sum(f[x >= 2])
+# 10,000 draws of X and their relative frequencies
+sims <- sample(x, 10000, replace = TRUE, prob = f)
+round(table(sims) / 10000, 3)
+```
+
+With infinitely many values we sum enough terms. R has the pmf of Example 1 built in: it is `dgeom(x, prob = 1/4)`.
+
+```{r}
+#| label: geo-r
+#| fig-width: 6
+#| fig-height: 3
+#| fig-alt: "Bar chart of the pmf f(x) = (1/4)(3/4)^x for x from 0 to 20. The bars decrease geometrically, with the values 0 to 3 highlighted."
+x <- 0:20
+f <- 0.25 * 0.75^x
+all.equal(f, dgeom(x, prob = 0.25))
+# P(0 <= X <= 3)
+sum(f[x <= 3])
+par(mar = c(4, 4, 1, 1))
+barplot(f, names.arg = x, col = ifelse(x <= 3, "#f28e2b", "#4e79a7"),
+        border = NA, xlab = "x", ylab = "f(x)", las = 1)
+```
+
+The sum of the first four terms is `r fmt(sum(0.25 * 0.75^(0:3)), 4)`, the $175/256$ we found above.
+
+## Summary
+
+- The pmf of a discrete r.v. is $f_X(x) = P(X = x)$.
+- Any function with $0 \le f(x) \le 1$ and $\sum_x f(x) = 1$ is a pmf. The second property pins down unknown constants.
+- $P(X \in B) = \sum_{x \in B} f_X(x)$: the probability of an event is the mass that lies in it.
+- To find the pmf of an r.v., start from the sample space and group the outcomes by value.
+
+## Review questions
+
+**1. Quick quiz.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz32 = [
+  {q: "Which of these is a pmf on the values x = 1, 2, 3, 4?",
+   opts: ["f(x) = x/10", "f(x) = x/4", "f(x) = (x − 2)/2", "f(x) = 1/3"], ans: 0,
+   why: "1 + 2 + 3 + 4 = 10, so x/10 sums to 1. x/4 sums to 2.5, (x − 2)/2 is negative at x = 1 and 1/3 sums to 4/3."},
+  {q: "If f(x) = c·(1/2)^x for x = 0, 1, 2, …, what is c?",
+   opts: ["1", "1/2", "2", "1/4"], ans: 1,
+   why: "Σ (1/2)^x = 1/(1 − 1/2) = 2, so 2c = 1 and c = 1/2."},
+  {q: "X has f(0) = 0.2, f(1) = 0.5, f(2) = 0.3. What is P(X ≠ 1)?",
+   opts: ["0.5", "0.3", "0.2", "0.7"], ans: 0,
+   why: "P(X ≠ 1) = 1 − f(1) = 0.5, or equivalently f(0) + f(2) = 0.2 + 0.3."},
+  {q: "Can a pmf have f(x) > 0 for infinitely many x?",
+   opts: ["No, the sum would be infinite", "Yes, as long as the sum is 1", "Only if X is continuous"], ans: 1,
+   why: "E.g. (1/4)(3/4)^x is positive for every x = 0, 1, 2, … and sums to 1. The terms just have to decrease fast enough."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz32.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz32.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** The discrete r.v. $X$ has pmf $f_X(x) = 2^{-x}$, $x = 1, 2, \ldots$
+
+(a) Is $X$ more likely to take an even or an odd value?
+(b) Compute $P(X > 5)$ and $P(X \text{ is divisible by } 3)$.
+
+Check your answers in the calculator, with the function $2^{-x}$.
+
+**3.** Find the constant $c$ such that $f(x) = c\,(x + 1)$, $x = 0, 1, 2, 3$, is a pmf, and compute $P(X \ge 2)$.
+
+**4.** Two dice are rolled and $X$ = {the absolute difference of the results}. Find the pmf of $X$.
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. (a) $P(X \text{ odd}) = \sum_{k \ge 1} 2^{-(2k-1)} = \dfrac{1/2}{1 - 1/4} = \dfrac{2}{3}$, so $P(X \text{ even}) = 1/3$. An odd value is more likely, mainly because $x = 1$ alone has probability $1/2$.
+(b) $P(X > 5) = \sum_{x \ge 6} 2^{-x} = 2^{-5} = 1/32$. $P(X \text{ is divisible by } 3) = \sum_{k \ge 1} 2^{-3k} = \dfrac{1/8}{1 - 1/8} = \dfrac{1}{7}$.
+3. $c\,(1 + 2 + 3 + 4) = 10c = 1$, so $c = 1/10$ and $P(X \ge 2) = (3 + 4)/10 = 0.7$.
+4. $X$ takes the values $0, 1, \ldots, 5$ with $f_X(0) = 6/36$ and $f_X(k) = 2(6 - k)/36$ for $k = 1, \ldots, 5$, i.e. $6/36, 10/36, 8/36, 6/36, 4/36, 2/36$, which add up to 1.
+:::
+
+---
+
+**Next post:** *The cumulative distribution function (CDF): probability "up to x".*

@@ -216,6 +216,33 @@ thumbs <- list(
       x0 <- x0 + 0.88 * w[j] + 0.02
     }
   }
+  ,
+  "random-variables" = function() {
+    blank(c(0, 9), c(0, 6))
+    k <- c(3, 2, 2, 1, 2, 1, 1, 0); xv <- 1.6 + 1.9 * k
+    for (i in 1:8) segments(i, 4.6, xv[i], 1.35, col = a(col["blue"], .55), lwd = 3)
+    for (i in 1:8) rect(i - 0.4, 4.6, i + 0.4, 5.6, col = if (k[i] == 2) col["orange"] else "white", border = ink, lwd = 3)
+    segments(0.5, 1, 8.5, 1, lwd = 4, col = ink)
+    symbols(1.6 + 1.9 * 0:3, rep(1, 4), circles = rep(0.32, 4), inches = FALSE, add = TRUE,
+            bg = c("white", "white", col["orange"], "white"), fg = ink, lwd = 3)
+  },
+  "probability-mass-function" = function() {
+    x <- 0:12; f <- 0.25 * 0.75^x
+    blank(c(-0.6, 12.6), c(0, 0.27))
+    rect(x - 0.36, 0, x + 0.36, f, col = ifelse(x <= 3, col["orange"], col["blue"]), border = NA)
+    segments(-0.6, 0, 12.6, 0, lwd = 3, col = ink)
+  },
+  "cumulative-distribution-function" = function() {
+    x <- 0:3; F <- cumsum(c(1, 3, 3, 1) / 8)
+    blank(c(-1, 4), c(-0.05, 1.05))
+    segments(-1, 0, 0, 0, lwd = 6, col = col["blue"])
+    segments(x, F, c(x[-1], 4), F, lwd = 6, col = col["blue"])
+    points(x, c(0, F[-4]), pch = 21, bg = "white", col = col["blue"], cex = 3, lwd = 3)
+    points(x, F, pch = 19, col = col["blue"], cex = 3)
+    segments(-1, -0.03, 4, -0.03, lwd = 3, col = ink)
+    segments(1.5, -0.03, 1.5, F[2], lty = 2, lwd = 3, col = col["orange"])
+    points(1.5, F[2], pch = 19, col = col["orange"], cex = 3.2)
+  }
 )
 
 # συχνότητες 600 ρίψεων ζαριού, με τις έδρες από κάτω

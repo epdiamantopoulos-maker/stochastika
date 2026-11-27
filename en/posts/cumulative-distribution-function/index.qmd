@@ -1,0 +1,298 @@
+---
+title: "The cumulative distribution function (CDF): probability \"up to x\""
+description: "The cumulative distribution function F(x) = P(X ≤ x) of a random variable: definition, properties, its staircase shape for discrete random variables, and how to get interval probabilities right with < and ≤, with an interactive chart and R."
+date: 2027-01-29
+image: thumbnail.png
+categories: [Probability, Random variables, R, Interactive]
+keywords: [cumulative distribution function, CDF, distribution function, F(x) = P(X ≤ x), step function, right-continuous, discrete random variable, empirical CDF, ecdf in R]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# non-ASCII characters in plots under a "C" locale
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+The [probability mass function](../probability-mass-function/index.qmd) answers the question "how likely is the value $x$?". Very often, though, we ask something else: how likely is a device to fail **within** its first 12 months, a student to score **up to** 4, a die to show **at most** 2? These probabilities are given by the **cumulative distribution function**. It has another advantage too: it is defined in exactly the same way for discrete and for continuous random variables.
+
+## Definition
+
+The **cumulative distribution function** (CDF) of a random variable $X$ is the function $F_X : \mathbb{R} \to [0, 1]$ given by
+
+$$F_X(x) = P(X \le x) = P\big(X \in (-\infty, x]\big).$$
+
+It gives the probability that $X$ lands in an interval $(a, b]$. Since $\{X \le b\}$ is the union of the disjoint events $\{X \le a\}$ and $\{a < X \le b\}$:
+
+$$P(a < X \le b) = F_X(b) - F_X(a).$$
+
+## Properties
+
+Every CDF has the following properties:
+
+1. $0 \le F_X(x) \le 1$ for every $x \in \mathbb{R}$.
+2. It is **non-decreasing**: if $x < y$, then $F_X(x) \le F_X(y)$, because $\{X \le x\} \subseteq \{X \le y\}$.
+3. $\lim_{x \to -\infty} F_X(x) = 0$ and $\lim_{x \to +\infty} F_X(x) = 1$.
+4. It is **right-continuous**: $\lim_{h \to 0^+} F_X(x + h) = F_X(x)$ for every $x$.
+
+Conversely, any function with properties 2–4 is the CDF of some random variable. That is why $F_X$ describes the distribution of $X$ **completely**.
+
+## Discrete random variables: a staircase
+
+If $X$ is discrete with pmf $f_X$, then $F_X(x)$ adds up the mass of all values not exceeding $x$:
+
+$$F_X(x) = \sum_{x_i \le x} f_X(x_i), \qquad P(a < X \le b) = \sum_{a < x_i \le b} f_X(x_i).$$
+
+For a die, where $f_X(x) = 1/6$ for $x = 1, \ldots, 6$:
+
+$$
+F_X(x) = \begin{cases}
+0, & x < 1, \\
+k/6, & k \le x < k + 1, \quad k = 1, \ldots, 5, \\
+1, & x \ge 6.
+\end{cases}
+$$
+
+The graph is a **staircase**: $F_X$ stays constant between the values of $X$ and **jumps** at each value $x_i$. The height of the jump is exactly $f_X(x_i)$. At the jump, $F_X$ takes the **upper** value (filled circle), because $\{X \le x_i\}$ contains $x_i$. This is the right-continuity of property 4. For example $F_X(2) = 2/6$, while $F_X(1.99) = 1/6$.
+
+The staircase gives back the pmf: the probability of a value is the height of the jump, $P(X = x) = F_X(x) - F_X(x^-)$, where $F_X(x^-)$ is the limit from the left.
+
+In the chart below, move $x$ and see which bars of the pmf $F_X(x)$ "collects". Stop exactly at a value of $X$, and just before it, to see the jump.
+
+::: {.ix-panel}
+::: {.ix-title}
+From the pmf to the CDF
+:::
+
+```{ojs}
+//| echo: false
+dists33 = new Map([
+  ["Die", {xs: [1, 2, 3, 4, 5, 6], ps: Array(6).fill(1 / 6)}],
+  ["Number of heads in 3 tosses", {xs: [0, 1, 2, 3], ps: [1, 3, 3, 1].map(v => v / 8)}],
+  ["Sum of two dice", {xs: d3.range(2, 13), ps: d3.range(2, 13).map(s => (6 - Math.abs(s - 7)) / 36)}],
+  ["f(x) = (1/4)(3/4)^x, x = 0, 1, 2, …", {xs: d3.range(0, 13), ps: d3.range(0, 13).map(x => 0.25 * 0.75 ** x), tail: true}]
+])
+viewof D33 = Inputs.select(dists33, {label: "Random variable"})
+viewof x33 = Inputs.range([D33.xs[0] - 1.5, D33.xs[D33.xs.length - 1] + 1.5], {step: 0.01, value: D33.xs[0] + 1.5, label: "x"})
+```
+
+```{ojs}
+//| echo: false
+{
+  const {xs, ps, tail} = D33, n = xs.length, cum = d3.cumsum(ps);
+  const F = x => { let s = 0; xs.forEach((v, i) => { if (v <= x + 1e-6) s += ps[i]; }); return s; };
+  const fm = (v, d = 4) => v.toFixed(d);
+  const W = 460, lo = xs[0] - 1.5, hi = xs[n - 1] + 1.5;
+  const sx = d3.scaleLinear().domain([lo, hi]).range([36, W - 10]);
+  const H1 = 190, sy = d3.scaleLinear().domain([0, 1]).range([H1 - 22, 12]);
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H1 + 150}`).style("width", "100%").style("max-width", "580px");
+  [0, 0.25, 0.5, 0.75, 1].forEach(t => {
+    svg.append("line").attr("x1", 36).attr("x2", W - 10).attr("y1", sy(t)).attr("y2", sy(t)).attr("stroke", "#eee");
+    svg.append("text").attr("x", 32).attr("y", sy(t)).attr("dy", "0.35em").attr("text-anchor", "end").style("font", "10px sans-serif").attr("fill", "#666").text(String(t));
+  });
+  svg.append("text").attr("x", 40).attr("y", 10).style("font", "11px sans-serif").attr("fill", "#4e79a7").text("F(x) = P(X ≤ x)");
+  const segs = [{a: lo, b: xs[0], y: 0}].concat(xs.map((v, i) => ({a: v, b: i < n - 1 ? xs[i + 1] : hi, y: cum[i]})));
+  svg.selectAll("line.s").data(segs).join("line").attr("x1", d => sx(d.a)).attr("x2", d => sx(d.b)).attr("y1", d => sy(d.y)).attr("y2", d => sy(d.y)).attr("stroke", "#4e79a7").attr("stroke-width", 2.5);
+  svg.selectAll("circle.o").data(xs).join("circle").attr("cx", v => sx(v)).attr("cy", (v, i) => sy(i ? cum[i - 1] : 0)).attr("r", 3.5).attr("fill", "#fff").attr("stroke", "#4e79a7").attr("stroke-width", 1.5);
+  svg.selectAll("circle.c").data(xs).join("circle").attr("cx", v => sx(v)).attr("cy", (v, i) => sy(cum[i])).attr("r", 3.5).attr("fill", "#4e79a7");
+  const Fx = F(x33);
+  svg.append("line").attr("x1", sx(x33)).attr("x2", sx(x33)).attr("y1", sy(0)).attr("y2", sy(Fx)).attr("stroke", "#f28e2b").attr("stroke-dasharray", "4 3");
+  svg.append("line").attr("x1", 36).attr("x2", sx(x33)).attr("y1", sy(Fx)).attr("y2", sy(Fx)).attr("stroke", "#f28e2b").attr("stroke-dasharray", "4 3");
+  svg.append("circle").attr("cx", sx(x33)).attr("cy", sy(Fx)).attr("r", 5.5).attr("fill", "#f28e2b");
+  svg.append("line").attr("x1", 36).attr("x2", W - 10).attr("y1", sy(0)).attr("y2", sy(0)).attr("stroke", "#333");
+  const top = d3.max(ps) * 1.2, y2 = d3.scaleLinear().domain([0, top]).range([H1 + 125, H1 + 25]);
+  svg.append("text").attr("x", 40).attr("y", H1 + 16).style("font", "11px sans-serif").attr("fill", "#4e79a7").text("f(x) = P(X = x)");
+  svg.selectAll("rect.b").data(xs).join("rect").attr("x", v => sx(v) - 7).attr("width", 14).attr("y", (v, i) => y2(ps[i])).attr("height", (v, i) => y2(0) - y2(ps[i]))
+    .attr("fill", v => v <= x33 + 1e-6 ? "#f28e2b" : "#4e79a7");
+  svg.append("line").attr("x1", 36).attr("x2", W - 10).attr("y1", y2(0)).attr("y2", y2(0)).attr("stroke", "#333");
+  svg.selectAll("text.t").data(xs).join("text").attr("x", v => sx(v)).attr("y", H1 + 140).attr("text-anchor", "middle").style("font", "10px sans-serif").text(v => v);
+  svg.append("line").attr("x1", sx(x33)).attr("x2", sx(x33)).attr("y1", H1 + 22).attr("y2", y2(0)).attr("stroke", "#f28e2b").attr("stroke-dasharray", "4 3");
+  const used = xs.filter(v => v <= x33 + 1e-6);
+  const jump = xs.find(v => Math.abs(v - x33) < 1e-6);
+  return html`<div>${svg.node()}
+    <div class="ix-note">x = ${fm(x33, 2)}: F(x) = ${used.length ? `f(${used[0]})${used.length > 2 ? ` + … + f(${used[used.length - 1]})` : used.length === 2 ? ` + f(${used[1]})` : ""}` : "0 (no value ≤ x)"} = <b>${fm(Fx)}</b>
+    ${jump !== undefined ? html`<br><b>You are on a jump:</b> F(${jump}) = ${fm(Fx)}, while just to the left F is ${fm(Fx - ps[xs.indexOf(jump)])}. The height of the jump is P(X = ${jump}) = ${fm(ps[xs.indexOf(jump)])}.` : ""}
+    ${tail ? html`<br>The r.v. also takes values above 12, so F approaches 1 without reaching it in the plot.` : ""}</div></div>`;
+}
+```
+:::
+
+## Interval probabilities: $<$ or $\le$?
+
+The formula $P(a < X \le b) = F_X(b) - F_X(a)$ is for an interval **open on the left and closed on the right**. For continuous random variables, as we will see, the difference between $<$ and $\le$ does not matter. For discrete ones it does: an endpoint that is a value of $X$ carries positive mass. The correct formulas are
+
+$$
+\begin{aligned}
+P(X < b) &= F_X(b^-), & P(X > a) &= 1 - F_X(a), \\
+P(a \le X \le b) &= F_X(b) - F_X(a^-), & P(a < X < b) &= F_X(b^-) - F_X(a),
+\end{aligned}
+$$
+
+where $F_X(b^-)$ is the height of the staircase **just before** $b$. For integer values, $F_X(b^-) = F_X(b - 1)$. For example, for a die, $P(2 \le X \le 4)$ equals $F_X(4) - F_X(1) = 4/6 - 1/6 = 1/2$. The difference $F_X(4) - F_X(2) = 2/6$ gives only $P(2 < X \le 4)$.
+
+Choose the endpoints and the type of inequality, and compare the formula with the mass being added up:
+
+::: {.ix-panel}
+::: {.ix-title}
+Interval probabilities from the CDF
+:::
+
+```{ojs}
+//| echo: false
+viewof iv33 = {
+  const xs = D33.xs, lo = xs[0], hi = xs[xs.length - 1];
+  const a = Inputs.range([lo, hi], {step: 1, value: Math.min(hi, lo + 1), label: "a"});
+  const b = Inputs.range([lo, hi], {step: 1, value: Math.min(hi, lo + 3), label: "b"});
+  const l = Inputs.radio(["<", "≤"], {value: "≤", label: "left"});
+  const r = Inputs.radio(["<", "≤"], {value: "≤", label: "right"});
+  const wrap = html`<div><div class="ix-note">Random variable: ${[...dists33].find(e => e[1] === D33)[0]} (change it in the first chart)</div>${a}${b}${l}${r}</div>`;
+  Object.defineProperty(wrap, "value", {get: () => ({a: a.value, b: b.value, l: l.value, r: r.value})});
+  [a, b, l, r].forEach(el => el.addEventListener("input", () => wrap.dispatchEvent(new Event("input", {bubbles: true}))));
+  return wrap;
+}
+```
+
+```{ojs}
+//| echo: false
+{
+  const {xs, ps} = D33, {a, b, l, r} = iv33;
+  const F = x => d3.sum(xs.map((v, i) => v <= x + 1e-6 ? ps[i] : 0));
+  const Fm = x => d3.sum(xs.map((v, i) => v < x - 1e-6 ? ps[i] : 0));
+  const fm = v => v.toFixed(4);
+  const inI = v => (l === "<" ? v > a : v >= a) && (r === "<" ? v < b : v <= b);
+  const pDirect = d3.sum(xs.map((v, i) => inI(v) ? ps[i] : 0));
+  const right = r === "≤" ? [`F(${b})`, F(b)] : [`F(${b}⁻)`, Fm(b)];
+  const left = l === "<" ? [`F(${a})`, F(a)] : [`F(${a}⁻)`, Fm(a)];
+  const val = Math.max(0, right[1] - left[1]);
+  const W = 460, sx = d3.scaleBand().domain(xs).range([10, W - 10]).padding(0.2);
+  const sy = d3.scaleLinear().domain([0, d3.max(ps) * 1.15]).range([120, 8]);
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} 140`).style("width", "100%").style("max-width", "580px");
+  svg.selectAll("rect").data(xs).join("rect").attr("x", v => sx(v)).attr("width", sx.bandwidth()).attr("y", (v, i) => sy(ps[i])).attr("height", (v, i) => 120 - sy(ps[i]))
+    .attr("fill", v => inI(v) ? "#f28e2b" : "#d6dbe0");
+  svg.selectAll("text").data(xs).join("text").attr("x", v => sx(v) + sx.bandwidth() / 2).attr("y", 134).attr("text-anchor", "middle").style("font", "10px sans-serif").text(v => v);
+  const ok = Math.abs(val - pDirect) < 1e-6 && a <= b;
+  return html`<div>${svg.node()}
+    <table class="ix-tbl">
+      <tr><td>P(${a} ${l} X ${r} ${b}) = sum of orange bars</td><td><b>${fm(pDirect)}</b></td></tr>
+      <tr><td>From the CDF: ${right[0]} − ${left[0]}</td><td><b>${fm(val)}</b> ${a <= b ? (ok ? html`<span class="ix-ok">✓</span>` : "") : html`<span class="ix-no">a > b</span>`}</td></tr>
+    </table>
+    <div class="ix-note">${a <= b && l === "≤" && r === "≤" ? html`The mistaken F(${b}) − F(${a}) would give ${fm(F(b) - F(a))}${Math.abs(F(b) - F(a) - pDirect) > 1e-6 ? ": the mass at a is lost." : "."}` : "F(c⁻) means the height of the staircase just before c."}</div>
+  </div>`;
+}
+```
+:::
+
+## An exercise: three coin tosses
+
+We toss a coin three times and let $X$ = {the number of heads}. From the [first post of this section](../random-variables/index.qmd), $f_X(0) = 1/8$, $f_X(1) = f_X(2) = 3/8$ and $f_X(3) = 1/8$. Adding cumulatively:
+
+$$
+F_X(x) = \begin{cases}
+0, & x < 0, \\
+1/8, & 0 \le x < 1, \\
+4/8, & 1 \le x < 2, \\
+7/8, & 2 \le x < 3, \\
+1, & x \ge 3.
+\end{cases}
+$$
+
+Choose "Number of heads in 3 tosses" in the first chart to see this staircase.
+
+## In R
+
+Cumulative sums of the pmf are computed with `cumsum()`, and `stepfun()` builds the step function. From a sample, `ecdf()` gives the **empirical** CDF: the proportion of observations that are $\le x$.
+
+```{r}
+#| label: cdf-r
+#| fig-width: 6
+#| fig-height: 3.4
+#| fig-alt: "The CDF of the number of heads in three tosses, a staircase with jumps at 0, 1, 2, 3, and the empirical CDF of 30 simulations, which almost coincides."
+x <- 0:3
+f <- c(1, 3, 3, 1) / 8
+cumsum(f)
+F <- stepfun(x, c(0, cumsum(f)))
+# P(1 <= X <= 2) = F(2) - F(0)
+F(2) - F(0)
+sims <- rbinom(30, size = 3, prob = 0.5)
+par(mar = c(4, 4, 1, 1))
+plot(F, verticals = FALSE, col = "#4e79a7", lwd = 3, pch = 19,
+     xlim = c(-1, 4), main = "", xlab = "x", ylab = "F(x)", las = 1)
+plot(ecdf(sims), add = TRUE, col = "#f28e2b", lwd = 1.5, pch = 1,
+     verticals = FALSE)
+legend("bottomright", c("F(x)", "empirical, n = 30"),
+       col = c("#4e79a7", "#f28e2b"), lwd = c(3, 1.5), bty = "n")
+```
+
+Even with only 30 simulations, the empirical staircase is close to the theoretical one. With more observations the two agree more and more closely.
+
+## Summary
+
+- $F_X(x) = P(X \le x)$: defined in the same way for discrete and continuous random variables, it describes the distribution completely.
+- It is non-decreasing and right-continuous, with limit 0 at $-\infty$ and 1 at $+\infty$.
+- For a discrete r.v. it is a staircase: constant between values, with a jump of height $f_X(x_i)$ at each value $x_i$.
+- $P(a < X \le b) = F_X(b) - F_X(a)$. Other inequalities need care at the endpoints.
+
+## Review questions
+
+**1. Quick quiz.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz33 = [
+  {q: "For a die, what is F(3.7)?",
+   opts: ["3.7/6", "3/6", "4/6", "0"], ans: 1,
+   why: "The values not exceeding 3.7 are 1, 2, 3, so F(3.7) = 3/6. F is constant on [3, 4)."},
+  {q: "Which of these CANNOT be a CDF?",
+   opts: ["A staircase rising from 0 to 1", "A function that increases and then decreases", "A function equal to 0 for x < 0 and 1 for x ≥ 0"], ans: 1,
+   why: "A CDF is non-decreasing, because {X ≤ x} grows as x grows. The third one is the CDF of an r.v. that is always 0."},
+  {q: "X takes integer values with F(2) = 0.5 and F(4) = 0.9. What is P(2 < X ≤ 4)?",
+   opts: ["0.4", "0.9", "0.5", "Cannot be determined"], ans: 0,
+   why: "P(2 < X ≤ 4) = F(4) − F(2) = 0.4."},
+  {q: "With the same information, can we find P(2 ≤ X ≤ 4)?",
+   opts: ["Yes, it is 0.4", "Yes, it is 0.9", "No, we also need F(1)"], ans: 2,
+   why: "P(2 ≤ X ≤ 4) = F(4) − F(1). Without F(1) we do not know how much mass sits at 2."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz33.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz33.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** The discrete r.v. $X$ has CDF $F_X(x) = 0$ for $x < 1$, $0.3$ for $1 \le x < 2$, $0.5$ for $2 \le x < 4$ and $1$ for $x \ge 4$. Find the pmf of $X$ and $P(1 < X < 4)$.
+
+**3.** Two dice are rolled and $X$ = {the larger of the two results}. Show that $F_X(k) = (k/6)^2$ for $k = 1, \ldots, 6$ and use it to find the pmf of $X$.
+
+**4.** In the R code, increase the number of simulations from 30 to 1,000. What happens to the gap between the two staircases?
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. The jumps are at 1 (height 0.3), at 2 (height 0.2) and at 4 (height 0.5). So $f_X(1) = 0.3$, $f_X(2) = 0.2$, $f_X(4) = 0.5$. Then $P(1 < X < 4) = F_X(4^-) - F_X(1) = 0.5 - 0.3 = 0.2$: only the value 2 lies inside the interval.
+3. The maximum is $\le k$ if and only if **both** dice are $\le k$, which happens in $k \cdot k$ of the 36 outcomes. So $F_X(k) = k^2/36$ and $f_X(k) = F_X(k) - F_X(k - 1) = (2k - 1)/36$: $1/36, 3/36, 5/36, 7/36, 9/36, 11/36$.
+4. The empirical staircase gets closer to the theoretical one and its jumps have almost the same heights. This is a form of the law of large numbers, which we will come back to.
+:::
+
+---
+
+**Next post:** *Continuous random variables and the probability density function: why P(X = x) = 0.*
