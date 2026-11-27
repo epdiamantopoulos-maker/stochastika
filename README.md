@@ -12,8 +12,8 @@ el/  en/                 ελληνικό και αγγλικό μέρος
   about.qmd, privacy.qmd
   posts/<slug>/index.qmd τα άρθρα (ίδιο slug και στις δύο γλώσσες)
 assets/                  λογότυπο, CSS, εναλλαγή γλώσσας
-_scripts/                απόκρυψη μελλοντικών άρθρων
-.github/workflows/       δημοσίευση και προεπισκόπηση στη Netlify
+_scripts/                απόκρυψη μελλοντικών άρθρων, αποτύπωμα ορατού περιεχομένου
+.github/workflows/       δημοσίευση (Cloudflare Pages) και προεπισκόπηση (Netlify)
 STYLE_GUIDE.md           οδηγός ύφους
 ```
 
@@ -34,7 +34,9 @@ quarto preview
 
 ## Ρυθμίσεις που χρειάζονται μία φορά
 
-Στο GitHub: *Settings → Secrets and variables → Actions*, δύο secrets:
+Στο GitHub: *Settings → Secrets and variables → Actions*, τέσσερα secrets:
 
-- `NETLIFY_AUTH_TOKEN`: προσωπικό token από τη Netlify,
-- `NETLIFY_SITE_ID`: το Project ID του site στη Netlify.
+- `CLOUDFLARE_API_TOKEN`: token της Cloudflare με δικαίωμα *Account → Cloudflare Pages → Edit* (δημοσίευση),
+- `CLOUDFLARE_ACCOUNT_ID`: το Account ID της Cloudflare (δημοσίευση),
+- `NETLIFY_AUTH_TOKEN`: προσωπικό token από τη Netlify (προεπισκοπήσεις),
+- `NETLIFY_SITE_ID`: το Project ID του site στη Netlify (προεπισκοπήσεις).

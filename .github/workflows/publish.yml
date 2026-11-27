@@ -1,10 +1,10 @@
-# Δημοσίευση του stochastika.com στη Netlify.
+# Δημοσίευση του stochastika.com στο Cloudflare Pages.
 # Τρέχει σε κάθε push στο main και κάθε πρωί, ώστε τα άρθρα να εμφανίζονται
 # αυτόματα την ημερομηνία τους.
 #
-# Κάθε δημοσίευση στη Netlify κοστίζει credits, γι' αυτό το site ανεβαίνει
-# μόνο όταν αλλάζει το ορατό περιεχόμενο: συγκρίνουμε το αποτύπωμα των
-# αρχείων (χωρίς τα μελλοντικά άρθρα) με εκείνο της τελευταίας δημοσίευσης.
+# Το site ανεβαίνει μόνο όταν αλλάζει το ορατό περιεχόμενο: συγκρίνουμε το
+# αποτύπωμα των αρχείων (χωρίς τα μελλοντικά άρθρα) με εκείνο της τελευταίας
+# δημοσίευσης. Αν δεν βρεθεί δημοσιευμένο αποτύπωμα, το site ανεβαίνει.
 # Για να ανέβει οπωσδήποτε: Actions → Publish → Run workflow → force.
 name: Publish
 
@@ -38,9 +38,7 @@ jobs:
         id: check
         run: |
           new=$(python3 _scripts/site_fingerprint.py)
-          old=$(curl -fsS --retry 3 --max-time 20 https://www.stochastika.com/deploy-fingerprint.txt 2>/dev/null | tr -d '[:space:]' || true)
-          # πριν από την πρώτη δημοσίευση με αποτύπωμα: η κατάσταση του live site στις 25/11/2026
-          [ -n "$old" ] || old=$(tr -d '[:space:]' < _scripts/initial-fingerprint.txt)
+          old=$(curl -fsS --retry 3 --max-time 20 https://stochastika.pages.dev/deploy-fingerprint.txt 2>/dev/null | tr -d '[:space:]' || true)
           echo "fingerprint=$new" >> "$GITHUB_OUTPUT"
           echo "Νέο αποτύπωμα:  $new"
           echo "Δημοσιευμένο:   ${old:-(κανένα)}"
@@ -79,12 +77,13 @@ jobs:
           quarto render
           echo "${{ steps.check.outputs.fingerprint }}" > _site/deploy-fingerprint.txt
 
-      - name: Deploy στη Netlify
+      - name: Deploy στο Cloudflare Pages
         if: steps.check.outputs.changed == 'true'
         env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          npx --yes netlify-cli@17 deploy --dir=_site --prod \
-            --site="$NETLIFY_SITE_ID" --auth="$NETLIFY_AUTH_TOKEN" \
-            --message="Publish ${GITHUB_SHA::7}"
+          # δημιουργία του project την πρώτη φορά (αν υπάρχει ήδη, αγνοείται)
+          npx --yes wrangler@3 pages project create stochastika --production-branch=main || true
+          npx --yes wrangler@3 pages deploy _site --project-name=stochastika --branch=main \
+            --commit-hash="$GITHUB_SHA" --commit-message="Publish ${GITHUB_SHA::7}"
