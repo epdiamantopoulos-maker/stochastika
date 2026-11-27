@@ -1,0 +1,312 @@
+---
+title: "The law of large numbers and E(X) as a sum of tail probabilities"
+description: "The difference between the average of observations and the expected value, the law of large numbers with an interactive simulation, and the tail-sum formula E(X) = Σ P(X ≥ n) for non-negative random variables, with proof and R."
+date: 2027-02-05
+image: thumbnail.png
+categories: [Probability, Random variables, R, Interactive]
+keywords: [law of large numbers, sample mean, expected value, tail sum formula, E(X) = sum P(X >= n), indicator variable, gambler's fallacy, running mean simulation]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# non-ASCII characters in plots under a "C" locale
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+In the [previous post](../expected-value/index.qmd) we defined the expected value $E(X)$ from the distribution of $X$, without running any experiment. In practice, though, we roll dice and take averages. How is the average of the observations related to $E(X)$? The answer is the **law of large numbers**. In the second part we will see another way to compute $E(X)$, often much quicker than the definition.
+
+## Average versus expected value
+
+The expected value is **not** the same thing as the arithmetic mean of the observations:
+
+- the **average** refers to one particular run of the experiment, with a given number of repetitions, and it changes from run to run;
+- the **expected value** is computed from all possible values and their probabilities, and it is a fixed number.
+
+If we roll a die 10 times and get 1, 5, 3, 6, 6, 2, 2, 3, 4, 1, the average is $33/10 = 3.3$, which is $0.2$ away from the expected value $3.5$. Another 10 rolls would give a different average. But if we roll the die $N$ times with $N \to \infty$, each face will appear in roughly $1/6$ of the rolls, and the average will approach $3.5$.
+
+## The law of large numbers
+
+Let $X_1, X_2, \ldots$ be independent repetitions of the same random variable $X$, with expected value $\mu = E(X)$. The **sample mean** of the first $N$ is
+
+$$\bar X_N = \frac{X_1 + X_2 + \cdots + X_N}{N}.$$
+
+The **law of large numbers** says that $\bar X_N \to \mu$ as $N \to \infty$. In its "weak" form: for every $\varepsilon > 0$,
+
+$$P\big(|\bar X_N - \mu| > \varepsilon\big) \longrightarrow 0.$$
+
+The "strong" form says more: with probability 1, the sequence of averages converges to $\mu$. That is what justifies reading $E(X)$ as the "long-run average", and it is what makes the simulations on this blog give the right answers.
+
+Two remarks:
+
+- The law requires $E(X)$ to **exist**. Otherwise the average may not converge to anything.
+- The law does **not** say that deviations get "corrected". If after 100 rolls there have been few sixes, sixes do not become more likely afterwards (the **gambler's fallacy**). The average approaches $\mu$ because the early deviation is divided by an ever larger $N$, not because it is compensated.
+
+## Watch the law at work
+
+Each line is one run of $N$ repetitions and shows the average $\bar X_n$ after $n = 1, 2, \ldots, N$ repetitions. The horizontal axis is logarithmic. Press "New runs" a few times: the lines start out very differently, but all end up on the green line $E(X)$. Then try the last distribution, which has **no** expected value.
+
+::: {.ix-panel}
+::: {.ix-title}
+The average as the number of repetitions grows
+:::
+
+```{ojs}
+//| echo: false
+lln36 = new Map([
+  ["Die: E(X) = 3.5", {mean: 3.5, draw: () => 1 + Math.floor(6 * Math.random())}],
+  ["Coin, X = 1 for heads: E(X) = 0.5", {mean: 0.5, draw: () => Math.random() < 0.5 ? 1 : 0}],
+  ["f(x) = (1/4)(3/4)^x: E(X) = 3", {mean: 3, draw: () => Math.floor(Math.log(1 - Math.random()) / Math.log(0.75))}],
+  ["pdf 3x² on [0, 1]: E(X) = 0.75", {mean: 0.75, draw: () => Math.cbrt(Math.random())}],
+  ["f(x) = 1/(x(x + 1)): no E(X)", {mean: null, draw: () => Math.floor(1 / (1 - Math.random()))}]
+])
+viewof d36 = Inputs.select(lln36, {label: "Distribution"})
+viewof N36 = Inputs.select([100, 1000, 10000, 100000], {label: "Repetitions N", value: 10000, format: x => x.toLocaleString("en-GB")})
+viewof k36 = Inputs.range([1, 6], {step: 1, value: 4, label: "Runs"})
+viewof go36 = Inputs.button("New runs")
+```
+
+```{ojs}
+//| echo: false
+{
+  go36;
+  const paths = d3.range(k36).map(() => {
+    let s = 0, next = 1; const pts = [];
+    for (let n = 1; n <= N36; n++) {
+      s += d36.draw();
+      // points on a logarithmic grid, for a smooth curve
+      if (n >= next || n === N36) { pts.push([n, s / n]); next = Math.ceil(n * 1.015); }
+    }
+    return pts;
+  });
+  const all = paths.flat().filter(p => p[0] >= 5).map(p => p[1]);
+  let lo = d3.quantile(all, 0.01), hi = d3.quantile(all, 0.99);
+  if (d36.mean !== null) { lo = Math.min(lo, d36.mean); hi = Math.max(hi, d36.mean); }
+  const pad = (hi - lo) * 0.08 || 1;
+  const W = 460, H = 260, L = 40, R = W - 24;
+  const xs = d3.scaleLog().domain([1, N36]).range([L, R]);
+  const ys = d3.scaleLinear().domain([lo - pad, hi + pad]).range([H - 24, 10]).clamp(true);
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H}`).style("width", "100%").style("max-width", "580px");
+  const t = v => String(+v.toFixed(2));
+  ys.ticks(5).forEach(v => {
+    svg.append("line").attr("x1", L).attr("x2", R).attr("y1", ys(v)).attr("y2", ys(v)).attr("stroke", "#eee");
+    svg.append("text").attr("x", L - 4).attr("y", ys(v)).attr("dy", "0.35em").attr("text-anchor", "end").style("font", "10px sans-serif").attr("fill", "#666").text(t(v));
+  });
+  [1, 10, 100, 1000, 10000, 100000].filter(v => v <= N36).forEach(v =>
+    svg.append("text").attr("x", xs(v)).attr("y", H - 8).attr("text-anchor", "middle").style("font", "10px sans-serif").attr("fill", "#666").text(v.toLocaleString("en-GB")));
+  if (d36.mean !== null) svg.append("line").attr("x1", L).attr("x2", R).attr("y1", ys(d36.mean)).attr("y2", ys(d36.mean)).attr("stroke", "#59a14f").attr("stroke-width", 2);
+  const cols = ["#4e79a7", "#f28e2b", "#9c755f", "#76b7b2", "#b07aa1", "#e15759"];
+  paths.forEach((p, i) => svg.append("path").attr("d", d3.line().x(d => xs(d[0])).y(d => ys(d[1]))(p))
+    .attr("fill", "none").attr("stroke", cols[i]).attr("stroke-width", 1.4).attr("opacity", 0.9));
+  svg.append("text").attr("x", R).attr("y", H - 30).attr("text-anchor", "end").style("font", "10px sans-serif").attr("fill", "#666").text("n (log scale)");
+  const fm = v => v.toLocaleString("en-GB", {minimumFractionDigits: 3, maximumFractionDigits: 3});
+  const finals = paths.map(p => p[p.length - 1][1]);
+  return html`<div>${svg.node()}
+    <table class="ix-tbl">
+      <tr><td>Averages at n = ${N36.toLocaleString("en-GB")}</td><td>${finals.map(fm).join(" · ")}</td></tr>
+      <tr><td>E(X)</td><td><b>${d36.mean === null ? "does not exist" : fm(d36.mean)}</b></td></tr>
+    </table>
+    ${d36.mean === null ? html`<div class="ix-note">Here the average keeps rising with rare large jumps: there is no number it converges to. We will see why E(X) is infinite with the tail-sum formula below.</div>` : ""}</div>`;
+}
+```
+:::
+
+## E(X) as a sum of tail probabilities
+
+For non-negative random variables there is another formula for the expected value. It uses the "tails" $P(X \ge n)$ instead of the probabilities $P(X = n)$.
+
+**Proposition (discrete case).** For every random variable $X$ with values in $\{0, 1, 2, \ldots\}$,
+
+$$E(X) = \sum_{n=1}^{\infty} P(X \ge n).$$
+
+**Proof.** For each $n \ge 1$ consider the **indicator** random variable $\mathbf{1}_{X \ge n}$, which equals 1 if $X \ge n$ and 0 if $X < n$. Its expected value is
+
+$$E(\mathbf{1}_{X \ge n}) = 1 \cdot P(X \ge n) + 0 \cdot \big(1 - P(X \ge n)\big) = P(X \ge n).$$
+
+If $X = m$, then $\mathbf{1}_{X \ge n} = 1$ for $n = 1, \ldots, m$ and $0$ for $n > m$, so their sum counts exactly $m$ ones:
+
+$$X = \sum_{n=1}^{X} 1 = \sum_{n=1}^{\infty} \mathbf{1}_{X \ge n}.$$
+
+Taking expected values on both sides,
+
+$$E(X) = E\Big(\sum_{n=1}^{\infty} \mathbf{1}_{X \ge n}\Big) = \sum_{n=1}^{\infty} E(\mathbf{1}_{X \ge n}) = \sum_{n=1}^{\infty} P(X \ge n).$$
+
+Swapping the expectation and the infinite sum is allowed because all terms are non-negative (monotone convergence theorem). The formula holds even when both sides are infinite. $\square$
+
+**Examples.**
+
+- **Die:** $P(X \ge n) = (7 - n)/6$ for $n = 1, \ldots, 6$. The numerators add up to $6 + 5 + \cdots + 1 = 21$, so $E(X) = 21/6 = 3.5$.
+- **$f(x) = \frac14 \left(\frac34\right)^x$:** for $X \ge n$ the first $n$ trials must fail, so $P(X \ge n) = (3/4)^n$ and $E(X) = \sum_{n \ge 1} (3/4)^n = \frac{3/4}{1/4} = 3$. Much quicker than differentiating a series as in the [previous post](../expected-value/index.qmd).
+- **$f(x) = \frac{1}{x(x+1)}$, $x = 1, 2, \ldots$:** since $\frac{1}{x(x+1)} = \frac1x - \frac{1}{x+1}$, the sum telescopes and $P(X \ge n) = 1/n$. So $E(X) = \sum 1/n = \infty$: the harmonic series diverges. This is the distribution without an expected value in the simulation.
+
+**Proposition (continuous case).** For every **non-negative** continuous random variable $X$,
+
+$$E(X) = \int_0^{\infty} P(X \ge t)\,dt = \int_0^{\infty} \big(1 - F(t)\big)\,dt.$$
+
+The proof is the same, with $\mathbf{1}_{X \ge t}$ for every $t \ge 0$ and $X = \int_0^X dt = \int_0^\infty \mathbf{1}_{X \ge t}\,dt$. Tonelli's theorem justifies swapping the expectation and the integral. For $f(x) = 3x^2$ on $[0, 1]$, where $F(t) = t^3$:
+
+$$E(X) = \int_0^1 (1 - t^3)\,dt = 1 - \frac14 = \frac34,$$
+
+as with the definition.
+
+Geometrically, the formula says that $E(X)$ is the **area above the CDF and below 1**, for $x \ge 0$. In the discrete case that area splits into columns of width 1 with heights $P(X \ge 1), P(X \ge 2), \ldots$
+
+::: {.ix-panel}
+::: {.ix-title}
+E(X) as the area above F
+:::
+
+```{ojs}
+//| echo: false
+tail36 = new Map([
+  ["Die", {type: "d", F: x => Math.min(1, Math.max(0, Math.floor(x) / 6)), max: 7, mean: 3.5}],
+  ["f(x) = (1/4)(3/4)^x", {type: "d", F: x => x < 0 ? 0 : 1 - 0.75 ** (Math.floor(x) + 1), max: 16, mean: 3}],
+  ["pdf 3x² on [0, 1]", {type: "c", F: x => x <= 0 ? 0 : x >= 1 ? 1 : x ** 3, max: 1.3, mean: 0.75}],
+  ["pdf x³/4 on [0, 2]", {type: "c", F: x => x <= 0 ? 0 : x >= 2 ? 1 : x ** 4 / 16, max: 2.5, mean: 1.6}],
+  ["f(x) = 1/(x(x + 1)): no E(X)", {type: "d", F: x => x < 1 ? 0 : 1 - 1 / (Math.floor(x) + 1), max: 30, mean: Infinity}]
+])
+viewof t36 = Inputs.select(tail36, {label: "Distribution"})
+viewof u36 = Inputs.range([0, t36.max], {step: t36.type === "d" ? 1 : 0.01, value: t36.max, label: "Up to x ="})
+```
+
+```{ojs}
+//| echo: false
+{
+  const {type, F, max, mean} = t36, upto = Math.max(u36, 1e-9);
+  const W = 460, H = 220, L = 34, R = W - 10;
+  const xs = d3.scaleLinear().domain([0, max]).range([L, R]);
+  const ys = d3.scaleLinear().domain([0, 1.05]).range([H - 24, 10]);
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H}`).style("width", "100%").style("max-width", "580px");
+  [0, 0.5, 1].forEach(v => {
+    svg.append("line").attr("x1", L).attr("x2", R).attr("y1", ys(v)).attr("y2", ys(v)).attr("stroke", v === 1 ? "#999" : "#eee").attr("stroke-dasharray", v === 1 ? "4 3" : null);
+    svg.append("text").attr("x", L - 4).attr("y", ys(v)).attr("dy", "0.35em").attr("text-anchor", "end").style("font", "10px sans-serif").attr("fill", "#666").text(String(v));
+  });
+  let area = 0;
+  if (type === "d") {
+    for (let n = 1; n <= Math.floor(upto); n++) {
+      const tail = 1 - F(n - 1); area += tail;
+      svg.append("rect").attr("x", xs(n - 1) + 0.5).attr("width", xs(n) - xs(n - 1) - 1).attr("y", ys(1)).attr("height", ys(1 - tail) - ys(1)).attr("fill", "#f28e2b").attr("opacity", 0.6);
+      if (max <= 16) svg.append("text").attr("x", (xs(n - 1) + xs(n)) / 2).attr("y", ys(1) + 12).attr("text-anchor", "middle").style("font", "9px sans-serif").attr("fill", "#7a3e00").text(`P(X≥${n})`);
+    }
+    const pts = []; for (let k = 0; k < max; k++) { pts.push([k, F(k)], [k + 1, F(k)]); }
+    svg.append("path").attr("d", d3.line().x(d => xs(d[0])).y(d => ys(d[1]))(pts)).attr("fill", "none").attr("stroke", "#4e79a7").attr("stroke-width", 2);
+    d3.range(0, max + 1, max > 16 ? 5 : 1).forEach(v => svg.append("text").attr("x", xs(v)).attr("y", H - 8).attr("text-anchor", "middle").style("font", "10px sans-serif").attr("fill", "#666").text(v));
+  } else {
+    const pts = d3.range(0, upto, max / 300).concat([upto]);
+    svg.append("path").attr("d", d3.area().x(x => xs(x)).y0(ys(1)).y1(x => ys(F(x)))(pts)).attr("fill", "#f28e2b").attr("opacity", 0.6);
+    const n = 600, h = upto / n; for (let i = 0; i < n; i++) area += (1 - F((i + 0.5) * h)) * h;
+    const cp = d3.range(0, max, max / 300).concat([max]);
+    svg.append("path").attr("d", d3.line().x(x => xs(x)).y(x => ys(F(x)))(cp)).attr("fill", "none").attr("stroke", "#4e79a7").attr("stroke-width", 2);
+    xs.ticks(6).forEach(v => svg.append("text").attr("x", xs(v)).attr("y", H - 8).attr("text-anchor", "middle").style("font", "10px sans-serif").attr("fill", "#666").text(String(v)));
+  }
+  svg.append("text").attr("x", R).attr("y", ys(0.12)).attr("text-anchor", "end").style("font", "11px sans-serif").attr("fill", "#4e79a7").text("F(x)");
+  const fm = v => v.toLocaleString("en-GB", {minimumFractionDigits: 3, maximumFractionDigits: 3});
+  const lab = type === "d" ? `Σ P(X ≥ n), n = 1, …, ${Math.floor(upto)}` : `∫ (1 − F(t)) dt from 0 to ${fm(upto)}`;
+  return html`<div>${svg.node()}
+    <table class="ix-tbl">
+      <tr><td>${lab}</td><td><b>${fm(area)}</b></td></tr>
+      <tr><td>E(X)</td><td>${Number.isFinite(mean) ? fm(mean) : "∞"}</td></tr>
+    </table>
+    ${Number.isFinite(mean) ? "" : html`<div class="ix-note">The columns have heights 1/n. Their sum grows like ln n, without a limit.</div>`}</div>`;
+}
+```
+:::
+
+Move the slider from 0 to the right: the area grows and settles at $E(X)$. For the geometric pmf the columns shrink geometrically, while for the last distribution they shrink so slowly ($1/n$) that the area never settles.
+
+## In R
+
+First the law of large numbers: the average after each roll is `cumsum()` divided by the number of rolls. Then we check the tail-sum formula numerically.
+
+```{r}
+#| label: lln-r
+#| fig-width: 6
+#| fig-height: 3.2
+#| fig-alt: "The average of 5,000 die rolls after each roll, on a logarithmic horizontal axis. The curve fluctuates at first and settles near the horizontal line at 3.5."
+x <- sample(1:6, 5000, replace = TRUE)
+running <- cumsum(x) / seq_along(x)
+running[c(10, 100, 1000, 5000)]
+par(mar = c(4, 4, 1, 1))
+plot(running, type = "l", log = "x", col = "#4e79a7", las = 1,
+     xlab = "number of rolls n", ylab = "average")
+abline(h = 3.5, col = "#59a14f", lwd = 2)
+# tail sum for the geometric pmf: P(X >= n) = 0.75^n
+n <- 1:500
+sum(0.75^n)
+# continuous: integral of 1 - F(t) for F(t) = t^3 on [0, 1]
+integrate(function(t) 1 - t^3, 0, 1)$value
+```
+
+After 10 rolls the average is `r fmt(running[10], 2)`, while after 5,000 it is `r fmt(running[5000], 3)`.
+
+## Summary
+
+- The average of observations varies from sample to sample, while $E(X)$ is fixed. The law of large numbers says $\bar X_N \to E(X)$ as $N \to \infty$.
+- The law needs $E(X)$ to exist, and it does not mean that deviations get "corrected".
+- For $X$ with values $0, 1, 2, \ldots$: $E(X) = \sum_{n \ge 1} P(X \ge n)$. For a non-negative continuous $X$: $E(X) = \int_0^\infty \big(1 - F(t)\big)\,dt$.
+- Geometrically, $E(X)$ is the area between the CDF and the line $y = 1$.
+
+## Review questions
+
+**1. Quick quiz.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz36 = [
+  {q: "In 20 tosses of a fair coin there were 15 heads. What does the law of large numbers say about the next tosses?",
+   opts: ["More tails will come, to even things out", "Nothing about the next tosses: each still has probability 1/2", "More heads will come, because the coin is \"hot\""], ans: 1,
+   why: "The tosses are independent. The proportion approaches 1/2 because the 15 out of 20 get diluted among thousands of later tosses, not because they are compensated."},
+  {q: "X takes values 0, 1, 2, … with P(X ≥ n) = (1/2)^n. What is E(X)?",
+   opts: ["1", "2", "1/2", "∞"], ans: 0,
+   why: "E(X) = Σ_{n ≥ 1} (1/2)^n = (1/2)/(1 − 1/2) = 1."},
+  {q: "X is non-negative and continuous with F(t) = 1 − e^(−t) for t ≥ 0. What is E(X)?",
+   opts: ["1", "e", "1/2", "It does not exist"], ans: 0,
+   why: "E(X) = ∫₀^∞ (1 − F(t)) dt = ∫₀^∞ e^(−t) dt = 1."},
+  {q: "What does the law of large numbers require?",
+   opts: ["X must be discrete", "E(X) must exist", "X must take finitely many values"], ans: 1,
+   why: "The law holds for discrete and continuous random variables, with finitely or infinitely many values, as long as E(X) exists. The 1/(x(x + 1)) distribution in the simulation shows what happens when it does not."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz36.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz36.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** We roll a die until the first six, and $X$ is the number of rolls. Find $P(X \ge n)$ and, with the tail-sum formula, $E(X)$.
+
+**3.** Using the tail-sum formula, compute $E(X)$ for the pdf $f(x) = x^3/4$ on $[0, 2]$. Compare with the $1.6$ of the [previous post](../expected-value/index.qmd).
+
+**4.** A student rolls a die 10 times and gets an average of 3.3. He claims the die is loaded, since the average should have been 3.5. What do you tell him?
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. $X \ge n$ means that the first $n - 1$ rolls were not sixes, so $P(X \ge n) = (5/6)^{n-1}$. Then $E(X) = \sum_{n \ge 1} (5/6)^{n-1} = \frac{1}{1 - 5/6} = 6$.
+3. $F(t) = t^4/16$ on $[0, 2]$, so $E(X) = \int_0^2 \left(1 - \frac{t^4}{16}\right) dt = 2 - \frac{32}{80} = 1.6$, as with the definition.
+4. 3.5 is the expected value, not the average that "must" come out of 10 rolls. With so few rolls the average easily differs from 3.5 by 0.2 or more (see the simulation with $N = 100$ and the first 10 rolls of each run). The law of large numbers guarantees convergence only for large $N$.
+:::
+
+---
+
+**Next post:** *Mode and median: other centres of a distribution.*

@@ -1,0 +1,285 @@
+---
+title: "Continuous random variables and the probability density function: why P(X = x) = 0"
+description: "Why a continuous random variable needs a probability density function (pdf) instead of a pmf, how probability becomes area, how the pdf and the CDF are linked and why P(X = x) = 0, with interactive widgets and R."
+date: 2027-02-01
+image: thumbnail.png
+categories: [Probability, Random variables, R, Interactive]
+keywords: [probability density function, pdf, continuous random variable, cumulative distribution function, area under the curve, integral, P(X = x) = 0, density greater than 1, integrate in R]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# non-ASCII characters in plots under a "C" locale
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+A student's height, the time until a light bulb fails, the temperature at noon: each of these random variables takes values in a whole interval. For them the [probability mass function](../probability-mass-function/index.qmd) does not work, because the probability that someone is *exactly* 1.75 m tall is zero. The [cumulative distribution function](../cumulative-distribution-function/index.qmd), however, still makes sense, and that is where we start.
+
+## Why a pmf is not enough
+
+Let $X$ be a **continuous** random variable, that is, one that takes values in an interval $(\alpha, \beta) \subseteq \mathbb{R}$. Its CDF is defined as always, $F_X(x) = P(X \le x)$. In the discrete case we wrote $F_X(x) = \sum_{k \le x} P(X = k)$. Here that fails for two reasons:
+
+- the values $k \le x$ are **uncountable**, so there is no sum over them;
+- even if there were, it would be a sum of zeros, because for a continuous random variable $P(X = k) = 0$ for **every** $k \in \mathbb{R}$.
+
+The fix is to replace the sum with an **integral**.
+
+## Definition
+
+A **probability density function** (pdf) is any function $f : \mathbb{R} \to \mathbb{R}$ with
+
+1. $f(x) \ge 0$ (almost everywhere),
+2. $\displaystyle\int_{-\infty}^{\infty} f(x)\,dx = 1$.
+
+Every pdf defines a CDF for a continuous random variable $X$:
+
+$$F_X(x) = P(X \le x) = \int_{-\infty}^{x} f(t)\,dt.$$
+
+Conversely, if $F_X$ is continuously differentiable, the pdf of $X$ is its derivative, $f_X(x) = F_X'(x)$.
+
+Three consequences follow:
+
+- **Probability is area:** $$P(a \le X \le b) = \int_a^b f(x)\,dx = F(b) - F(a).$$
+- **$P(X = x) = 0$:** a point is an interval of zero width, so it has zero area. That is why, unlike the discrete case, $<$ and $\le$ give the same probability: $P(a < X < b) = P(a \le X \le b)$.
+- **$f(x)$ is not a probability.** It can be larger than 1. The probability is approximately $f(x)\,h$ for a short interval of width $h$ around $x$.
+
+## Example: $f(x) = 3x^2$ on $[0, 1]$
+
+Let $f(x) = 3x^2$ for $x \in [0, 1]$ and $f(x) = 0$ elsewhere.
+
+**(a) It is a pdf.** $f(x) \ge 0$, and $\int_0^1 3x^2\,dx = \big[x^3\big]_0^1 = 1$.
+
+**(b) The CDF.** For $0 \le x \le 1$ we get $F(x) = \int_0^x 3t^2\,dt = x^3$, so
+
+$$F(x) = \begin{cases} 0, & x < 0, \\ x^3, & 0 \le x \le 1, \\ 1, & x > 1. \end{cases}$$
+
+**(c) Probabilities.** In the widget below you can see each one as an area.
+
+- $P(X < 0) = 0$ and $P(X > 3) = 0$, because $f = 0$ there.
+- $P(X < 1/2)$ and $P(X \le 1/2)$ are equal: $F(1/2) = 1/8$.
+- $P(X \ge 1/2) = 1 - 1/8 = 7/8$.
+
+**An unknown constant.** For which $c$ is $f(x) = x^3/4$, $x \in [0, c]$, a pdf? We need $\int_0^c x^3/4\,dx = c^4/16 = 1$, so $c = 2$. Note that $f(2) = 2 > 1$: a density above 1, and nothing wrong with it.
+
+## Area under f, height of F
+
+Pick a pdf and an interval $[a, b]$. In the top panel the probability is the shaded area. In the bottom panel the same probability is the difference $F(b) - F(a)$, the orange segment. Move $b$ very close to $a$: the area and the segment shrink to zero together.
+
+::: {.ix-panel}
+::: {.ix-title}
+Probability as area and as a difference of F
+:::
+
+```{ojs}
+//| echo: false
+pdfs34 = new Map([
+  ["f(x) = 3x², 0 ≤ x ≤ 1", {lo: 0, hi: 1, f: x => 3 * x * x, F: x => x ** 3, Ft: "x³"}],
+  ["f(x) = x³/4, 0 ≤ x ≤ 2", {lo: 0, hi: 2, f: x => x ** 3 / 4, F: x => x ** 4 / 16, Ft: "x⁴/16"}],
+  ["Triangular: x + 1 on (−1, 0], 1 − x on [0, 1)", {lo: -1, hi: 1, f: x => 1 - Math.abs(x),
+     F: x => x <= 0 ? (x + 1) ** 2 / 2 : 1 - (1 - x) ** 2 / 2, Ft: "(x + 1)²/2 or 1 − (1 − x)²/2"}],
+  ["f(x) = (x + 1)/2, −1 < x < 1", {lo: -1, hi: 1, f: x => (x + 1) / 2, F: x => (x + 1) ** 2 / 4, Ft: "(x + 1)²/4"}]
+])
+viewof d34 = Inputs.select(pdfs34, {label: "pdf"})
+viewof ab34 = {
+  const {lo, hi} = d34, pad = (hi - lo) / 4;
+  const a = Inputs.range([lo - pad, hi + pad], {step: 0.01, value: lo + (hi - lo) / 2, label: "a"});
+  const b = Inputs.range([lo - pad, hi + pad], {step: 0.01, value: hi, label: "b"});
+  const wrap = html`<div>${a}${b}</div>`;
+  Object.defineProperty(wrap, "value", {get: () => [Math.min(a.value, b.value), Math.max(a.value, b.value)]});
+  for (const el of [a, b]) el.addEventListener("input", () => wrap.dispatchEvent(new Event("input", {bubbles: true})));
+  return wrap;
+}
+```
+
+```{ojs}
+//| echo: false
+{
+  const {lo, hi} = d34, pad = (hi - lo) / 4, [a, b] = ab34;
+  const f = x => x < lo || x > hi ? 0 : d34.f(x), F = x => x <= lo ? 0 : x >= hi ? 1 : d34.F(x);
+  const W = 440, H1 = 170, H2 = 140, L = 34, R = W - 10;
+  const xs = d3.scaleLinear().domain([lo - pad, hi + pad]).range([L, R]);
+  const fmax = d3.max(d3.range(lo, hi + 1e-9, (hi - lo) / 200), f);
+  const y1 = d3.scaleLinear().domain([0, fmax * 1.1]).range([H1 - 20, 10]);
+  const y2 = d3.scaleLinear().domain([0, 1.05]).range([H1 + H2 - 20, H1 + 14]);
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H1 + H2}`).style("width", "100%").style("max-width", "560px");
+  const lab = (x, y, t, anchor = "end", col = "#666") => svg.append("text").attr("x", x).attr("y", y).attr("dy", "0.35em")
+    .attr("text-anchor", anchor).style("font", "10px sans-serif").attr("fill", col).text(t);
+  const num = v => String(+v.toFixed(2)).replace("-", "−");
+  y1.ticks(4).forEach(t => { svg.append("line").attr("x1", L).attr("x2", R).attr("y1", y1(t)).attr("y2", y1(t)).attr("stroke", "#eee"); lab(L - 4, y1(t), num(t)); });
+  [0, 0.5, 1].forEach(t => { svg.append("line").attr("x1", L).attr("x2", R).attr("y1", y2(t)).attr("y2", y2(t)).attr("stroke", "#eee"); lab(L - 4, y2(t), num(t)); });
+  // area
+  const s = Math.max(a, lo), e = Math.min(b, hi);
+  if (e > s) {
+    const pts = d3.range(s, e, (e - s) / 120).concat([e]);
+    svg.append("path").attr("d", d3.area().x(x => xs(x)).y0(y1(0)).y1(x => y1(f(x)))(pts)).attr("fill", "#f28e2b").attr("opacity", 0.55);
+  }
+  const sp = d3.range(lo, hi, (hi - lo) / 300).concat([hi]);
+  svg.append("path").attr("d", d3.line().x(x => xs(x)).y(x => y1(d34.f(x)))(sp)).attr("fill", "none").attr("stroke", "#4e79a7").attr("stroke-width", 2);
+  svg.append("line").attr("x1", xs(lo - pad)).attr("x2", xs(lo)).attr("y1", y1(0)).attr("y2", y1(0)).attr("stroke", "#4e79a7").attr("stroke-width", 2);
+  svg.append("line").attr("x1", xs(hi)).attr("x2", xs(hi + pad)).attr("y1", y1(0)).attr("y2", y1(0)).attr("stroke", "#4e79a7").attr("stroke-width", 2);
+  svg.append("line").attr("x1", L).attr("x2", R).attr("y1", y1(0)).attr("y2", y1(0)).attr("stroke", "#333").attr("stroke-width", 0.6);
+  lab(R, 14, "f(x)", "end", "#4e79a7");
+  // F
+  const fp = d3.range(lo - pad, hi + pad, (hi - lo + 2 * pad) / 300).concat([hi + pad]);
+  svg.append("path").attr("d", d3.line().x(x => xs(x)).y(x => y2(F(x)))(fp)).attr("fill", "none").attr("stroke", "#59a14f").attr("stroke-width", 2);
+  for (const [x, c] of [[a, "#888"], [b, "#888"]]) {
+    svg.append("line").attr("x1", xs(x)).attr("x2", xs(x)).attr("y1", y1(0)).attr("y2", y2(F(x))).attr("stroke", c).attr("stroke-dasharray", "3 3");
+    svg.append("line").attr("x1", L).attr("x2", xs(x)).attr("y1", y2(F(x))).attr("y2", y2(F(x))).attr("stroke", c).attr("stroke-dasharray", "2 3");
+  }
+  svg.append("line").attr("x1", xs(b) + 4).attr("x2", xs(b) + 4).attr("y1", y2(F(a))).attr("y2", y2(F(b))).attr("stroke", "#f28e2b").attr("stroke-width", 4);
+  lab(R, y2(0.12), "F(x)", "end", "#59a14f");
+  xs.ticks(6).forEach(t => lab(xs(t), H1 + H2 - 8, num(t), "middle"));
+  const fm = v => v.toFixed(4);
+  return html`<div>${svg.node()}
+    <table class="ix-tbl">
+      <tr><td>F(x) on the range of values</td><td>${d34.Ft}</td></tr>
+      <tr><td>F(${num(b)}) − F(${num(a)})</td><td>${fm(F(b))} − ${fm(F(a))}</td></tr>
+      <tr><td>P(${num(a)} ≤ X ≤ ${num(b)}) = P(${num(a)} &lt; X &lt; ${num(b)})</td><td><b>${fm(F(b) - F(a))}</b></td></tr>
+      <tr><td>Maximum of f</td><td>${num(fmax)} ${fmax > 1 ? html`<span class="ix-note">(&gt; 1: f is not a probability)</span>` : ""}</td></tr>
+    </table></div>`;
+}
+```
+:::
+
+With $f(x) = 3x^2$, $a = 0$ and $b = 0.5$ you get the $1/8 = 0.125$ of the example. With $a = 0.5$ and $b = 1$ you get $7/8$. With the pdf $x^3/4$ the curve rises above 1, yet the total area stays 1.
+
+## Why P(X = x) = 0
+
+Take a point $x_0$ and a short interval $(x_0, x_0 + h]$. Its probability is $F(x_0 + h) - F(x_0)$, and as $h$ shrinks it tends to $0$, because $F$ is continuous. The ratio, however,
+
+$$\frac{P(x_0 < X \le x_0 + h)}{h} = \frac{F(x_0 + h) - F(x_0)}{h} \;\longrightarrow\; F'(x_0) = f(x_0)$$
+
+does not vanish: it tends to the density. That also explains the name. $f(x_0)$ is "probability per unit length", just as the density of a material is mass per unit volume. A point has zero length, hence zero probability, however large the density there.
+
+::: {.ix-panel}
+::: {.ix-title}
+Probability of a short interval and the density
+:::
+
+```{ojs}
+//| echo: false
+viewof d34b = Inputs.select(pdfs34, {label: "pdf"})
+viewof x34 = Inputs.range([0, 1], {step: 0.01, value: 0.6, label: "Position of x₀ within the range"})
+```
+
+```{ojs}
+//| echo: false
+{
+  const {lo, hi} = d34b, x0 = lo + x34 * (hi - lo) * 0.9;
+  const F = x => x <= lo ? 0 : x >= hi ? 1 : d34b.F(x), f0 = d34b.f(x0);
+  const hs = [0.1, 0.01, 0.001, 0.0001, 0.00001];
+  const fm = (v, d) => v.toLocaleString("en-GB", {minimumFractionDigits: d, maximumFractionDigits: d});
+  const rows = hs.map(h => { const p = F(x0 + h) - F(x0);
+    return html`<tr><td>${fm(h, Math.round(-Math.log10(h)))}</td><td>${fm(p, 8)}</td><td>${fm(p / h, 4)}</td></tr>`; });
+  return html`<table class="ix-tbl">
+    <tr><th>h</th><th>P(x₀ &lt; X ≤ x₀ + h)</th><th>P / h</th></tr>${rows}
+    <tr><td>h → 0</td><td><b>0</b></td><td><b>f(x₀) = ${fm(f0, 4)}</b></td></tr></table>
+    <div class="ix-note">x₀ = ${fm(x0, 3)}. The probability in the second column tends to 0, while the ratio in the third tends to the density f(x₀).</div>`;
+}
+```
+:::
+
+## In R
+
+`integrate()` computes integrals numerically, so we can check both properties and compute probabilities. To see the pdf "in action", we generate 10,000 values of $X$ with $f(x) = 3x^2$. One way is $X = U^{1/3}$ with $U$ uniform on $[0, 1]$, because $P(U^{1/3} \le x) = P(U \le x^3) = x^3 = F(x)$. We will study this method in detail in a later post.
+
+```{r}
+#| label: pdf-r
+#| fig-width: 6
+#| fig-height: 3.2
+#| fig-alt: "Density histogram of 10,000 simulated values with pdf 3x² on [0, 1], with the curve 3x² on top. The histogram follows the curve."
+f <- function(x) 3 * x^2
+integrate(f, 0, 1)$value
+# P(X <= 1/2) and P(X >= 1/2)
+c(integrate(f, 0, 0.5)$value, integrate(f, 0.5, 1)$value)
+x <- runif(10000)^(1/3)
+mean(x <= 0.5)
+par(mar = c(4, 4, 1, 1))
+hist(x, breaks = 30, freq = FALSE, col = "#9ecae1", border = "white",
+     main = "", xlab = "x", ylab = "density", las = 1)
+curve(f, 0, 1, add = TRUE, col = "#4e79a7", lwd = 2)
+```
+
+The proportion of simulated values below $0.5$ is `r fmt(mean(x <= 0.5), 4)`, close to $1/8 = 0.125$. A histogram with `freq = FALSE` has total area 1, like the pdf, which is why it follows the curve.
+
+## Summary
+
+- A continuous random variable has $P(X = x) = 0$ for every $x$, so a pmf cannot describe its distribution.
+- A pdf is a non-negative function with $\int_{-\infty}^{\infty} f = 1$, and the probability of an interval is the **area** under it.
+- $F(x) = \int_{-\infty}^x f(t)\,dt$ and $f = F'$. Hence $P(a \le X \le b) = F(b) - F(a)$, with $<$ or $\le$.
+- $f(x)$ is probability per unit length, not a probability, and it can exceed 1.
+
+## Review questions
+
+**1. Quick quiz.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz34 = [
+  {q: "X is continuous with pdf f. Which statement always holds?",
+   opts: ["P(X < 1) = P(X ≤ 1)", "P(X = 1) = f(1)", "f(x) ≤ 1 for every x", "P(X ≤ 1) = f(1)"], ans: 0,
+   why: "P(X = 1) = 0, so adding or removing a single point does not change the probability. f(1) is a density, not a probability, and can exceed 1."},
+  {q: "For which c is f(x) = c·x on [0, 2] a pdf?",
+   opts: ["1/2", "1", "2", "1/4"], ans: 0,
+   why: "∫₀² c·x dx = 2c = 1, so c = 1/2."},
+  {q: "If F(x) = x² for 0 ≤ x ≤ 1, what is the pdf?",
+   opts: ["f(x) = 2x on [0, 1]", "f(x) = x³/3 on [0, 1]", "f(x) = x² on [0, 1]", "f(x) = 2 on [0, 1]"], ans: 0,
+   why: "The pdf is the derivative of the CDF: f(x) = F'(x) = 2x."},
+  {q: "f(x) = 3x² on [0, 1] has f(1) = 3. What does that mean?",
+   opts: ["It is not a pdf, because it exceeds 1", "Near 1 the probability per unit length is 3: P(1 − h < X ≤ 1) ≈ 3h", "P(X = 1) = 3"], ans: 1,
+   why: "A density can exceed 1. The product f(x)·h for a small width h is a probability, and here P(1 − h < X ≤ 1) = 1 − (1 − h)³ ≈ 3h."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz34.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz34.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** Let $f(x) = x + 1$ for $x \in (-1, 0]$, $f(x) = 1 - x$ for $x \in [0, 1)$ and $f(x) = 0$ elsewhere.
+
+(a) Show that $f$ is a pdf.
+(b) Find the CDF of $X$.
+(c) Find the CDF of $Y = 2X + 1$.
+
+**3.** Let $F(x) = (x + 1)^2/4$ for $x \in (-1, 1)$, with $F(x) = 0$ for $x \le -1$ and $F(x) = 1$ for $x \ge 1$.
+
+(a) Show that $F$ is the CDF of a continuous random variable.
+(b) Find the corresponding pdf.
+
+Check your results in the first widget, with the triangular pdf and with $(x + 1)/2$.
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. (a) $f$ is non-negative, and its graph is a triangle with base 2 and height 1, so $\int f = \tfrac12 \cdot 2 \cdot 1 = 1$.
+(b) For $-1 < x \le 0$: $F(x) = \int_{-1}^x (t + 1)\,dt = (x + 1)^2/2$. For $0 \le x < 1$: $F(x) = \tfrac12 + \int_0^x (1 - t)\,dt = 1 - (1 - x)^2/2$. Also $F(x) = 0$ for $x \le -1$ and $F(x) = 1$ for $x \ge 1$.
+(c) $F_Y(y) = P(2X + 1 \le y) = P\big(X \le \tfrac{y - 1}{2}\big) = F_X\big(\tfrac{y - 1}{2}\big)$. $Y$ takes values in $(-1, 3)$, with $F_Y(y) = (y + 1)^2/8$ for $-1 < y \le 1$ and $F_Y(y) = 1 - (3 - y)^2/8$ for $1 \le y < 3$.
+3. (a) $F$ is continuous (the formula gives $F(-1) = 0$ and $F(1) = 1$), increasing on $(-1, 1)$, with limits 0 and 1 at $-\infty$ and $+\infty$.
+(b) $f(x) = F'(x) = (x + 1)/2$ for $-1 < x < 1$ and $f(x) = 0$ elsewhere.
+:::
+
+---
+
+**Next post:** *Expected value: a distribution's centre of mass.*

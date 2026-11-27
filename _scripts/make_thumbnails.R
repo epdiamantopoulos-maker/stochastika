@@ -259,6 +259,37 @@ thumbs[["random-experiments"]] <- function() {
   }
 }
 
+# σ.π.π. 3x² με χρωματισμένο εμβαδόν κάτω από την καμπύλη
+thumbs[["probability-density-function"]] <- function() {
+  blank(c(-0.08, 1.12), c(-0.15, 3.1))
+  x <- seq(0, 1, length.out = 200)
+  xa <- seq(0.5, 0.85, length.out = 100)
+  polygon(c(0.5, xa, 0.85), c(0, 3 * xa^2, 0), col = a(col["orange"], 0.75), border = NA)
+  lines(x, 3 * x^2, lwd = 7, col = col["blue"])
+  segments(-0.08, 0, 0, 0, lwd = 7, col = col["blue"]); segments(1, 0, 1.12, 0, lwd = 7, col = col["blue"])
+  segments(-0.08, -0.06, 1.12, -0.06, lwd = 3, col = ink)
+}
+
+# τραμπάλα: στήλες σ.μ.π. πάνω σε δοκό που ισορροπεί στο κέντρο βάρους
+thumbs[["expected-value"]] <- function() {
+  blank(c(-0.6, 6.6), c(-0.16, 0.42))
+  p <- c(0.06, 0.2, 0.32, 0.22, 0.12, 0.06, 0.02); x <- 0:6; m <- sum(x * p)
+  rect(x - 0.3, 0.02, x + 0.3, 0.02 + p, col = col["blue"], border = NA)
+  rect(-0.5, 0, 6.5, 0.02, col = ink, border = NA)
+  polygon(c(m, m - 0.35, m + 0.35), c(0, -0.13, -0.13), col = col["orange"], border = NA)
+}
+
+# μέσοι όροι ρίψεων ζαριού που συγκλίνουν στο 3,5
+thumbs[["law-of-large-numbers"]] <- function() {
+  N <- 3000
+  blank(c(0, log10(N)), c(2.2, 4.8))
+  abline(h = 3.5, lwd = 6, col = col["green"])
+  for (k in 1:4) {
+    r <- cumsum(sample(1:6, N, TRUE)) / seq_len(N)
+    lines(log10(seq_len(N)), pmin(pmax(r, 2.25), 4.75), lwd = 4, col = col[c("blue", "orange", "purple", "teal")][k])
+  }
+}
+
 slugs <- basename(list.dirs("el/posts", recursive = FALSE))
 missing <- setdiff(slugs, names(thumbs))
 if (length(missing)) message("Χωρίς μικρογραφία: ", paste(missing, collapse = ", "))
