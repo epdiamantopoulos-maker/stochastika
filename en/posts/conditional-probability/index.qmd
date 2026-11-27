@@ -2,6 +2,7 @@
 title: "Conditional probability: how information changes the odds"
 description: "The definition of conditional probability P(B | A) as probability in a \"shrunken\" sample space, with an interactive two-dice grid, a simulation and the inversion error P(B | A) ≠ P(A | B)."
 date: 2026-12-30
+image: thumbnail.png
 categories: [Probability, Conditional probability, R, Interactive]
 keywords: [conditional probability, P(B|A), given that, reduced sample space, confusion of the inverse, prosecutor's fallacy, dice, probability]
 ---

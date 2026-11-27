@@ -2,6 +2,7 @@
 title: "Sample spaces and events: the set-theory language of probability"
 description: "What sample spaces and events are and how set operations become logical statements about a random experiment, with interactive diagrams and R examples."
 date: 2026-12-09
+image: thumbnail.png
 categories: [Probability, Foundations, R, Interactive]
 keywords: [sample space, events, set operations, Venn diagram, mutually exclusive events, disjoint events, symmetric difference]
 execute:

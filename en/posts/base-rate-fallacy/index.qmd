@@ -2,6 +2,7 @@
 title: "Bayes in practice: why a positive test is often wrong (base-rate fallacy)"
 description: "The base-rate fallacy: how a test with 95% sensitivity and 99% specificity has a positive predictive value of only 9% for a rare disease, with an interactive diagram of 1,000 people and the PPV and NPV formulas."
 date: 2027-01-15
+image: thumbnail.png
 categories: [Probability, Bayes, Diagnostic tests, R, Interactive]
 keywords: [base rate fallacy, base rate neglect, positive predictive value, PPV, NPV, prevalence, Bayes theorem, sensitivity, specificity, natural frequencies, false positives]
 ---

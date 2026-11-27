@@ -2,6 +2,7 @@
 title: "Worked problems: conditional probability and Bayes"
 description: "Seven worked problems on conditional probability, the multiplication rule, independence, total probability, Bayes' theorem and diagnostic tests, with an answer checker and verification by simulation."
 date: 2027-01-22
+image: thumbnail.png
 categories: [Probability, Exercises, R, Interactive]
 keywords: [worked problems, conditional probability, Bayes theorem, total probability, independence, reliability, diagnostic test, probability exercises]
 ---

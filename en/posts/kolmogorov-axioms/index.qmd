@@ -2,6 +2,7 @@
 title: "Kolmogorov's axioms: all of probability from three rules"
 description: "What a probability space is, why we need a sigma-algebra, how every probability rule follows from three axioms, and why there is no such thing as a 'random natural number'."
 date: 2026-12-14
+image: thumbnail.png
 categories: [Probability, Foundations, R, Interactive]
 keywords: [Kolmogorov axioms, probability space, sigma-algebra, countable additivity, probability measure, loaded die]
 ---

@@ -2,6 +2,7 @@
 title: "Independent vs mutually exclusive: a classic mix-up"
 description: "What independence of events means, why it has nothing to do with disjoint (mutually exclusive) events, pairwise versus mutual independence, with an interactive area diagram and examples in R."
 date: 2027-01-04
+image: thumbnail.png
 categories: [Probability, Conditional probability, R, Interactive]
 keywords: [independent events, mutually exclusive events, disjoint events, independence, conditional independence, pairwise independence, probability]
 ---

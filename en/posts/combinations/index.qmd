@@ -2,6 +2,7 @@
 title: "Combinations: when order does not matter"
 description: "Combinations of n taken k at a time and the binomial coefficient, with an interactive Pascal's triangle and a lottery simulator that compares simulation with exact probabilities."
 date: 2026-12-23
+image: thumbnail.png
 categories: [Probability, Combinatorics, R, Interactive]
 keywords: [combinations, binomial coefficient, n choose k, Pascal's triangle, lottery odds, Lotto 6/49, probability, combinatorics]
 ---
