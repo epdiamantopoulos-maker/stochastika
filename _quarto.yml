@@ -1,6 +1,8 @@
 project:
   type: website
   output-dir: _site
+  # σχετικοί σύνδεσμοι στις ροές RSS → απόλυτοι (για R-bloggers κ.λπ.)
+  post-render: _scripts/fix_feed_links.py
   render:
     - "*.qmd"
     - "!STYLE_GUIDE.md"

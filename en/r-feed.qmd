@@ -1,0 +1,18 @@
+---
+title: "R posts: full-text feed"
+description: "Full-text RSS feed of the English posts that use R, for R-bloggers."
+# Σελίδα μόνο για τη ροή r-feed.xml (R-bloggers): δεν εμφανίζεται σε μενού ή αναζήτηση.
+search: false
+listing:
+  contents: posts
+  sort: "date desc"
+  type: table
+  fields: [date, title]
+  include:
+    categories: "R"
+  feed:
+    type: full
+    items: 10
+---
+
+This page exists for the full-text RSS feed of the posts that use R, [r-feed.xml](r-feed.xml), which is syndicated by [R-bloggers](https://www.r-bloggers.com/). For the whole blog, see the [home page](index.qmd).

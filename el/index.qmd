@@ -9,7 +9,9 @@ listing:
   categories: true
   sort-ui: false
   filter-ui: true
-  feed: true
+  # μόνο τίτλος, περιγραφή και εικόνα: για Facebook/LinkedIn και προγράμματα RSS
+  feed:
+    type: metadata
 page-layout: full
 title-block-banner: false
 toc: false

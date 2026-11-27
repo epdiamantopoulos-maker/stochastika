@@ -26,6 +26,7 @@ A short, curated list of free resources that complement the Stochastika posts. A
 
 - [**CRAN**](https://cran.r-project.org/): the official source for downloading R and its packages.
 - [**R for Data Science** (2nd edition)](https://r4ds.hadley.nz/): a free online book on data wrangling and visualisation with R.
+- [**R-bloggers**](https://www.r-bloggers.com/): daily news and tutorials about R from hundreds of blogs, including the R posts of Stochastika.
 
 ## Greek sources
 
