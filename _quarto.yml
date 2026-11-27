@@ -35,6 +35,12 @@ website:
         text: "Σχετικά"
       - href: en/about.qmd
         text: "About"
+      - href: el/index.xml
+        icon: rss
+        text: "RSS"
+      - href: en/index.xml
+        icon: rss
+        text: "RSS"
   # Υποσέλιδο: το .st-el εμφανίζεται μόνο στις ελληνικές σελίδες, το .st-en
   # μόνο στις αγγλικές (βλ. assets/styles.css).
   page-footer:
