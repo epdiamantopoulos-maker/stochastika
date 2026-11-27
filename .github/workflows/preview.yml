@@ -43,17 +43,21 @@ jobs:
       - name: Render
         run: quarto render
 
-      - name: Deploy προεπισκόπησης στη Netlify
+      # Προεπισκόπηση στο Cloudflare Pages: κάθε branch εκτός του main είναι
+      # «preview deployment», με σταθερή διεύθυνση pr-N.stochastika.pages.dev.
+      # Το Cloudflare βάζει σε αυτές noindex, ώστε να μην τις ευρετηριάζουν
+      # οι μηχανές αναζήτησης (περιέχουν και τα μελλοντικά άρθρα).
+      - name: Deploy προεπισκόπησης στο Cloudflare Pages
         id: deploy
         env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PR: ${{ github.event.pull_request.number }}
         run: |
-          npx --yes netlify-cli@17 deploy --dir=_site \
-            --alias="pr-${{ github.event.pull_request.number }}" \
-            --site="$NETLIFY_SITE_ID" --auth="$NETLIFY_AUTH_TOKEN" \
-            --message="Preview PR #${{ github.event.pull_request.number }}" --json > deploy.json
-          url=$(python3 -c "import json; print(json.load(open('deploy.json'))['deploy_url'])")
+          npx --yes wrangler@3 pages deploy _site --project-name=stochastika \
+            --branch="pr-$PR" --commit-hash="${{ github.event.pull_request.head.sha }}" \
+            --commit-message="Preview PR #$PR"
+          url="https://pr-$PR.stochastika.pages.dev"
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "### Προεπισκόπηση: $url" >> "$GITHUB_STEP_SUMMARY"
 
