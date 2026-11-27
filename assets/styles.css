@@ -55,3 +55,13 @@ html[lang="el"] .navbar-nav.ms-auto .nav-item:has(> a.nav-link[href$="en/resourc
 html[lang="el"] .navbar-nav.ms-auto .nav-item:has(> a.nav-link[href$="en/about.html"]),
 html[lang="en"] .navbar-nav.ms-auto .nav-item:has(> a.nav-link[href$="el/resources.html"]),
 html[lang="en"] .navbar-nav.ms-auto .nav-item:has(> a.nav-link[href$="el/about.html"]) { display: none; }
+
+/* Υποσέλιδο: κείμενο ανά γλώσσα (ορίζεται στο _quarto.yml, page-footer) */
+html[lang="el"] .st-en,
+html[lang="en"] .st-el { display: none; }
+.nav-footer-center p { margin-bottom: .4rem; }
+.nav-footer-center a[href^="tel:"] { white-space: nowrap; }
+
+/* Ο συγγραφέας εμφανίζεται στο υποσέλιδο· στην κεφαλίδα του άρθρου μένει μόνο η ημερομηνία.
+   (Το author παραμένει στα μεταδεδομένα, για τις μηχανές αναζήτησης.) */
+.quarto-title-meta > div:has(> .quarto-title-meta-contents > p:not(.date)) { display: none; }

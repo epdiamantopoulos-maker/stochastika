@@ -35,8 +35,15 @@ website:
         text: "Σχετικά"
       - href: en/about.qmd
         text: "About"
+  # Υποσέλιδο: το .st-el εμφανίζεται μόνο στις ελληνικές σελίδες, το .st-en
+  # μόνο στις αγγλικές (βλ. assets/styles.css).
   page-footer:
-    center: "© 2026 Stochastika · [Απόρρητο](/el/privacy.html) · [Privacy](/en/privacy.html)"
+    center: |
+      [**Επαμεινώνδας Διαμαντόπουλος**<br>Τμήμα Ηλεκτρολόγων Μηχανικών και Μηχανικών Υπολογιστών, Δημοκρίτειο Πανεπιστήμιο Θράκης]{.st-el}[**Epameinondas Diamantopoulos**<br>Department of Electrical and Computer Engineering, Democritus University of Thrace]{.st-en}
+
+      [[Προσωπική σελίδα](https://utopia.duth.gr/epdiaman/) · Τηλ.\ [25410\ 79757](tel:+302541079757) · Κιν.\ [694\ 468\ 3327](tel:+306944683327) · [info@stochastika.com](mailto:info@stochastika.com)]{.st-el}[[Personal page](https://utopia.duth.gr/epdiaman/) · Tel.\ [+30\ 25410\ 79757](tel:+302541079757) · Mob.\ [+30\ 694\ 468\ 3327](tel:+306944683327) · [info@stochastika.com](mailto:info@stochastika.com)]{.st-en}
+
+      © 2026 Stochastika · [[Απόρρητο](/el/privacy.html)]{.st-el}[[Privacy](/en/privacy.html)]{.st-en}
 
 format:
   html:
