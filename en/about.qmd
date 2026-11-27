@@ -26,7 +26,7 @@ AI assistance is used to draft the posts, code and interactive elements. Every p
 
 ## Follow new posts
 
-New posts appear every Monday, Wednesday and Friday. To follow them, add the [RSS feed](index.xml) (`https://www.stochastika.com/en/index.xml`) to a feed reader such as Feedly or Inoreader, or click the <i class="bi bi-rss"></i> icon at the top right.
+New posts appear every Monday, Wednesday and Friday. To follow them, add the [RSS feed](index.xml) (`https://www.stochastika.com/en/index.xml`) to a feed reader such as Feedly or Inoreader, or click the <i class="bi bi-rss"></i> icon at the top right. New posts are also shared on our [Facebook page](https://www.facebook.com/stochastika/).
 
 ## Contact
 

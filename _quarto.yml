@@ -41,6 +41,9 @@ website:
       - href: en/index.xml
         icon: rss
         text: "RSS"
+      - href: https://www.facebook.com/stochastika/
+        icon: facebook
+        text: "Facebook"
   # Υποσέλιδο: το .st-el εμφανίζεται μόνο στις ελληνικές σελίδες, το .st-en
   # μόνο στις αγγλικές (βλ. assets/styles.css).
   page-footer:
@@ -49,7 +52,7 @@ website:
 
       [[Προσωπική σελίδα](https://utopia.duth.gr/epdiaman/) · Τηλ.\ [25410\ 79757](tel:+302541079757) · Κιν.\ [694\ 468\ 3327](tel:+306944683327) · [info@stochastika.com](mailto:info@stochastika.com)]{.st-el}[[Personal page](https://utopia.duth.gr/epdiaman/) · Tel.\ [+30\ 25410\ 79757](tel:+302541079757) · Mob.\ [+30\ 694\ 468\ 3327](tel:+306944683327) · [info@stochastika.com](mailto:info@stochastika.com)]{.st-en}
 
-      © 2026 Stochastika · [[Απόρρητο](/el/privacy.html)]{.st-el}[[Privacy](/en/privacy.html)]{.st-en}
+      © 2026 Stochastika · [Facebook](https://www.facebook.com/stochastika/) · [[Απόρρητο](/el/privacy.html)]{.st-el}[[Privacy](/en/privacy.html)]{.st-en}
 
 format:
   html:

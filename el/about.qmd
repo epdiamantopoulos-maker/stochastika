@@ -26,7 +26,7 @@ toc: false
 
 ## Ενημέρωση για νέα άρθρα
 
-Νέα άρθρα δημοσιεύονται κάθε Δευτέρα, Τετάρτη και Παρασκευή. Για να ενημερώνεστε, προσθέστε τη ροή [RSS](index.xml) (`https://www.stochastika.com/el/index.xml`) σε ένα πρόγραμμα ανάγνωσης RSS, όπως το Feedly ή το Inoreader, ή πατήστε το εικονίδιο <i class="bi bi-rss"></i> πάνω δεξιά.
+Νέα άρθρα δημοσιεύονται κάθε Δευτέρα, Τετάρτη και Παρασκευή. Για να ενημερώνεστε, προσθέστε τη ροή [RSS](index.xml) (`https://www.stochastika.com/el/index.xml`) σε ένα πρόγραμμα ανάγνωσης RSS, όπως το Feedly ή το Inoreader, ή πατήστε το εικονίδιο <i class="bi bi-rss"></i> πάνω δεξιά. Τα νέα άρθρα αναρτώνται επίσης στη σελίδα μας στο [Facebook](https://www.facebook.com/stochastika/).
 
 ## Επικοινωνία
 
