@@ -13,7 +13,7 @@ el/  en/                 ελληνικό και αγγλικό μέρος
   posts/<slug>/index.qmd τα άρθρα (ίδιο slug και στις δύο γλώσσες)
 assets/                  λογότυπο, CSS, εναλλαγή γλώσσας
 _scripts/                απόκρυψη μελλοντικών άρθρων, αποτύπωμα ορατού περιεχομένου
-.github/workflows/       δημοσίευση (Cloudflare Pages) και προεπισκόπηση (Netlify)
+.github/workflows/       δημοσίευση και προεπισκόπηση (Cloudflare Pages)
 STYLE_GUIDE.md           οδηγός ύφους
 ```
 
@@ -34,9 +34,9 @@ quarto preview
 
 ## Ρυθμίσεις που χρειάζονται μία φορά
 
-Στο GitHub: *Settings → Secrets and variables → Actions*, τέσσερα secrets:
+Στο GitHub: *Settings → Secrets and variables → Actions*, δύο secrets, κοινά για δημοσίευση και προεπισκοπήσεις:
 
-- `CLOUDFLARE_API_TOKEN`: token της Cloudflare με δικαίωμα *Account → Cloudflare Pages → Edit* (δημοσίευση),
-- `CLOUDFLARE_ACCOUNT_ID`: το Account ID της Cloudflare (δημοσίευση),
-- `NETLIFY_AUTH_TOKEN`: προσωπικό token από τη Netlify (προεπισκοπήσεις),
-- `NETLIFY_SITE_ID`: το Project ID του site στη Netlify (προεπισκοπήσεις).
+- `CLOUDFLARE_API_TOKEN`: token της Cloudflare με δικαίωμα *Account → Cloudflare Pages → Edit*,
+- `CLOUDFLARE_ACCOUNT_ID`: το Account ID της Cloudflare.
+
+Η δημοσίευση πηγαίνει στο `www.stochastika.com` (branch `main`). Κάθε Pull Request παίρνει προεπισκόπηση στο `https://pr-N.stochastika.pages.dev`.
