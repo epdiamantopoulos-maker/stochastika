@@ -2,6 +2,7 @@
 title: "The Monty Hall problem: should you switch?"
 description: "The famous three-door problem: play it interactively, see why switching wins with probability 2/3 using Bayes' theorem, and what changes when the host does not know where the car is."
 date: 2027-01-11
+image: thumbnail.png
 categories: [Probability, Bayes, R, Interactive]
 keywords: [Monty Hall problem, three doors, Bayes theorem, conditional probability, probability paradox, simulation, should you switch]
 ---

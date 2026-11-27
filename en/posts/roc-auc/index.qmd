@@ -2,6 +2,7 @@
 title: "The ROC curve and AUC: choosing a decision threshold"
 description: "How a model that outputs probabilities becomes a binary prediction, why every decision threshold trades sensitivity for specificity, and what the area under the ROC curve measures, with an interactive threshold slider."
 date: 2027-01-18
+image: thumbnail.png
 categories: [Probability, Diagnostic tests, R, Interactive]
 keywords: [ROC curve, AUC, area under the curve, decision threshold, cut-off, sensitivity, specificity, classification, spam filter]
 ---

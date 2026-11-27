@@ -2,6 +2,7 @@
 title: "Permutations and arrangements: when order matters (and the birthday problem)"
 description: "Permutations, permutations with repeated elements and arrangements with and without repetition, with an interactive anagram explorer and a simulation of the birthday problem."
 date: 2026-12-21
+image: thumbnail.png
 categories: [Probability, Combinatorics, R, Interactive]
 keywords: [permutations, k-permutations, arrangements, factorial, anagrams, multiset permutations, birthday problem, combinatorics]
 ---

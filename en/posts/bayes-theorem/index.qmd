@@ -2,6 +2,7 @@
 title: "Bayes' theorem: reversing the conditioning"
 description: "Bayes' theorem as the way from P(A | B) to P(B | A), with worked examples and an interactive game where the probability is updated after every coin toss."
 date: 2027-01-08
+image: thumbnail.png
 categories: [Probability, Bayes, R, Interactive]
 keywords: [Bayes theorem, Bayes rule, prior probability, posterior probability, likelihood, conditional probability, total probability, Bayesian updating]
 ---

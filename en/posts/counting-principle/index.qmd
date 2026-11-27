@@ -2,6 +2,7 @@
 title: "The fundamental counting principle: counting without listing"
 description: "The fundamental counting principle with an interactive decision tree and a password calculator: when to multiply, when not to, and why an 8-character password beats a PIN."
 date: 2026-12-18
+image: thumbnail.png
 categories: [Probability, Combinatorics, R, Interactive]
 keywords: [fundamental counting principle, multiplication principle, rule of product, combinatorics, tree diagram, counting, passwords, classical probability]
 ---

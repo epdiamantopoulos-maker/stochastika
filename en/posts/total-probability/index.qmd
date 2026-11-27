@@ -2,6 +2,7 @@
 title: "The law of total probability: splitting a problem into scenarios"
 description: "The law of total probability as a weighted average of scenarios, with an interactive area diagram, the answer to the sampling-without-replacement puzzle and the two-urns problem."
 date: 2027-01-06
+image: thumbnail.png
 categories: [Probability, Conditional probability, R, Interactive]
 keywords: [law of total probability, total probability theorem, partition of the sample space, conditional probability, weighted average, probability tree]
 ---

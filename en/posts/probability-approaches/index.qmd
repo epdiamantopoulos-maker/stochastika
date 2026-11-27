@@ -2,6 +2,7 @@
 title: "Classical, geometric and axiomatic probability: three views of one idea"
 description: "The ways we assign probabilities (classical, frequentist, geometric) and how the axiomatic foundation unites them, with the meeting problem as an interactive Monte Carlo simulation."
 date: 2026-12-16
+image: thumbnail.png
 categories: [Probability, Foundations, R, Interactive]
 keywords: [classical probability, geometric probability, frequentist probability, axiomatic probability, meeting problem, Monte Carlo, estimating pi]
 ---

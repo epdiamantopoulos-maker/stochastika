@@ -2,6 +2,7 @@
 title: "System reliability: components in series and in parallel"
 description: "How to compute the probability that a system works from the reliability of its components: series, parallel, mixed and 2-out-of-3 layouts, with an interactive diagram and a simulation."
 date: 2027-01-20
+image: thumbnail.png
 categories: [Probability, Independence, R, Interactive]
 keywords: [system reliability, series system, parallel system, redundancy, independent events, failure probability, k-out-of-n system]
 ---

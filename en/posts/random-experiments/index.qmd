@@ -2,6 +2,7 @@
 title: "Random experiments: what does \"random\" really mean?"
 description: "What makes an experiment random, why randomness is a property of the model rather than the world, and three common misconceptions debunked with R simulations."
 date: 2026-12-07
+image: thumbnail.png
 categories: [Probability, Foundations, R, Interactive]
 keywords: [random experiment, randomness, deterministic experiment, pseudo-random numbers, gambler's fallacy, R simulation]
 execute:

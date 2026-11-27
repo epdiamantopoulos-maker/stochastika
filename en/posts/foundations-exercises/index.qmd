@@ -2,6 +2,7 @@
 title: "Worked problems: foundations of probability"
 description: "Seven worked problems on sample spaces, the rules of probability, counting and geometric probability, with an answer checker and verification by simulation."
 date: 2026-12-28
+image: thumbnail.png
 categories: [Probability, Exercises, R, Interactive]
 keywords: [probability worked problems, sample space, permutations, classical probability, geometric probability, simulation, counting exercises, broken stick problem]
 ---

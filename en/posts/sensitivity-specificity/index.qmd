@@ -2,6 +2,7 @@
 title: "Sensitivity, specificity, PPV and NPV: how to evaluate a diagnostic test"
 description: "The confusion matrix of a binary prediction and the measures of accuracy, sensitivity, specificity, PPV and NPV as conditional probabilities, with an interactive calculator and real data from rapid tests."
 date: 2027-01-13
+image: thumbnail.png
 categories: [Probability, Diagnostic tests, R, Interactive]
 keywords: [sensitivity, specificity, positive predictive value, negative predictive value, PPV, NPV, confusion matrix, accuracy, diagnostic test evaluation]
 ---

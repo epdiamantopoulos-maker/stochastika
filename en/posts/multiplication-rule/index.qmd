@@ -2,6 +2,7 @@
 title: "The multiplication rule: probabilities step by step"
 description: "The multiplication rule P(A ∩ B) = P(A) · P(B | A) and its extension to many steps, with an interactive probability tree for draws from an urn and the LOTTO cards problem."
 date: 2027-01-01
+image: thumbnail.png
 categories: [Probability, Conditional probability, R, Interactive]
 keywords: [multiplication rule, general multiplication rule, chain rule of probability, conditional probability, probability tree, sampling without replacement]
 ---

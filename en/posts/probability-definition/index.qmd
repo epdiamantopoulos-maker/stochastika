@@ -2,6 +2,7 @@
 title: "Defining probability: from statistical regularity to basic properties"
 description: "How the stabilising relative frequency leads to the idea of probability, the classical definition and its equally-likely trap, and the basic rules for computing probabilities, with interactive tools and R."
 date: 2026-12-11
+image: thumbnail.png
 categories: [Probability, Foundations, R, Interactive]
 keywords: [definition of probability, relative frequency, statistical regularity, classical probability, equally likely outcomes, probability rules, inclusion-exclusion]
 ---
