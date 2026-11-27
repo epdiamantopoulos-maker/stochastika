@@ -1,0 +1,307 @@
+---
+title: "Variance and standard deviation: how spread out a distribution is"
+description: "The definition of the variance and the standard deviation of a random variable, the shortcut Var X = E(X²) − μ², the rules for linear transformations and standardization, with worked problems, interactive widgets and R."
+date: 2027-02-10
+image: thumbnail.png
+categories: [Probability, Random variables, R, Interactive]
+keywords: [variance, standard deviation, Var(X), E(X^2) - mu^2, variance of a random variable, linear transformation, standardization, z-score, variance problems]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# non-ASCII characters in plots under a "C" locale
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+Two buses arrive at 8:00 on average. The first always comes between 7:58 and 8:02, the second anywhere between 7:40 and 8:20. Their [expected values](../expected-value/index.qmd) and [medians](../mode-median/index.qmd) are the same, yet the two buses are not equally reliable at all. The missing measure is **spread**: how far the values scatter around the centre.
+
+## Definition
+
+The **variance** of a random variable $X$ with $\mu = E(X)$ is
+
+$$\sigma^2 = \operatorname{Var}(X) = E\big[(X - \mu)^2\big],$$
+
+the expected value of the squared distance of $X$ from its centre. Squaring makes every deviation positive and penalises large ones more.
+
+**A more practical formula.** $\sigma^2 = E(X^2) - \mu^2$. Indeed, $(X - \mu)^2 = X^2 - 2\mu X + \mu^2$, and by linearity of expectation
+
+$$E(X - \mu)^2 = E(X^2) - 2\mu E(X) + \mu^2 = E(X^2) - 2\mu^2 + \mu^2 = E(X^2) - \mu^2.$$
+
+For a discrete and a continuous random variable respectively:
+
+$$\sigma^2 = \sum_{x_i} (x_i - \mu)^2 f_X(x_i) = \sum_{x_i} x_i^2 f_X(x_i) - \mu^2,$$
+
+$$\sigma^2 = \int_{-\infty}^{\infty} (x - \mu)^2 f_X(x)\,dx = \int_{-\infty}^{\infty} x^2 f_X(x)\,dx - \mu^2.$$
+
+**Standard deviation.** If $X$ is measured in metres, its variance is in square metres, which makes it hard to interpret. The **standard deviation**
+
+$$\sigma = \sqrt{\operatorname{Var}(X)}$$
+
+has the same units as $X$ and is the measure of spread used most in practice.
+
+## Two worked problems
+
+**Problem 1.** If $X$ is the outcome of a die roll, find $\operatorname{Var}(X)$ and $\sigma$.
+
+From the [expected value post](../expected-value/index.qmd), $\mu = 7/2$ and $E(X^2) = 91/6$. So
+
+$$\operatorname{Var}(X) = \frac{91}{6} - \frac{49}{4} = \frac{35}{12} \approx 2.917,$$
+
+and $\sigma = \sqrt{35/12} \approx 1.708$.
+
+**Problem 2.** $X$ has pdf $f(x) = x + 1$ for $x \in (-1, 0]$ and $f(x) = 1 - x$ for $x \in [0, 1)$. Find $\operatorname{Var}(X)$ and $\sigma$.
+
+$f$ is symmetric about 0, so $\mu = 0$ and $\operatorname{Var}(X) = E(X^2)$. By symmetry,
+
+$$E(X^2) = 2 \int_0^1 x^2 (1 - x)\,dx = 2 \left( \frac13 - \frac14 \right) = \frac16,$$
+
+and $\sigma = 1/\sqrt6 \approx 0.408$.
+
+## Spread in a picture
+
+Choose a distribution. The green band is the interval $\mu \pm \sigma$. For discrete distributions the table shows how much each value contributes to the variance: values far from $\mu$ contribute disproportionately, because of the square. With "your own symmetric pmf", move weight to the ends 0 and 6 and watch $\sigma$ grow while $\mu$ stays at 3.
+
+::: {.ix-panel}
+::: {.ix-title}
+Variance, standard deviation and the band μ ± σ
+:::
+
+```{ojs}
+//| echo: false
+dists37 = new Map([
+  ["Die", {type: "d", xs: d3.range(1, 7), p: x => 1 / 6}],
+  ["Sum of two dice", {type: "d", xs: d3.range(2, 13), p: x => (6 - Math.abs(x - 7)) / 36}],
+  ["Coin: X = 1 for heads", {type: "d", xs: [0, 1], p: x => 0.5}],
+  ["f(x) = (1/4)(3/4)^x, x = 0, 1, 2, …", {type: "d", xs: d3.range(0, 300), p: x => 0.25 * 0.75 ** x, shown: 16}],
+  ["Your own symmetric pmf on 0, …, 6", {type: "custom"}],
+  ["pdf: f(x) = 3x², 0 ≤ x ≤ 1", {type: "c", lo: 0, hi: 1, f: x => 3 * x * x}],
+  ["pdf: triangular on (−1, 1)", {type: "c", lo: -1, hi: 1, f: x => 1 - Math.abs(x)}],
+  ["pdf: f(x) = x³/4, 0 ≤ x ≤ 2", {type: "c", lo: 0, hi: 2, f: x => x ** 3 / 4}]
+])
+viewof d37 = Inputs.select(dists37, {label: "Distribution"})
+viewof w37 = {
+  const init = [1, 2, 4, 6];
+  const names = ["0 and 6", "1 and 5", "2 and 4", "3"];
+  const rs = init.map((v, i) => Inputs.range([0, 20], {step: 1, value: v, label: `weight of ${names[i]}`}));
+  const wrap = html`<div>${d37.type === "custom" ? html`${rs}<div class="ix-note">Values symmetric about 3 share a weight, so μ = 3.</div>` : html``}</div>`;
+  Object.defineProperty(wrap, "value", {get: () => rs.map(r => r.value)});
+  rs.forEach(r => r.addEventListener("input", () => wrap.dispatchEvent(new Event("input", {bubbles: true}))));
+  return wrap;
+}
+```
+
+```{ojs}
+//| echo: false
+{
+  const W = 460, H = 200, L = 34, R = W - 12;
+  const fm = (v, d = 3) => String(+(Math.abs(v) < 5e-4 ? 0 : v).toFixed(d)).replace("-", "−");
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H}`).style("width", "100%").style("max-width", "580px");
+  const txt = (x, y, t, c = "#666", a = "middle") => svg.append("text").attr("x", x).attr("y", y).attr("text-anchor", a).style("font", "10px sans-serif").attr("fill", c).text(t);
+  let mu, v, within, rows = null, xs, ys;
+  if (d37.type === "c") {
+    const {lo, hi, f} = d37, n = 2000, h = (hi - lo) / n, g = d3.range(n + 1).map(i => lo + i * h);
+    // Simpson's rule
+    const S = fn => g.reduce((s, x, i) => s + (i === 0 || i === n ? 1 : i % 2 ? 4 : 2) * fn(x), 0) * h / 3;
+    mu = S(x => x * f(x)); v = S(x => (x - mu) ** 2 * f(x));
+    const sd = Math.sqrt(v);
+    within = k => S(x => Math.abs(x - mu) < k * sd ? f(x) : 0);
+    const dom = [lo - (hi - lo) * 0.08, hi + (hi - lo) * 0.08];
+    xs = d3.scaleLinear().domain(dom).range([L, R]); ys = d3.scaleLinear().domain([0, d3.max(g, f) * 1.12]).range([H - 20, 10]);
+    svg.append("rect").attr("x", xs(mu - sd)).attr("width", xs(mu + sd) - xs(mu - sd)).attr("y", 10).attr("height", H - 30).attr("fill", "#59a14f").attr("opacity", 0.15);
+    svg.append("path").attr("d", d3.area().x(x => xs(x)).y0(ys(0)).y1(x => ys(f(x)))(g.filter((x, i) => i % 10 === 0))).attr("fill", "#9ecae1");
+    xs.ticks(6).forEach(t => txt(xs(t), H - 6, fm(t, 2)));
+  } else {
+    let x0, ps;
+    if (d37.type === "custom") { const w = w37, t = 2 * (w[0] + w[1] + w[2]) + w[3] || 1; x0 = d3.range(7); ps = [w[0], w[1], w[2], w[3], w[2], w[1], w[0]].map(a => a / t); }
+    else { x0 = d37.xs; ps = x0.map(d37.p); }
+    const shown = d37.shown || x0.length;
+    mu = d3.sum(x0, (x, i) => x * ps[i]); v = d3.sum(x0, (x, i) => (x - mu) ** 2 * ps[i]);
+    const sd = Math.sqrt(v);
+    within = k => d3.sum(x0, (x, i) => Math.abs(x - mu) < k * sd - 1e-12 ? ps[i] : 0);
+    xs = d3.scaleLinear().domain([x0[0] - 0.7, x0[shown - 1] + 0.7]).range([L, R]); ys = d3.scaleLinear().domain([0, d3.max(ps) * 1.12]).range([H - 20, 10]);
+    svg.append("rect").attr("x", xs(mu - sd)).attr("width", xs(mu + sd) - xs(mu - sd)).attr("y", 10).attr("height", H - 30).attr("fill", "#59a14f").attr("opacity", 0.15);
+    const bw = Math.min(24, (R - L) / shown * 0.6);
+    x0.slice(0, shown).forEach((x, i) => {
+      svg.append("rect").attr("x", xs(x) - bw / 2).attr("width", bw).attr("y", ys(ps[i])).attr("height", ys(0) - ys(ps[i])).attr("fill", "#9ecae1");
+      txt(xs(x), H - 6, x);
+    });
+    if (x0.length <= 13) rows = x0.map((x, i) => html`<tr><td>${x}</td><td>${fm(ps[i])}</td><td>${fm((x - mu) ** 2)}</td><td>${fm((x - mu) ** 2 * ps[i])}</td></tr>`);
+  }
+  const sd = Math.sqrt(v);
+  svg.append("line").attr("x1", L).attr("x2", R).attr("y1", ys(0)).attr("y2", ys(0)).attr("stroke", "#333");
+  svg.append("line").attr("x1", xs(mu)).attr("x2", xs(mu)).attr("y1", 10).attr("y2", ys(0)).attr("stroke", "#4e79a7").attr("stroke-width", 2);
+  txt(xs(mu), 9, "μ", "#4e79a7"); txt(xs(mu - sd), H - 24, "μ − σ", "#3b7a2f"); txt(xs(mu + sd), H - 24, "μ + σ", "#3b7a2f");
+  return html`<div>${svg.node()}
+    <table class="ix-tbl">
+      <tr><td>μ = E(X)</td><td>${fm(mu)}</td></tr>
+      <tr><td>Var(X) = σ²</td><td><b>${fm(v)}</b></td></tr>
+      <tr><td>σ</td><td><b>${fm(sd)}</b></td></tr>
+      <tr><td>P(|X − μ| &lt; σ)</td><td>${fm(within(1))}</td></tr>
+      <tr><td>P(|X − μ| &lt; 2σ)</td><td>${fm(within(2))}</td></tr>
+    </table>
+    ${rows ? html`<details style="margin-top:6px"><summary>Contribution of each value to the variance</summary>
+      <table class="ix-tbl"><tr><th>x</th><th>f(x)</th><th>(x − μ)²</th><th>(x − μ)² f(x)</th></tr>${rows}
+      <tr><td colspan="3">Sum = Var(X)</td><td><b>${fm(v)}</b></td></tr></table></details>` : ""}</div>`;
+}
+```
+:::
+
+For the die you get the $35/12 \approx 2.917$ of Problem 1 and for the triangular pdf the $1/6$ of Problem 2. The geometric pmf has $\sigma \approx 3.46$, larger than its mean: its long tail makes the distribution very spread out.
+
+## Properties
+
+For every random variable $X$ and constants $\lambda, \alpha \in \mathbb{R}$:
+
+1. $\operatorname{Var}(X) \ge 0$.
+2. $\operatorname{Var}(X) = 0$ if and only if there is an $x_0$ with $P(X = x_0) = 1$: only a constant random variable has no spread.
+3. $\operatorname{Var}(X + \alpha) = \operatorname{Var}(X)$: shifting does not change the spread.
+4. $\operatorname{Var}(\lambda) = 0$.
+5. $\operatorname{Var}(\lambda X) = \lambda^2 \operatorname{Var}(X)$, so $\sigma_{\lambda X} = |\lambda|\, \sigma_X$.
+
+**Problem 3.** (a) Show that $\operatorname{Var}(\lambda X) = \lambda^2 \operatorname{Var}(X)$. (b) If $\mu = E(X)$, $\sigma^2 = \operatorname{Var}(X) > 0$ and $Y = (X - \mu)/\sigma$, show that $E(Y) = 0$ and $\operatorname{Var}(Y) = 1$.
+
+(a) $E(\lambda X) = \lambda \mu$, so
+
+$$\operatorname{Var}(\lambda X) = E\big[(\lambda X - \lambda\mu)^2\big] = \lambda^2 E\big[(X - \mu)^2\big] = \lambda^2 \operatorname{Var}(X).$$
+
+(b) By linearity, $E(Y) = \big(E(X) - \mu\big)/\sigma = 0$. By (a) and property 3,
+
+$$\operatorname{Var}(Y) = \frac{1}{\sigma^2} \operatorname{Var}(X - \mu) = \frac{\sigma^2}{\sigma^2} = 1.$$
+
+$Y$ is called the **standardized** form of $X$ (z-score): it counts how many standard deviations $X$ lies from its centre. We will use it in the next post to define skewness and kurtosis.
+
+Try properties 3 and 5: $Y = \lambda X + \alpha$, with $X$ a die, shifts with $\alpha$ without changing width, while $\lambda$ stretches it (or flips it, for $\lambda < 0$).
+
+::: {.ix-panel}
+::: {.ix-title}
+Linear transformation Y = λX + α of a die
+:::
+
+```{ojs}
+//| echo: false
+viewof lam37 = Inputs.range([-3, 3], {step: 0.5, value: 2, label: "λ"})
+viewof alp37 = Inputs.range([-10, 10], {step: 1, value: -3, label: "α"})
+```
+
+```{ojs}
+//| echo: false
+{
+  const xs0 = d3.range(1, 7), ys0 = xs0.map(x => lam37 * x + alp37);
+  const all = xs0.concat(ys0), lo = Math.min(-1, d3.min(all)) - 1, hi = Math.max(7, d3.max(all)) + 1;
+  const W = 460, H = 130, L = 14, R = W - 14;
+  const xs = d3.scaleLinear().domain([lo, hi]).range([L, R]);
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H}`).style("width", "100%").style("max-width", "580px");
+  const row = (vals, y, col, name) => {
+    svg.append("line").attr("x1", L).attr("x2", R).attr("y1", y).attr("y2", y).attr("stroke", "#bbb");
+    vals.forEach(v => svg.append("circle").attr("cx", xs(v)).attr("cy", y - 9).attr("r", 6).attr("fill", col));
+    const m = d3.mean(vals), s = Math.sqrt(d3.mean(vals, v => (v - m) ** 2));
+    svg.append("rect").attr("x", xs(m - s)).attr("width", Math.max(1, xs(m + s) - xs(m - s))).attr("y", y + 3).attr("height", 6).attr("fill", col).attr("opacity", 0.5);
+    svg.append("text").attr("x", L).attr("y", y - 22).style("font", "11px sans-serif").attr("fill", col).text(name);
+  };
+  row(xs0, 45, "#4e79a7", "X"); row(ys0, 105, "#f28e2b", "Y = λX + α");
+  xs.ticks(10).forEach(t => svg.append("text").attr("x", xs(t)).attr("y", 125).attr("text-anchor", "middle").style("font", "9px sans-serif").attr("fill", "#666").text(String(t).replace("-", "−")));
+  const fm = v => String(+v.toFixed(3)).replace("-", "−");
+  const mu = 3.5, v = 35 / 12;
+  return html`<div>${svg.node()}
+    <table class="ix-tbl">
+      <tr><th></th><th>X</th><th>Y = λX + α</th><th>Rule</th></tr>
+      <tr><td>E</td><td>3.5</td><td>${fm(lam37 * mu + alp37)}</td><td>λ·E(X) + α</td></tr>
+      <tr><td>Var</td><td>${fm(v)}</td><td>${fm(lam37 ** 2 * v)}</td><td>λ²·Var(X)</td></tr>
+      <tr><td>σ</td><td>${fm(Math.sqrt(v))}</td><td>${fm(Math.abs(lam37) * Math.sqrt(v))}</td><td>|λ|·σ</td></tr>
+    </table>
+    <div class="ix-note">The coloured bars under each axis are the interval μ ± σ.</div></div>`;
+}
+```
+:::
+
+## In R
+
+```{r}
+#| label: var-r
+x <- 1:6
+f <- rep(1/6, 6)
+mu <- sum(x * f)
+# the definition and the shortcut agree
+c(def = sum((x - mu)^2 * f), short = sum(x^2 * f) - mu^2, exact = 35/12)
+# triangular pdf: E(X^2) with integrate
+tri <- function(x) ifelse(x < 0, x + 1, 1 - x)
+integrate(function(x) x^2 * tri(x), -1, 1)$value
+# from 100,000 rolls
+s <- sample(1:6, 1e5, replace = TRUE)
+c(var = var(s), sd = sd(s))
+```
+
+R's `var()` and `sd()` compute the **sample** variance from data, with denominator $n - 1$ instead of $n$. For 100,000 rolls the difference is negligible, and the result, `r fmt(var(s), 3)`, is close to $35/12$. We will see why $n - 1$ is used when we get to Statistics.
+
+## Summary
+
+- The variance $E\big[(X - \mu)^2\big]$ is the mean squared distance from the centre, and is easiest to compute as $E(X^2) - \mu^2$.
+- $\sigma = \sqrt{\operatorname{Var}(X)}$ has the units of $X$.
+- $\operatorname{Var}(\lambda X + \alpha) = \lambda^2 \operatorname{Var}(X)$: a shift does not change the spread, a change of scale changes it by the square.
+- The standardized $Y = (X - \mu)/\sigma$ has mean 0 and variance 1.
+
+## Review questions
+
+**1. Quick quiz.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz37 = [
+  {q: "If Var(X) = 4, what is Var(2X − 3)?",
+   opts: ["16", "8", "5", "13"], ans: 0,
+   why: "Var(2X − 3) = 2²·Var(X) = 16. The −3 shifts without changing the spread."},
+  {q: "If E(X) = 2 and E(X²) = 5, what is the standard deviation?",
+   opts: ["1", "√5", "3", "√3"], ans: 0,
+   why: "Var(X) = E(X²) − μ² = 5 − 4 = 1, so σ = 1."},
+  {q: "For X = 1 on heads and 0 otherwise, with a fair coin, what is Var(X)?",
+   opts: ["1/4", "1/2", "1", "0"], ans: 0,
+   why: "E(X) = E(X²) = 1/2, so Var(X) = 1/2 − 1/4 = 1/4."},
+  {q: "Which statement is correct?",
+   opts: ["Var(X) = 0 only if X is constant with probability 1", "Var(−X) = −Var(X)", "σ has squared units"], ans: 0,
+   why: "Var(−X) = (−1)²Var(X) = Var(X). The variance has squared units, not the standard deviation."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz37.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz37.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** Find the variance and the standard deviation of the pdf $f(x) = 3x^2$ on $[0, 1]$.
+
+**3.** $X$ has pdf $f(x) = x^3/4$ on $[0, 2]$, with $E(X) = 1.6$. Find $\operatorname{Var}(X)$.
+
+**4.** The temperature $C$ of a city in degrees Celsius has $E(C) = 20$ and $\sigma_C = 5$. What are the mean and the standard deviation in degrees Fahrenheit, $F = 1.8\,C + 32$?
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. $E(X) = 3/4$ and $E(X^2) = \int_0^1 3x^4\,dx = 3/5$, so $\operatorname{Var}(X) = 3/5 - 9/16 = 3/80 = 0.0375$ and $\sigma \approx 0.194$.
+3. $E(X^2) = \int_0^2 x^2 \frac{x^3}{4}\,dx = \frac{64}{24} = \frac83$, so $\operatorname{Var}(X) = \frac83 - 1.6^2 = \frac{8}{75} \approx 0.107$ and $\sigma \approx 0.327$.
+4. $E(F) = 1.8 \cdot 20 + 32 = 68$ and $\sigma_F = 1.8 \cdot 5 = 9$. The $+32$ does not affect the spread.
+:::
+
+---
+
+**Next post:** *Skewness and kurtosis: the shape of a distribution.*

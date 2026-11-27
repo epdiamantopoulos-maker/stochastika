@@ -1,0 +1,266 @@
+---
+title: "Mode and median: other centres of a distribution"
+description: "The definitions of the mode and the median of a random variable, how to find them from the pmf, the pdf and the CDF, and how they compare with the expected value, with an interactive widget and R."
+date: 2027-02-08
+image: thumbnail.png
+categories: [Probability, Random variables, R, Interactive]
+keywords: [mode, median, measures of location, median of a discrete random variable, median from the CDF, mean median mode, skewed distribution, expected value]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# non-ASCII characters in plots under a "C" locale
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+The mean salary in a country is usually well above what a "typical" worker earns. A few very high salaries pull the [expected value](../expected-value/index.qmd) upwards, like a weight at the end of a see-saw. That is why we also use two other measures of the "location" of a distribution: the **mode** and the **median**.
+
+## Definitions
+
+Let $X$ be a random variable with probability function $f_X$ (mass or density) and CDF $F_X$.
+
+The **mode** of $X$ is any $x \in \mathbb{R}$ at which $f_X$ attains its maximum. It is written $M$. There may be more than one: the distribution is then called bimodal or multimodal.
+
+The **median** of $X$ is any $x_0 \in \mathbb{R}$ with
+
+$$P(X \le x_0) \ge \tfrac12 \quad \text{and} \quad P(X \ge x_0) \ge \tfrac12.$$
+
+It is written $\delta$ (in the course notes) or $m$. The median cuts the distribution in half: at least half of the probability lies to its left (including $x_0$ itself) and at least half to its right.
+
+- For a **continuous** random variable the definition reduces to $F_X(x_0) = 1/2$, because $P(X = x_0) = 0$.
+- For a **discrete** random variable the equation $F_X(x_0) = 1/2$ often has no solution, and both inequalities are needed. The median may also fail to be unique.
+
+## Example: the sum of two dice
+
+**Problem.** We roll two dice and $X$ = {the sum of the outcomes}. Find (a) the mode $M$ and (b) the median $\delta$.
+
+Out of the 36 equally likely pairs, the sum $x$ arises in $6 - |x - 7|$ ways, for $x = 2, \ldots, 12$:
+
+| $x$ | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
+|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| $36 f_X(x)$ | 1 | 2 | 3 | 4 | 5 | 6 | 5 | 4 | 3 | 2 | 1 |
+
+(a) The largest value of the pmf is $6/36$, at $x = 7$. So $M = 7$.
+
+(b) Adding the first six columns, $P(X \le 7) = 21/36 \ge 1/2$ and, by symmetry, $P(X \ge 7) = 21/36 \ge 1/2$. So $\delta = 7$. For $x_0 = 6$ we would have $P(X \le 6) = 15/36 < 1/2$, so 6 is not a median.
+
+Here all three measures coincide, $M = \delta = E(X) = 7$, because the distribution is symmetric about 7 and has a single peak.
+
+## When the three centres differ
+
+**One die.** All values $1, \ldots, 6$ have the same probability, so **all** of them are modes. For the median, $P(X \le 3) = 1/2$ and $P(X \ge 4) = 1/2$: every $x_0 \in [3, 4]$ satisfies the definition. When we need a single number we usually take the midpoint, $3.5$.
+
+**The geometric pmf $f(x) = \frac14 \left(\frac34\right)^x$, $x = 0, 1, 2, \ldots$** The pmf is decreasing, so $M = 0$. For the median, $P(X \le 1) = 1 - (3/4)^2 \approx 0.44 < 1/2$, while $P(X \le 2) = 1 - (3/4)^3 \approx 0.58$ and $P(X \ge 2) = (3/4)^2 \approx 0.56$. So $\delta = 2$. The expected value is $3$, hence
+
+$$M = 0 \;<\; \delta = 2 \;<\; E(X) = 3.$$
+
+This ordering is typical of distributions with a long right tail, such as salaries.
+
+**The pdf $f(x) = 3x^2$ on $[0, 1]$.** $f$ is increasing, so $M = 1$. The median solves $F(x_0) = x_0^3 = 1/2$: $\delta = 2^{-1/3} \approx 0.794$. With $E(X) = 3/4$ the ordering is reversed, $E(X) < \delta < M$, because the tail is to the left.
+
+## Three centres in one picture
+
+Choose a distribution. The top panel shows the pmf or pdf with the mode (orange), the median (green) and the expected value (blue triangle, the balance point). In the bottom panel the median is where the CDF crosses $1/2$. With "your own pmf", raise the weight of 5 and watch: the expected value moves continuously, while the median stays put until half of the probability has moved across.
+
+::: {.ix-panel}
+::: {.ix-title}
+Mode, median and expected value
+:::
+
+```{ojs}
+//| echo: false
+dists36 = new Map([
+  ["Sum of two dice", {type: "d", xs: d3.range(2, 13), p: x => (6 - Math.abs(x - 7)) / 36}],
+  ["One die", {type: "d", xs: d3.range(1, 7), p: x => 1 / 6}],
+  ["f(x) = (1/4)(3/4)^x, x = 0, 1, 2, …", {type: "d", xs: d3.range(0, 200), p: x => 0.25 * 0.75 ** x, shown: 13}],
+  ["Your own pmf on 0, 1, …, 5", {type: "custom"}],
+  ["pdf: f(x) = 3x², 0 ≤ x ≤ 1", {type: "c", lo: 0, hi: 1, f: x => 3 * x * x}],
+  ["pdf: f(x) = 2(1 − x), 0 ≤ x ≤ 1", {type: "c", lo: 0, hi: 1, f: x => 2 * (1 - x)}],
+  ["pdf: triangular on (−1, 1)", {type: "c", lo: -1, hi: 1, f: x => 1 - Math.abs(x)}],
+  ["pdf: f(x) = (x + 1)/2, −1 < x < 1", {type: "c", lo: -1, hi: 1, f: x => (x + 1) / 2}]
+])
+viewof d36 = Inputs.select(dists36, {label: "Distribution"})
+viewof w36 = {
+  const init = [4, 6, 3, 1, 1, 1];
+  const rs = init.map((v, i) => Inputs.range([0, 20], {step: 1, value: v, label: `weight of ${i}`}));
+  const wrap = html`<div>${d36.type === "custom" ? html`${rs}<div class="ix-note">The weights are divided by their total.</div>` : html``}</div>`;
+  Object.defineProperty(wrap, "value", {get: () => rs.map(r => r.value)});
+  rs.forEach(r => r.addEventListener("input", () => wrap.dispatchEvent(new Event("input", {bubbles: true}))));
+  return wrap;
+}
+```
+
+```{ojs}
+//| echo: false
+{
+  const eps = 1e-9, W = 460, H1 = 170, H2 = 120, L = 34, R = W - 12;
+  const fm = v => String(+(Math.abs(v) < 5e-4 ? 0 : v).toFixed(3)).replace("-", "−");
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H1 + H2 + 10}`).style("width", "100%").style("max-width", "580px");
+  const txt = (x, y, t, c = "#666", a = "middle") => svg.append("text").attr("x", x).attr("y", y).attr("text-anchor", a).style("font", "10px sans-serif").attr("fill", c).text(t);
+  let modes, medLo, medHi, mean, dom, F, ys1;
+  if (d36.type === "c") {
+    const {lo, hi, f} = d36, n = 2000, h = (hi - lo) / n, g = d3.range(n + 1).map(i => lo + i * h);
+    // Simpson's rule for E(X), cumulative area for F
+    mean = g.reduce((s, x, i) => s + (i === 0 || i === n ? 1 : i % 2 ? 4 : 2) * x * f(x), 0) * h / 3;
+    const cum = [0]; for (let i = 1; i <= n; i++) cum.push(cum[i - 1] + (f(g[i - 1]) + f(g[i])) * h / 2);
+    F = x => x <= lo ? 0 : x >= hi ? 1 : cum[Math.min(n, Math.round((x - lo) / h))];
+    const k = cum.findIndex(c => c >= 0.5); medLo = medHi = g[k - 1] + (0.5 - cum[k - 1]) / (cum[k] - cum[k - 1]) * h;
+    const fmax = d3.max(g, f); modes = g.filter(x => f(x) > fmax - 1e-6);
+    modes = [modes[0], modes[modes.length - 1]].filter((v, i, a) => a.indexOf(v) === i);
+    dom = [lo - (hi - lo) * 0.08, hi + (hi - lo) * 0.08];
+    const xs = d3.scaleLinear().domain(dom).range([L, R]); ys1 = d3.scaleLinear().domain([0, fmax * 1.12]).range([H1 - 18, 10]);
+    svg.append("path").attr("d", d3.area().x(x => xs(x)).y0(ys1(0)).y1(x => ys1(f(x)))(g.filter((x, i) => i % 10 === 0))).attr("fill", "#9ecae1");
+    svg.node().__xs = xs;
+  } else {
+    let xs0, ps;
+    if (d36.type === "custom") { const t = d3.sum(w36) || 1; xs0 = d3.range(6); ps = w36.map(w => w / t); }
+    else { xs0 = d36.xs; ps = xs0.map(d36.p); }
+    const shown = d36.shown || xs0.length;
+    mean = d3.sum(xs0, (x, i) => x * ps[i]);
+    const cdf = d3.cumsum(ps), pmax = d3.max(ps);
+    modes = xs0.filter((x, i) => ps[i] > pmax - eps);
+    // medians: P(X ≤ x) ≥ 1/2 and P(X ≥ x) ≥ 1/2
+    const meds = xs0.filter((x, i) => cdf[i] >= 0.5 - eps && 1 - (i ? cdf[i - 1] : 0) >= 0.5 - eps);
+    medLo = d3.min(meds); medHi = d3.max(meds);
+    F = x => { let s = 0; xs0.forEach((v, i) => { if (v <= x + eps) s += ps[i]; }); return s; };
+    dom = [xs0[0] - 0.7, xs0[shown - 1] + 0.7];
+    const xs = d3.scaleLinear().domain(dom).range([L, R]); ys1 = d3.scaleLinear().domain([0, pmax * 1.12]).range([H1 - 18, 10]);
+    const bw = Math.min(24, (R - L) / shown * 0.6);
+    xs0.slice(0, shown).forEach((x, i) => {
+      svg.append("rect").attr("x", xs(x) - bw / 2).attr("width", bw).attr("y", ys1(ps[i])).attr("height", ys1(0) - ys1(ps[i])).attr("fill", "#9ecae1");
+      txt(xs(x), H1 - 4, x);
+    });
+    svg.node().__xs = xs;
+  }
+  const xs = svg.node().__xs;
+  if (d36.type === "c") xs.ticks(6).forEach(t => txt(xs(t), H1 - 4, String(t).replace("-", "−")));
+  svg.append("line").attr("x1", L).attr("x2", R).attr("y1", ys1(0)).attr("y2", ys1(0)).attr("stroke", "#333");
+  // median
+  if (medHi > medLo) svg.append("rect").attr("x", xs(medLo)).attr("width", xs(medHi) - xs(medLo)).attr("y", 10).attr("height", H1 + H2 - 30).attr("fill", "#59a14f").attr("opacity", 0.15);
+  for (const m of [medLo, medHi]) svg.append("line").attr("x1", xs(m)).attr("x2", xs(m)).attr("y1", 10).attr("y2", H1 + H2 - 20).attr("stroke", "#59a14f").attr("stroke-width", 2).attr("stroke-dasharray", "5 3");
+  // modes
+  modes.forEach(m => svg.append("circle").attr("cx", xs(m)).attr("cy", 16).attr("r", 6).attr("fill", "#f28e2b"));
+  // expected value
+  svg.append("path").attr("d", `M${xs(mean)},${ys1(0) + 2} l-7,12 h14 z`).attr("fill", "#4e79a7");
+  // CDF
+  const y2 = d3.scaleLinear().domain([0, 1]).range([H1 + H2 - 20, H1 + 14]);
+  const pts = d3.range(dom[0], dom[1], (dom[1] - dom[0]) / 400).concat([dom[1]]);
+  svg.append("line").attr("x1", L).attr("x2", R).attr("y1", y2(0.5)).attr("y2", y2(0.5)).attr("stroke", "#999").attr("stroke-dasharray", "3 3");
+  txt(L - 4, y2(0.5) + 3, "1/2", "#666", "end"); txt(L - 4, y2(1) + 3, "1", "#666", "end"); txt(L - 4, y2(0) + 3, "0", "#666", "end");
+  svg.append("path").attr("d", d3.line().curve(d36.type === "c" ? d3.curveLinear : d3.curveStepAfter).x(x => xs(x)).y(x => y2(F(x)))(pts)).attr("fill", "none").attr("stroke", "#59a14f").attr("stroke-width", 2);
+  txt(R, y2(0.1), "F(x)", "#59a14f", "end");
+  const medText = medHi > medLo ? `every value in [${fm(medLo)}, ${fm(medHi)}]` : fm(medLo);
+  return html`<div>${svg.node()}
+    <table class="ix-tbl">
+      <tr><td><span style="color:#f28e2b">●</span> Mode M</td><td>${modes.length > 4 ? "all values" : modes.map(fm).join(", ")}</td></tr>
+      <tr><td><span style="color:#59a14f">┆</span> Median</td><td>${medText}</td></tr>
+      <tr><td><span style="color:#4e79a7">▲</span> Expected value E(X)</td><td>${fm(mean)}</td></tr>
+    </table></div>`;
+}
+```
+:::
+
+For the sum of two dice the three markers coincide at 7. For the geometric pmf you see the ordering $0 < 2 < 3$, and for $2(1 - x)$, which has a right tail, the same ordering for a continuous distribution.
+
+## Which centre should I use?
+
+- The **mode** is the "most likely" value. It is the only one of the three that makes sense for qualitative variables (say, the most common colour), but it may not be unique.
+- The **median** is **robust** to extreme values: if the largest value of $X$ becomes ten times larger, the median does not change. That is why it is preferred for salaries, house prices and waiting times.
+- The **expected value** depends on all values and their probabilities. It has, however, the useful linearity properties and, through the [law of large numbers](../law-of-large-numbers/index.qmd), describes the long-run average.
+
+For a **symmetric** unimodal distribution about a point $c$, all three equal $c$ (when the expected value exists).
+
+## In R
+
+R has no built-in function for the mode of a distribution, but `which.max()` finds it easily. For the median we check the two inequalities of the definition.
+
+```{r}
+#| label: mode-median-r
+x <- 2:12
+f <- (6 - abs(x - 7)) / 36
+# mode
+x[f == max(f)]
+# medians: P(X <= x) >= 1/2 and P(X >= x) >= 1/2
+F <- cumsum(f)
+x[F >= 0.5 & rev(cumsum(rev(f))) >= 0.5]
+# the same answer from 10,000 rolls
+s <- sample(1:6, 1e4, TRUE) + sample(1:6, 1e4, TRUE)
+c(median = median(s), mode = as.numeric(names(which.max(table(s)))))
+# continuous: median of 3x^2 from F(x) = x^3
+uniroot(function(x) x^3 - 0.5, c(0, 1))$root
+```
+
+The median of $3x^2$ comes out as `r fmt(uniroot(function(x) x^3 - 0.5, c(0, 1))$root, 4)`, which is $2^{-1/3}$.
+
+## Summary
+
+- Mode: where $f_X$ is largest. There may be several.
+- Median: any $x_0$ with $P(X \le x_0) \ge 1/2$ and $P(X \ge x_0) \ge 1/2$. For a continuous random variable, the solution of $F(x_0) = 1/2$.
+- In a symmetric unimodal distribution $M = \delta = E(X)$. With a right tail, usually $M < \delta < E(X)$, and with a left tail the reverse.
+- The median is robust to extreme values; the expected value is not.
+
+## Review questions
+
+**1. Quick quiz.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz36m = [
+  {q: "X takes the values 1, 2, 3, 10 with probabilities 0.3, 0.3, 0.3, 0.1. What is the median?",
+   opts: ["2", "2.8", "3", "10"], ans: 0,
+   why: "P(X ≤ 2) = 0.6 ≥ 0.5 and P(X ≥ 2) = 0.7 ≥ 0.5. The expected value is 2.8: the 10 pulls it upwards, but not the median."},
+  {q: "The continuous X has F(x) = x² on [0, 1]. What is the median?",
+   opts: ["1/√2 ≈ 0.707", "1/2", "1/4", "2/3"], ans: 0,
+   why: "The median solves F(x₀) = 1/2, that is x₀² = 1/2 and x₀ = 1/√2."},
+  {q: "A distribution has a long right tail. Which ordering is most common?",
+   opts: ["M < median < E(X)", "E(X) < median < M", "M = median = E(X)"], ans: 0,
+   why: "The large values in the tail have a large torque and pull E(X) to the right; the median moves less and the peak stays on the left."},
+  {q: "Can a discrete random variable have more than one median?",
+   opts: ["Yes, e.g. a die: every value in [3, 4]", "No, the median is always unique", "Only if it has no expected value"], ans: 0,
+   why: "For a die P(X ≤ 3) = P(X ≥ 4) = 1/2, so every x₀ in [3, 4] satisfies both inequalities."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz36m.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz36m.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** Find the mode, the median and the expected value of the pdf $f(x) = 2(1 - x)$ on $[0, 1]$, and check their ordering.
+
+**3.** For $f(x) = (x + 1)/2$ on $(-1, 1)$, with $F(x) = (x + 1)^2/4$, find the median. Is there a mode?
+
+**4.** We toss a coin until the first head, and $X$ is the number of tosses. Find the mode and the median of $X$.
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. $f$ is decreasing, so $M = 0$. $F(x) = 2x - x^2$, and $F(x_0) = 1/2$ gives $x_0^2 - 2x_0 + 1/2 = 0$, so $\delta = 1 - 1/\sqrt2 \approx 0.293$. $E(X) = \int_0^1 2x(1 - x)\,dx = 1/3 \approx 0.333$. Ordering $M < \delta < E(X)$: a right tail.
+3. $(x_0 + 1)^2/4 = 1/2$ gives $\delta = \sqrt2 - 1 \approx 0.414$. $f$ increases towards 1, but the interval is open, so the maximum is not attained at any point. If we set $f(1) = 1$, which changes no probability, then $M = 1$.
+4. $f(x) = (1/2)^x$ for $x = 1, 2, \ldots$, so $M = 1$. $P(X \le 1) = 1/2$ and $P(X \ge 1) = 1$, so 1 is a median. Also $P(X \le 2) = 3/4$ and $P(X \ge 2) = 1/2$, so 2 is a median too: every $x_0 \in [1, 2]$ is a median.
+:::
+
+---
+
+**Next post:** *Variance and standard deviation: how spread out a distribution is.*

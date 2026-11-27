@@ -290,6 +290,36 @@ thumbs[["law-of-large-numbers"]] <- function() {
   }
 }
 
+# ασύμμετρη σ.μ.π. με επικρατούσα τιμή, διάμεσο και μέση τιμή
+thumbs[["mode-median"]] <- function() {
+  x <- 0:12; f <- 0.25 * 0.75^x
+  blank(c(-0.8, 12.8), c(-0.07, 0.3))
+  rect(x - 0.35, 0, x + 0.35, f, col = a(col["blue"], 0.45), border = NA)
+  points(0, 0.27, pch = 19, cex = 3.4, col = col["orange"])
+  segments(2, 0, 2, 0.28, lwd = 6, lty = 2, col = col["green"])
+  polygon(c(3, 2.6, 3.4), c(-0.005, -0.06, -0.06), col = col["blue"], border = NA)
+}
+
+# δύο κατανομές με το ίδιο κέντρο και διαφορετική διασπορά
+thumbs[["variance"]] <- function() {
+  x <- seq(-4, 4, length.out = 300)
+  blank(c(-4, 4), c(-0.03, 0.85))
+  polygon(x, dnorm(x, 0, 2), col = a(col["orange"], 0.45), border = NA)
+  polygon(x, dnorm(x, 0, 0.5), col = a(col["blue"], 0.55), border = NA)
+  lines(x, dnorm(x, 0, 2), lwd = 5, col = col["orange"]); lines(x, dnorm(x, 0, 0.5), lwd = 5, col = col["blue"])
+  segments(0, 0, 0, 0.83, lwd = 4, col = ink)
+}
+
+# μια κατανομή με ουρά δεξιά και η κατοπτρική της
+thumbs[["skewness-kurtosis"]] <- function() {
+  x <- seq(0, 1, length.out = 300)
+  blank(c(0, 1), c(-0.05, 3.1))
+  polygon(c(0, x, 1), c(0, dbeta(x, 2, 6), 0), col = a(col["blue"], 0.5), border = NA)
+  polygon(c(0, x, 1), c(0, dbeta(x, 6, 2), 0), col = a(col["orange"], 0.5), border = NA)
+  lines(x, dbeta(x, 2, 6), lwd = 5, col = col["blue"]); lines(x, dbeta(x, 6, 2), lwd = 5, col = col["orange"])
+  segments(0, -0.03, 1, -0.03, lwd = 3, col = ink)
+}
+
 slugs <- basename(list.dirs("el/posts", recursive = FALSE))
 missing <- setdiff(slugs, names(thumbs))
 if (length(missing)) message("Χωρίς μικρογραφία: ", paste(missing, collapse = ", "))
