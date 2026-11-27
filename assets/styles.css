@@ -48,3 +48,10 @@ mjx-container[display="true"] { display: block; max-width: 100%; overflow-x: aut
 @media (max-width: 640px) {
   mjx-container:not([display="true"]) { max-width: 100%; overflow-x: auto; overflow-y: hidden; }
 }
+
+/* Μπάρα: οι σύνδεσμοι Πόροι/Σχετικά εμφανίζονται μόνο στη γλώσσα της σελίδας
+   (η <html lang> είναι el ή en). Μόνο η δεξιά λίστα· η αριστερή «Ελληνικά/English» μένει πάντα. */
+html[lang="el"] .navbar-nav.ms-auto .nav-item:has(> a.nav-link[href$="en/resources.html"]),
+html[lang="el"] .navbar-nav.ms-auto .nav-item:has(> a.nav-link[href$="en/about.html"]),
+html[lang="en"] .navbar-nav.ms-auto .nav-item:has(> a.nav-link[href$="el/resources.html"]),
+html[lang="en"] .navbar-nav.ms-auto .nav-item:has(> a.nav-link[href$="el/about.html"]) { display: none; }
