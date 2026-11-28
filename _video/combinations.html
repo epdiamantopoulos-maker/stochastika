@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="el"><head><meta charset="utf-8">
+<link rel="stylesheet" href="common.css">
+<style>
+  .ball { display: inline-block; width: 110px; height: 110px; border-radius: 50%; background: #f28e2b; color: #fff; font-weight: 800; font-size: 52px; text-align: center; line-height: 110px; margin-right: 22px; }
+</style></head>
+<body>
+<div class="scene" id="s1">
+  <div class="tag">Πιθανότητες σε 30″</div>
+  <div class="mid" style="top:290px">Λόττο: διαλέγεις <span class="blue" style="font-weight:800">6</span> αριθμούς από τους <span class="blue" style="font-weight:800">49</span>.</div>
+  <div id="balls" style="position:absolute;left:80px;top:480px"></div>
+  <div class="big" style="top:720px">Πόσες διαφορετικές στήλες υπάρχουν;</div>
+</div>
+<div class="scene" id="s2">
+  <div class="mid" style="top:260px">Αν μετρούσε η σειρά:</div>
+  <div class="mid" style="top:350px;font-size:54px">49 · 48 · 47 · 46 · 45 · 44 =</div>
+  <div class="big blue" style="top:450px;font-size:84px" id="ordered">0</div>
+  <div class="mid" id="div" style="top:640px">Η σειρά όμως <b>δεν μετράει</b>: κάθε εξάδα εμφανίζεται 6! = 720 φορές.</div>
+  <div class="mid" id="eq" style="top:900px">Συνδυασμοί 49 ανά 6:</div>
+  <div class="big hl" style="top:1000px;font-size:110px" id="comb">13.983.816</div>
+</div>
+<div class="scene" id="s3">
+  <div class="mid" style="top:300px">Με μία στήλη την εβδομάδα, το εξάρι έρχεται κατά μέσο όρο σε</div>
+  <div class="big hl" style="top:540px;font-size:120px" id="yrs">0</div>
+  <div class="big" style="top:700px">χρόνια.</div>
+</div>
+<div class="brand" id="brand">stochastika.com</div>
+<script src="common.js"></script>
+<script>
+endCard("s4", "Παίξε Λόττο και σύγκρινε την προσομοίωση με τη θεωρία:");
+document.getElementById("balls").innerHTML = [7, 13, 21, 28, 36, 42].map(v => `<span class="ball">${v}</span>`).join("");
+const scenes = [["s1", 0, 5.5], ["s2", 5.5, 19.5], ["s3", 19.5, 26.5], ["s4", 26.5, 30.5]];
+const gr = v => Math.round(v).toLocaleString("el-GR");
+window.render = t => {
+  showScenes(t, scenes);
+  document.getElementById("brand").style.opacity = t < 26.5 ? 1 : 0;
+  [...document.querySelectorAll(".ball")].forEach((b, i) => b.style.opacity = fadeIn(t, 0.8 + i * 0.25, 0.2));
+  document.getElementById("ordered").textContent = gr(10068347520 * ease((t - 6.2) / 2.5));
+  document.getElementById("div").style.opacity = fadeIn(t, 9.5);
+  document.getElementById("eq").style.opacity = fadeIn(t, 13);
+  document.getElementById("comb").style.opacity = fadeIn(t, 13.6);
+  document.getElementById("comb").textContent = gr(13983816 * ease((t - 13.6) / 2.5));
+  document.getElementById("yrs").textContent = gr(268919 * ease((t - 20.5) / 3));
+};
+render(0);
+</script>
+</body></html>

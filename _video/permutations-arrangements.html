@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="el"><head><meta charset="utf-8">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<div class="scene" id="s1">
+  <div class="tag">Πιθανότητες σε 30″</div>
+  <div class="mid" style="top:290px">Σε μια τάξη υπάρχουν <span class="blue" style="font-weight:800">23</span> άτομα.</div>
+  <div class="big" style="top:470px">Ποια η πιθανότητα δύο να έχουν γενέθλια την ίδια μέρα;</div>
+  <div class="big hl" id="opts" style="top:1020px">6%; 23%; 50%;</div>
+</div>
+<div class="scene" id="s2">
+  <div class="mid" style="top:250px;font-size:54px">Πιθανότητα κοινών γενεθλίων με <span class="blue" id="nn" style="font-weight:800">1</span> άτομα</div>
+  <svg id="ch" width="1080" height="820" style="position:absolute;left:0;top:430px"></svg>
+  <div class="big" style="top:1310px;font-size:96px"><span class="hl" id="pp">0%</span></div>
+</div>
+<div class="scene" id="s3">
+  <div class="big" style="top:330px">Γιατί τόσο μεγάλη;</div>
+  <div class="mid" style="top:600px">Δεν ψάχνουμε κάποιον με τα <i>δικά σου</i> γενέθλια, αλλά <b>οποιοδήποτε</b> ζευγάρι.</div>
+  <div class="big" style="top:930px;font-size:84px">23 άτομα = <span class="hl">253</span> ζευγάρια</div>
+</div>
+<div class="brand" id="brand">stochastika.com</div>
+<script src="common.js"></script>
+<script>
+endCard("s4", "Δοκίμασε με τυχαίες αίθουσες στον προσομοιωτή του άρθρου:");
+// P(κοινά γενέθλια) για n άτομα, 365 ισοπίθανες ημέρες
+const P = n => { let q = 1; for (let k = 0; k < n; k++) q *= (365 - k) / 365; return 1 - q; };
+const L = 130, R = 940, T = 30, B = 700, NMAX = 60;
+const X = n => L + (R - L) * (n - 1) / (NMAX - 1), Y = p => B - (B - T) * p;
+let g = "";
+for (const p of [0, 0.25, 0.5, 0.75, 1]) g += `<line x1="${L}" x2="${R}" y1="${Y(p)}" y2="${Y(p)}" stroke="${p === 0.5 ? "#c9d3df" : "#e3e8ef"}" stroke-width="${p === 0.5 ? 4 : 2}"/><text x="${L - 16}" y="${Y(p) + 12}" text-anchor="end" font-size="34" fill="#8796a8">${p * 100}%</text>`;
+for (const n of [1, 10, 20, 30, 40, 50, 60]) g += `<text x="${X(n)}" y="${B + 52}" text-anchor="middle" font-size="34" fill="#8796a8">${n}</text>`;
+g += `<path id="curve" fill="none" stroke="#4e79a7" stroke-width="8" stroke-linejoin="round"/><circle id="dot" r="14" fill="#f28e2b"/>`;
+g += `<g id="m23"><line x1="${X(23)}" x2="${X(23)}" y1="${Y(P(23))}" y2="${B}" stroke="#f28e2b" stroke-width="4" stroke-dasharray="10 8"/><text x="${X(23) + 14}" y="${Y(P(23)) + 50}" font-size="38" font-weight="800" fill="#f28e2b">23 → 50,7%</text></g>`;
+document.getElementById("ch").innerHTML = g;
+const scenes = [["s1", 0, 5.5], ["s2", 5.5, 21], ["s3", 21, 26.5], ["s4", 26.5, 30.5]];
+window.render = t => {
+  showScenes(t, scenes);
+  document.getElementById("brand").style.opacity = (t < 5.5 || (t > 21.2 && t < 26.5)) ? 1 : 0;
+  document.getElementById("opts").style.opacity = fadeIn(t, 2.5);
+  // πρώτα ως το 23 (στάση), μετά ως το 60
+  const n = t < 13.5 ? 1 + 22 * ease((t - 6.2) / 6.5) : 23 + 37 * ease((t - 15.5) / 4.5);
+  const pts = []; for (let k = 1; k <= n; k += 0.25) pts.push(`${X(k).toFixed(1)},${Y(P(Math.floor(k))).toFixed(1)}`);
+  document.getElementById("curve").setAttribute("d", "M" + pts.join("L"));
+  const ni = Math.max(1, Math.floor(n));
+  const dot = document.getElementById("dot"); dot.setAttribute("cx", X(n)); dot.setAttribute("cy", Y(P(ni)));
+  document.getElementById("nn").textContent = ni;
+  document.getElementById("pp").textContent = (100 * P(ni)).toLocaleString("el-GR", {maximumFractionDigits: 1}) + "%";
+  document.getElementById("m23").style.opacity = fadeIn(t, 12.8);
+};
+render(0);
+</script>
+</body></html>

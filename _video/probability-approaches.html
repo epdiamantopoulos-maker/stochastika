@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="el"><head><meta charset="utf-8">
+<link rel="stylesheet" href="common.css">
+<style>canvas { position: absolute; left: 140px; top: 520px; }</style>
+</head>
+<body>
+<div class="scene" id="s1">
+  <div class="tag">Πιθανότητες σε 30″</div>
+  <div class="big" style="top:300px">Ρίχνεις βελάκια στα τυφλά σε ένα τετράγωνο.</div>
+  <div class="big hl" id="q" style="top:720px">Μπορείς να βρεις το π;</div>
+</div>
+<div class="scene" id="s2">
+  <div class="mid" style="top:250px;font-size:54px">Βελάκια: <span class="blue" id="n" style="font-weight:800">0</span> · μέσα στον κύκλο: <span class="hl" id="in" style="font-weight:800">0</span></div>
+  <canvas id="cv" width="800" height="800"></canvas>
+  <div class="mid" style="top:1345px;font-size:46px">π ≈ 4 · (μέσα / όλα) =</div><div class="big green" id="pi" style="top:1400px;font-size:90px">–</div>
+</div>
+<div class="scene" id="s3">
+  <div class="tag">Γεωμετρική πιθανότητα</div>
+  <div class="mid" style="top:300px">P(μέσα στον κύκλο) =</div>
+  <div class="mid" style="top:400px;font-weight:800">εμβαδόν κύκλου / εμβαδόν τετραγώνου</div>
+  <div class="big" style="top:600px;font-size:96px">= π / 4</div>
+  <div class="mid" style="top:820px">Άρα η συχνότητα των βελακιών μέσα στον κύκλο, επί 4, πλησιάζει το π.</div>
+</div>
+<div class="brand" id="brand">stochastika.com</div>
+<script src="common.js"></script>
+<script>
+endCard("s4", "Κλασική, συχνοτική και γεωμετρική πιθανότητα, με προσομοιώσεις:");
+const N = 5000, r = rng(314), pts = Array.from({length: N}, () => [r() * 2 - 1, r() * 2 - 1]);
+const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+const scenes = [["s1", 0, 5], ["s2", 5, 19.5], ["s3", 19.5, 26.5], ["s4", 26.5, 30.5]];
+window.render = t => {
+  showScenes(t, scenes);
+  document.getElementById("brand").style.opacity = (t < 5 || (t > 19.6 && t < 26.5)) ? 1 : 0;
+  document.getElementById("q").style.opacity = fadeIn(t, 2.2);
+  const n = Math.round(N * Math.pow(ease((t - 5.8) / 12), 1.6));
+  ctx.clearRect(0, 0, 800, 800);
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, 800, 800);
+  ctx.strokeStyle = "#4a5a6b"; ctx.lineWidth = 4; ctx.strokeRect(2, 2, 796, 796);
+  let inside = 0;
+  for (let i = 0; i < n; i++) {
+    const [x, y] = pts[i], ok = x * x + y * y <= 1; inside += ok;
+    ctx.fillStyle = ok ? "#f28e2b" : "#4e79a7";
+    ctx.beginPath(); ctx.arc(400 + x * 396, 400 + y * 396, 5, 0, 2 * Math.PI); ctx.fill();
+  }
+  ctx.strokeStyle = "#3b8f3b"; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(400, 400, 396, 0, 2 * Math.PI); ctx.stroke();
+  document.getElementById("n").textContent = n.toLocaleString("el-GR");
+  document.getElementById("in").textContent = inside.toLocaleString("el-GR");
+  document.getElementById("pi").textContent = n ? (4 * inside / n).toLocaleString("el-GR", {minimumFractionDigits: 3, maximumFractionDigits: 3}) : "–";
+};
+render(0);
+</script>
+</body></html>
