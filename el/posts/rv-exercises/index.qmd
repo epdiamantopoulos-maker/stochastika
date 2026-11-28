@@ -1,0 +1,186 @@
+---
+title: "Λυμένες ασκήσεις: τυχαίες μεταβλητές και κατανομές"
+description: "Επτά λυμένες ασκήσεις που καλύπτουν όλη την τρίτη ενότητα: σ.μ.π. και σ.π.π., συνάρτηση κατανομής, μέση τιμή, διάμεσος, διακύμανση, ανισότητα του Jensen, ροπογεννήτρια, πιθανογεννήτρια και τύπος των ουρών, με έλεγχο απάντησης και επαλήθευση σε R."
+date: 2027-02-19
+image: thumbnail.png
+categories: [Πιθανότητες, Ασκήσεις, R, Διαδραστικό]
+keywords: [λυμένες ασκήσεις, τυχαίες μεταβλητές, συνάρτηση πυκνότητας, συνάρτηση κατανομής, αναμενόμενη τιμή, διακύμανση, διάμεσος, ροπογεννήτρια, πιθανογεννήτρια, ασκήσεις πιθανοτήτων]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# ελληνικοί χαρακτήρες στην έξοδο και στα γραφήματα και σε locale "C"
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, decimal.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+Με αυτό το άρθρο κλείνει η τρίτη ενότητα, από τις [τυχαίες μεταβλητές](../random-variables/index.qmd) μέχρι την [πιθανογεννήτρια](../probability-generating-function/index.qmd). Όπως και στις προηγούμενες [λυμένες ασκήσεις](../conditional-exercises/index.qmd), λύστε πρώτα μόνοι σας. Ελέγξτε την απάντησή σας στο πεδίο (κλάσμα, δεκαδικό ή ποσοστό) και μετά ανοίξτε τη λύση.
+
+```{ojs}
+//| echo: false
+// έλεγχος απάντησης: δέχεται κλάσμα, δεκαδικό με κόμμα ή τελεία, ή ποσοστό
+check3A = (exact) => {
+  const inp = html`<input type="text" placeholder="η απάντησή σας" style="width:9em;padding:3px 6px;border:1px solid #9ecae1;border-radius:5px">`;
+  const btn = html`<button>Έλεγχος</button>`, fb = html`<span class="ix-note" style="margin-left:8px"></span>`;
+  const parse = s => {
+    s = s.trim().replace(/\s/g, "").replace(",", ".");
+    if (!s) return NaN;
+    if (s.endsWith("%")) return parseFloat(s) / 100;
+    if (s.includes("/")) { const [a, b] = s.split("/").map(Number); return a / b; }
+    return Number(s);
+  };
+  const run = () => {
+    const v = parse(inp.value);
+    if (!Number.isFinite(v)) { fb.innerHTML = "Γράψτε έναν αριθμό ή ένα κλάσμα."; return; }
+    const ok = Math.abs(v - exact) <= Math.max(0.002, 0.005 * Math.abs(exact));
+    fb.innerHTML = ok ? `<span class="ix-ok">✓ Σωστό.</span>` : `<span class="ix-no">✗ Όχι ακόμα.</span> Ξαναδείτε τη λύση σας ή ανοίξτε την παρακάτω.`;
+  };
+  btn.onclick = run;
+  inp.onkeydown = e => { if (e.key === "Enter") run(); };
+  return html`<div class="ix-panel" style="padding:8px 12px">${inp} ${btn}${fb}</div>`;
+}
+```
+
+## 1. Μια διακριτή κατανομή από την αρχή ως το τέλος
+
+Η $X$ παίρνει τις τιμές $0, 1, 2, 3$ με $f(x) = c(x + 1)$. Βρείτε (α) τη σταθερά $c$, (β) την $P(X \ge 2)$, (γ) τη μέση τιμή και τη διακύμανση, (δ) τη διάμεσο και την επικρατούσα τιμή. Στο πεδίο γράψτε τη $\operatorname{Var}(X)$.
+
+```{ojs}
+//| echo: false
+check3A(1)
+```
+
+::: {.callout-tip collapse="true"}
+## Λύση
+
+(α) $c(1 + 2 + 3 + 4) = 10c = 1$, άρα $c = 1/10$ και οι πιθανότητες είναι $0{,}1$, $0{,}2$, $0{,}3$, $0{,}4$.
+(β) $P(X \ge 2) = 0{,}3 + 0{,}4 = 0{,}7$.
+(γ) $E(X) = 0 \cdot 0{,}1 + 1 \cdot 0{,}2 + 2 \cdot 0{,}3 + 3 \cdot 0{,}4 = 2$ και $E(X^2) = 0{,}2 + 1{,}2 + 3{,}6 = 5$, άρα $\operatorname{Var}(X) = 5 - 4 = 1$.
+(δ) $P(X \le 1) = 0{,}3 < 0{,}5$, ενώ $P(X \le 2) = 0{,}6$ και $P(X \ge 2) = 0{,}7$, άρα η [διάμεσος](../mode-median/index.qmd) είναι το 2. Η μεγαλύτερη πιθανότητα είναι στο 3, άρα η επικρατούσα τιμή είναι το 3.
+:::
+
+## 2. Μια συνεχής κατανομή
+
+Η $X$ έχει σ.π.π. $f(x) = c\,x(2 - x)$ για $0 \le x \le 2$ και $0$ αλλού. Βρείτε (α) το $c$, (β) τη συνάρτηση κατανομής, (γ) την $P(1/2 < X < 3/2)$, (δ) την $E(X)$ και τη $\operatorname{Var}(X)$. Στο πεδίο γράψτε την πιθανότητα του (γ).
+
+```{ojs}
+//| echo: false
+check3A(11 / 16)
+```
+
+::: {.callout-tip collapse="true"}
+## Λύση
+
+(α) $\int_0^2 x(2 - x)\,dx = 4 - \frac83 = \frac43$, άρα $c = \frac34$.
+(β) Για $0 \le x \le 2$, $F(x) = \frac34 \int_0^x (2t - t^2)\,dt = \frac{3x^2 - x^3}{4}$, με $F(x) = 0$ για $x < 0$ και $F(x) = 1$ για $x > 2$.
+(γ) $P(1/2 < X < 3/2) = F(3/2) - F(1/2) = \frac{27}{32} - \frac{5}{32} = \frac{11}{16}$.
+(δ) Η σ.π.π. είναι συμμετρική γύρω από το 1, άρα $E(X) = 1$. Επίσης $E(X^2) = \frac34 \int_0^2 (2x^3 - x^4)\,dx = \frac34\left(8 - \frac{32}{5}\right) = \frac65$, άρα $\operatorname{Var}(X) = \frac65 - 1 = \frac15$.
+:::
+
+## 3. Διάμεσος και μέση τιμή μιας ασύμμετρης κατανομής
+
+Η $X$ έχει σ.π.π. $f(x) = 2e^{-2x}$ για $x > 0$. Βρείτε (α) τη διάμεσο, (β) την $E(X)$ με τον [τύπο των ουρών](../law-of-large-numbers/index.qmd), (γ) τη $\operatorname{Var}(X)$. Στο πεδίο γράψτε τη διάμεσο, με τρία δεκαδικά.
+
+```{ojs}
+//| echo: false
+check3A(Math.log(2) / 2)
+```
+
+::: {.callout-tip collapse="true"}
+## Λύση
+
+Για $x > 0$, $F(x) = 1 - e^{-2x}$ και $P(X \ge t) = e^{-2t}$.
+(α) $1 - e^{-2\delta} = \frac12$ δίνει $\delta = \frac{\ln 2}{2} \approx 0{,}347$.
+(β) $E(X) = \int_0^\infty e^{-2t}\,dt = \frac12$. Η μέση τιμή είναι μεγαλύτερη από τη διάμεσο: η κατανομή έχει ουρά προς τα δεξιά.
+(γ) $E(X^2) = \int_0^\infty x^2 \cdot 2e^{-2x}\,dx = \frac12$, άρα $\operatorname{Var}(X) = \frac12 - \frac14 = \frac14$. Το ίδιο προκύπτει από τη [ροπογεννήτρια](../moment-generating-function/index.qmd) $M_X(t) = \frac{2}{2 - t}$ (Άσκηση 3 εκεί, με $\alpha = 0$, $\theta = 2$).
+:::
+
+## 4. Η αναμενόμενη τιμή μιας συνάρτησης
+
+Ρίχνουμε ένα ζάρι και $Y = (X - 3)^2$. Βρείτε την $E(Y)$ και συγκρίνετε με το $\big(E(X) - 3\big)^2$.
+
+```{ojs}
+//| echo: false
+check3A(19 / 6)
+```
+
+::: {.callout-tip collapse="true"}
+## Λύση
+
+Για $X = 1, \ldots, 6$ η $Y$ παίρνει τις τιμές $4, 1, 0, 1, 4, 9$, καθεμιά με πιθανότητα $1/6$, άρα $E(Y) = \frac{19}{6} \approx 3{,}17$. Αντίθετα, $\big(E(X) - 3\big)^2 = 0{,}5^2 = 0{,}25$. Η $g(x) = (x - 3)^2$ είναι κυρτή, και όπως προβλέπει η [ανισότητα του Jensen](../expected-value/index.qmd), $E\big(g(X)\big) \ge g\big(E(X)\big)$.
+:::
+
+## 5. Αναγνώριση κατανομής από τη ροπογεννήτρια
+
+Η $X$ έχει ροπογεννήτρια $M_X(t) = \frac13 e^{-t} + \frac16 + \frac12 e^{2t}$. Βρείτε την κατανομή της, την $E(X)$ και τη $\operatorname{Var}(X)$. Στο πεδίο γράψτε τη $\operatorname{Var}(X)$.
+
+```{ojs}
+//| echo: false
+check3A(17 / 9)
+```
+
+::: {.callout-tip collapse="true"}
+## Λύση
+
+Για διακριτή $X$, $M_X(t) = \sum_x P(X = x) e^{tx}$: κάθε όρος $p\,e^{xt}$ αντιστοιχεί σε τιμή $x$ με πιθανότητα $p$. Άρα $P(X = -1) = \frac13$, $P(X = 0) = \frac16$, $P(X = 2) = \frac12$, και από τη μοναδικότητα αυτή είναι η κατανομή της $X$. Τότε $E(X) = -\frac13 + 1 = \frac23$, $E(X^2) = \frac13 + 2 = \frac73$ και $\operatorname{Var}(X) = \frac73 - \frac49 = \frac{17}{9}$.
+:::
+
+## 6. Από την πιθανογεννήτρια στις πιθανότητες
+
+Η $X$ έχει πιθανογεννήτρια $G_X(z) = (1 + z)^3 / 8$. Βρείτε την $P(X = 2)$ και την $E(X)$. Στο πεδίο γράψτε την $P(X = 2)$.
+
+```{ojs}
+//| echo: false
+check3A(3 / 8)
+```
+
+::: {.callout-tip collapse="true"}
+## Λύση
+
+Από το διώνυμο του Newton, $(1 + z)^3 = 1 + 3z + 3z^2 + z^3$, άρα $P(X = 0) = \frac18$, $P(X = 1) = \frac38$, $P(X = 2) = \frac38$, $P(X = 3) = \frac18$: το πλήθος των Κορωνών σε τρεις ρίψεις. Επίσης $G_X'(z) = \frac38 (1 + z)^2$, άρα $E(X) = G_X'(1) = \frac{3 \cdot 4}{8} = 1{,}5$.
+:::
+
+## 7. Μια μέση τιμή που φέρνει το π
+
+Η $X$ παίρνει τιμές $1, 2, 3, \ldots$ με $P(X \ge n) = 1/n^2$. Βρείτε την $P(X = n)$ και την $E(X)$. Στο πεδίο γράψτε την $E(X)$, με τρία δεκαδικά.
+
+```{ojs}
+//| echo: false
+check3A(Math.PI ** 2 / 6)
+```
+
+::: {.callout-tip collapse="true"}
+## Λύση
+
+$P(X = n) = P(X \ge n) - P(X \ge n + 1) = \frac{1}{n^2} - \frac{1}{(n + 1)^2}$. Από τον [τύπο των ουρών](../law-of-large-numbers/index.qmd),
+
+$$E(X) = \sum_{n=1}^{\infty} P(X \ge n) = \sum_{n=1}^{\infty} \frac{1}{n^2} = \frac{\pi^2}{6} \approx 1{,}645,$$
+
+το γνωστό «πρόβλημα της Βασιλείας» που έλυσε ο Euler. Με τον ορισμό θα χρειαζόμασταν το πολύ πιο δύσκολο άθροισμα $\sum n\left(\frac{1}{n^2} - \frac{1}{(n+1)^2}\right)$.
+:::
+
+## Επαλήθευση σε R
+
+Όλες οι απαντήσεις, υπολογισμένες αριθμητικά:
+
+```{r}
+#| label: check
+x <- 0:3; f <- (x + 1) / 10
+c(ask1 = sum(x^2 * f) - sum(x * f)^2)
+F2 <- function(x) (3 * x^2 - x^3) / 4
+c(ask2 = F2(1.5) - F2(0.5))
+c(ask3 = uniroot(function(m) 1 - exp(-2 * m) - 0.5, c(0, 5))$root)
+c(ask4 = mean(((1:6) - 3)^2))
+v <- c(-1, 0, 2); p <- c(1/3, 1/6, 1/2)
+c(ask5 = sum(v^2 * p) - sum(v * p)^2)
+c(ask6 = dbinom(2, 3, 0.5))
+n <- 1:1e6
+c(ask7 = sum(1 / n^2), pi2_6 = pi^2 / 6)
+```
+
+---
+
+**Επόμενο άρθρο:** *Κοινή και περιθώρια κατανομή δύο τυχαίων μεταβλητών.*

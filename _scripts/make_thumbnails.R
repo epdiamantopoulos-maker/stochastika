@@ -320,6 +320,34 @@ thumbs[["skewness-kurtosis"]] <- function() {
   segments(0, -0.03, 1, -0.03, lwd = 3, col = ink)
 }
 
+# ροπογεννήτρια: η καμπύλη M(t) με την εφαπτομένη της στο (0, 1)
+thumbs[["moment-generating-function"]] <- function() {
+  t <- seq(-1.6, 0.62, length.out = 300); M <- exp(t) / (2 - exp(t))
+  blank(c(-1.6, 0.72), c(-0.1, 3.6))
+  abline(v = log(2), lwd = 4, lty = 2, col = col["grey"])
+  segments(-0.5, 0, 0.6, 2.2, lwd = 5, col = col["green"])
+  lines(t, M, lwd = 8, col = col["blue"])
+  points(0, 1, pch = 19, cex = 3.2, col = col["orange"])
+}
+
+# πιθανογεννήτρια: οι συντελεστές ενός ζαριού και του αθροίσματος δύο ζαριών
+thumbs[["probability-generating-function"]] <- function() {
+  n <- 2:12; p2 <- (6 - abs(n - 7)) / 36
+  blank(c(0.3, 19.7), c(-0.01, 0.2))
+  rect(1:6 - 0.38, 0, 1:6 + 0.38, rep(1/6, 6) * 0.6, col = col["blue"], border = NA)
+  rect(n + 6.62, 0, n + 7.38, p2 * 1.1, col = col["orange"], border = NA)
+}
+
+# λυμένες ασκήσεις: μια σ.π.π. και η συνάρτηση κατανομής της
+thumbs[["rv-exercises"]] <- function() {
+  x <- seq(0, 2, length.out = 200)
+  blank(c(-0.1, 2.1), c(-0.05, 1.1))
+  polygon(c(0, x, 2), c(0, 0.75 * x * (2 - x), 0), col = a(col["blue"], 0.45), border = NA)
+  xa <- seq(0.5, 1.5, length.out = 100)
+  polygon(c(0.5, xa, 1.5), c(0, 0.75 * xa * (2 - xa), 0), col = a(col["orange"], 0.8), border = NA)
+  lines(x, (3 * x^2 - x^3) / 4, lwd = 7, col = col["green"])
+}
+
 slugs <- basename(list.dirs("el/posts", recursive = FALSE))
 missing <- setdiff(slugs, names(thumbs))
 if (length(missing)) message("Χωρίς μικρογραφία: ", paste(missing, collapse = ", "))

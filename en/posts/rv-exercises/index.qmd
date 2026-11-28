@@ -1,0 +1,186 @@
+---
+title: "Worked problems: random variables and distributions"
+description: "Seven worked problems covering the whole third section: pmf and pdf, CDF, mean, median, variance, Jensen's inequality, the MGF, the PGF and the tail-sum formula, with answer checking and verification in R."
+date: 2027-02-19
+image: thumbnail.png
+categories: [Probability, Exercises, R, Interactive]
+keywords: [worked problems, random variables, probability density function, cumulative distribution function, expected value, variance, median, moment generating function, probability generating function, probability exercises]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# non-ASCII characters in output and plots under a "C" locale
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+This post closes the third section, from [random variables](../random-variables/index.qmd) to the [probability-generating function](../probability-generating-function/index.qmd). As in the earlier [worked problems](../conditional-exercises/index.qmd), solve each one yourself first. Check your answer in the box (a fraction, a decimal or a percentage), then open the solution.
+
+```{ojs}
+//| echo: false
+// answer checker: accepts a fraction, a decimal or a percentage
+check3A = (exact) => {
+  const inp = html`<input type="text" placeholder="your answer" style="width:9em;padding:3px 6px;border:1px solid #9ecae1;border-radius:5px">`;
+  const btn = html`<button>Check</button>`, fb = html`<span class="ix-note" style="margin-left:8px"></span>`;
+  const parse = s => {
+    s = s.trim().replace(/\s/g, "");
+    if (!s) return NaN;
+    if (s.endsWith("%")) return parseFloat(s) / 100;
+    if (s.includes("/")) { const [a, b] = s.split("/").map(Number); return a / b; }
+    return Number(s);
+  };
+  const run = () => {
+    const v = parse(inp.value);
+    if (!Number.isFinite(v)) { fb.innerHTML = "Enter a number or a fraction."; return; }
+    const ok = Math.abs(v - exact) <= Math.max(0.002, 0.005 * Math.abs(exact));
+    fb.innerHTML = ok ? `<span class="ix-ok">✓ Correct.</span>` : `<span class="ix-no">✗ Not yet.</span> Check your working or open the solution below.`;
+  };
+  btn.onclick = run;
+  inp.onkeydown = e => { if (e.key === "Enter") run(); };
+  return html`<div class="ix-panel" style="padding:8px 12px">${inp} ${btn}${fb}</div>`;
+}
+```
+
+## 1. A discrete distribution from start to finish
+
+$X$ takes the values $0, 1, 2, 3$ with $f(x) = c(x + 1)$. Find (a) the constant $c$, (b) $P(X \ge 2)$, (c) the mean and the variance, (d) the median and the mode. Enter $\operatorname{Var}(X)$ in the box.
+
+```{ojs}
+//| echo: false
+check3A(1)
+```
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+(a) $c(1 + 2 + 3 + 4) = 10c = 1$, so $c = 1/10$ and the probabilities are $0.1$, $0.2$, $0.3$, $0.4$.
+(b) $P(X \ge 2) = 0.3 + 0.4 = 0.7$.
+(c) $E(X) = 0 \cdot 0.1 + 1 \cdot 0.2 + 2 \cdot 0.3 + 3 \cdot 0.4 = 2$ and $E(X^2) = 0.2 + 1.2 + 3.6 = 5$, so $\operatorname{Var}(X) = 5 - 4 = 1$.
+(d) $P(X \le 1) = 0.3 < 0.5$, while $P(X \le 2) = 0.6$ and $P(X \ge 2) = 0.7$, so the [median](../mode-median/index.qmd) is 2. The largest probability is at 3, so the mode is 3.
+:::
+
+## 2. A continuous distribution
+
+$X$ has pdf $f(x) = c\,x(2 - x)$ for $0 \le x \le 2$ and $0$ elsewhere. Find (a) $c$, (b) the CDF, (c) $P(1/2 < X < 3/2)$, (d) $E(X)$ and $\operatorname{Var}(X)$. Enter the probability in (c) in the box.
+
+```{ojs}
+//| echo: false
+check3A(11 / 16)
+```
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+(a) $\int_0^2 x(2 - x)\,dx = 4 - \frac83 = \frac43$, so $c = \frac34$.
+(b) For $0 \le x \le 2$, $F(x) = \frac34 \int_0^x (2t - t^2)\,dt = \frac{3x^2 - x^3}{4}$, with $F(x) = 0$ for $x < 0$ and $F(x) = 1$ for $x > 2$.
+(c) $P(1/2 < X < 3/2) = F(3/2) - F(1/2) = \frac{27}{32} - \frac{5}{32} = \frac{11}{16}$.
+(d) The pdf is symmetric about 1, so $E(X) = 1$. Also $E(X^2) = \frac34 \int_0^2 (2x^3 - x^4)\,dx = \frac34\left(8 - \frac{32}{5}\right) = \frac65$, so $\operatorname{Var}(X) = \frac65 - 1 = \frac15$.
+:::
+
+## 3. Median and mean of a skewed distribution
+
+$X$ has pdf $f(x) = 2e^{-2x}$ for $x > 0$. Find (a) the median, (b) $E(X)$ using the [tail-sum formula](../law-of-large-numbers/index.qmd), (c) $\operatorname{Var}(X)$. Enter the median in the box, to three decimals.
+
+```{ojs}
+//| echo: false
+check3A(Math.log(2) / 2)
+```
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+For $x > 0$, $F(x) = 1 - e^{-2x}$ and $P(X \ge t) = e^{-2t}$.
+(a) $1 - e^{-2\delta} = \frac12$ gives $\delta = \frac{\ln 2}{2} \approx 0.347$.
+(b) $E(X) = \int_0^\infty e^{-2t}\,dt = \frac12$. The mean is larger than the median: the distribution has a right tail.
+(c) $E(X^2) = \int_0^\infty x^2 \cdot 2e^{-2x}\,dx = \frac12$, so $\operatorname{Var}(X) = \frac12 - \frac14 = \frac14$. The same follows from the [MGF](../moment-generating-function/index.qmd) $M_X(t) = \frac{2}{2 - t}$ (Problem 3 there, with $\alpha = 0$, $\theta = 2$).
+:::
+
+## 4. The expected value of a function
+
+We roll a die and set $Y = (X - 3)^2$. Find $E(Y)$ and compare it with $\big(E(X) - 3\big)^2$.
+
+```{ojs}
+//| echo: false
+check3A(19 / 6)
+```
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+For $X = 1, \ldots, 6$, $Y$ takes the values $4, 1, 0, 1, 4, 9$, each with probability $1/6$, so $E(Y) = \frac{19}{6} \approx 3.17$. By contrast, $\big(E(X) - 3\big)^2 = 0.5^2 = 0.25$. $g(x) = (x - 3)^2$ is convex, and as [Jensen's inequality](../expected-value/index.qmd) predicts, $E\big(g(X)\big) \ge g\big(E(X)\big)$.
+:::
+
+## 5. Recognising a distribution from its MGF
+
+$X$ has MGF $M_X(t) = \frac13 e^{-t} + \frac16 + \frac12 e^{2t}$. Find its distribution, $E(X)$ and $\operatorname{Var}(X)$. Enter $\operatorname{Var}(X)$ in the box.
+
+```{ojs}
+//| echo: false
+check3A(17 / 9)
+```
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+For a discrete $X$, $M_X(t) = \sum_x P(X = x) e^{tx}$: each term $p\,e^{xt}$ corresponds to a value $x$ with probability $p$. So $P(X = -1) = \frac13$, $P(X = 0) = \frac16$, $P(X = 2) = \frac12$, and by uniqueness this is the distribution of $X$. Then $E(X) = -\frac13 + 1 = \frac23$, $E(X^2) = \frac13 + 2 = \frac73$ and $\operatorname{Var}(X) = \frac73 - \frac49 = \frac{17}{9}$.
+:::
+
+## 6. From the PGF to the probabilities
+
+$X$ has PGF $G_X(z) = (1 + z)^3 / 8$. Find $P(X = 2)$ and $E(X)$. Enter $P(X = 2)$ in the box.
+
+```{ojs}
+//| echo: false
+check3A(3 / 8)
+```
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+By the binomial theorem, $(1 + z)^3 = 1 + 3z + 3z^2 + z^3$, so $P(X = 0) = \frac18$, $P(X = 1) = \frac38$, $P(X = 2) = \frac38$, $P(X = 3) = \frac18$: the number of heads in three tosses. Also $G_X'(z) = \frac38 (1 + z)^2$, so $E(X) = G_X'(1) = \frac{3 \cdot 4}{8} = 1.5$.
+:::
+
+## 7. An expected value that produces π
+
+$X$ takes values $1, 2, 3, \ldots$ with $P(X \ge n) = 1/n^2$. Find $P(X = n)$ and $E(X)$. Enter $E(X)$ in the box, to three decimals.
+
+```{ojs}
+//| echo: false
+check3A(Math.PI ** 2 / 6)
+```
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+$P(X = n) = P(X \ge n) - P(X \ge n + 1) = \frac{1}{n^2} - \frac{1}{(n + 1)^2}$. By the [tail-sum formula](../law-of-large-numbers/index.qmd),
+
+$$E(X) = \sum_{n=1}^{\infty} P(X \ge n) = \sum_{n=1}^{\infty} \frac{1}{n^2} = \frac{\pi^2}{6} \approx 1.645,$$
+
+the famous "Basel problem" solved by Euler. With the definition we would need the much harder sum $\sum n\left(\frac{1}{n^2} - \frac{1}{(n+1)^2}\right)$.
+:::
+
+## Verification in R
+
+All the answers, computed numerically:
+
+```{r}
+#| label: check
+x <- 0:3; f <- (x + 1) / 10
+c(prob1 = sum(x^2 * f) - sum(x * f)^2)
+F2 <- function(x) (3 * x^2 - x^3) / 4
+c(prob2 = F2(1.5) - F2(0.5))
+c(prob3 = uniroot(function(m) 1 - exp(-2 * m) - 0.5, c(0, 5))$root)
+c(prob4 = mean(((1:6) - 3)^2))
+v <- c(-1, 0, 2); p <- c(1/3, 1/6, 1/2)
+c(prob5 = sum(v^2 * p) - sum(v * p)^2)
+c(prob6 = dbinom(2, 3, 0.5))
+n <- 1:1e6
+c(prob7 = sum(1 / n^2), pi2_6 = pi^2 / 6)
+```
+
+---
+
+**Next post:** *Joint and marginal distributions of two random variables.*

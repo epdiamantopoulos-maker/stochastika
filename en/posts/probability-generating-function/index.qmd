@@ -1,0 +1,273 @@
+---
+title: "The probability-generating function: a whole distribution in one power series"
+description: "The probability-generating function G(z) = E(z^X) of a discrete random variable: how its coefficients are the probabilities, how it gives the mean and variance, and how roots of unity filter multiples, with worked problems, interactive widgets and R."
+date: 2027-02-17
+image: thumbnail.png
+categories: [Probability, Random variables, R, Interactive]
+keywords: [probability generating function, PGF, "G(z) = E(z^X)", power series, factorial moments, roots of unity filter, sum of two dice, generating functions]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# non-ASCII characters in plots under a "C" locale
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+The [moment-generating function](../moment-generating-function/index.qmd) stores the moments of a random variable as the coefficients of a series. For random variables with values $0, 1, 2, \ldots$, such as counts, there is an even more direct idea: write **the probabilities themselves** as the coefficients of a power series. That is the **probability-generating function**.
+
+## Definition
+
+Let $X$ be a discrete random variable with values $0, 1, 2, \ldots$ The **probability-generating function** (PGF) of $X$ is
+
+$$G_X(z) = E\big(z^X\big) = \sum_{n=0}^{\infty} P(X = n)\, z^n.$$
+
+Since $\sum_n P(X = n)\,|z|^n \le 1$ when $|z| \le 1$, the series always converges for **every** $|z| \le 1$, and $G_X(1) = 1$. It may converge on a larger disc, even on the whole complex plane, as when $X$ takes finitely many values and $G_X$ is a polynomial.
+
+The PGF and the MGF are linked by $G_X(e^t) = E(e^{tX}) = M_X(t)$.
+
+**Example.** For a die, $G_X(z) = \frac16 (z + z^2 + z^3 + z^4 + z^5 + z^6)$. The coefficient of $z^n$ is $P(X = n)$.
+
+## From G to the probabilities
+
+Differentiating the series term by term,
+
+$$G_X^{(k)}(z) = \sum_{n \ge k} \frac{n!}{(n - k)!}\, P(X = n)\, z^{n - k},$$
+
+and at $z = 0$ only the term with $n = k$ survives:
+
+$$P(X = k) = \frac{G_X^{(k)}(0)}{k!}.$$
+
+So the PGF **completely determines** the distribution: if $G_X = G_Y$, then $P(X = n) = P(Y = n)$ for every $n$.
+
+## From G to the mean and variance
+
+At $z = 1$ instead of $z = 0$, the derivatives give the **factorial moments**:
+
+$$G_X'(1) = \sum_n n\,P(X = n) = E(X), \qquad G_X''(1) = E\big(X(X - 1)\big).$$
+
+If the series does not converge beyond $z = 1$, these values are understood as limits as $z \to 1^-$. Since $E(X^2) = E\big(X(X-1)\big) + E(X)$,
+
+$$\operatorname{Var}(X) = G_X''(1) + G_X'(1) - \big(G_X'(1)\big)^2.$$
+
+## Two worked problems
+
+**Problem 1.** $X$ takes the values 0, 1, 2 with $f(0) = 1/2$, $f(1) = 1/4$, $f(2) = 1/4$. Find $G_X(z)$, $E(X)$ and $\operatorname{Var}(X)$.
+
+Straight from the definition, $G_X(z) = \frac12 + \frac14 z + \frac14 z^2$. Then $G_X'(z) = \frac14 + \frac12 z$ and $G_X''(z) = \frac12$, so
+
+$$E(X) = G_X'(1) = \frac34, \qquad \operatorname{Var}(X) = \frac12 + \frac34 - \frac{9}{16} = \frac{11}{16}.$$
+
+**Problem 2.** $X$ takes values $0, 1, 2, \ldots$ and has PGF $G_X(z) = z(2 + 3z^2)/5$. Find its distribution.
+
+Computing $G_X^{(n)}(0)/n!$ is immediate once we expand: $G_X(z) = \frac25 z + \frac35 z^3$. The coefficients are the probabilities, so
+
+$$P(X = 1) = \frac25, \qquad P(X = 3) = \frac35,$$
+
+and $P(X = k) = 0$ for every other $k$. Also $E(X) = G_X'(1) = \frac25 + \frac95 = \frac{11}{5}$.
+
+## Coefficients and slope
+
+Choose a distribution. On the left are the coefficients of $G_X$, that is the probabilities, and on the right the curve $G_X(z)$ on $[0, 1]$. The curve starts at $P(X = 0)$ when $z = 0$ and ends at 1 when $z = 1$, with slope there (green tangent) equal to $E(X)$.
+
+::: {.ix-panel}
+::: {.ix-title}
+The PGF: coefficients and slope at 1
+:::
+
+```{ojs}
+//| echo: false
+pgfs310 = new Map([
+  ["Die", d3.range(7).map(n => n ? 1 / 6 : 0)],
+  ["Sum of two dice: G(z)²", d3.range(13).map(n => n < 2 ? 0 : (6 - Math.abs(n - 7)) / 36)],
+  ["f(0) = 1/2, f(1) = 1/4, f(2) = 1/4 (Problem 1)", [0.5, 0.25, 0.25]],
+  ["G(z) = z(2 + 3z²)/5 (Problem 2)", [0, 0.4, 0, 0.6]],
+  ["f(x) = (1/2)^x, x = 1, 2, …", d3.range(40).map(n => n ? 0.5 ** n : 0)],
+  ["Poisson with λ = 2", d3.range(30).map(n => Math.exp(-2) * 2 ** n / d3.range(1, n + 1).reduce((a, b) => a * b, 1))]
+])
+viewof d310 = Inputs.select(pgfs310, {label: "Distribution"})
+```
+
+```{ojs}
+//| echo: false
+{
+  const p = d310, G = z => p.reduce((s, q, n) => s + q * z ** n, 0);
+  const G1 = p.reduce((s, q, n) => s + n * q, 0), G2 = p.reduce((s, q, n) => s + n * (n - 1) * q, 0);
+  const shown = Math.min(p.length, 13), W = 460, H = 230;
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H}`).style("width", "100%").style("max-width", "580px");
+  // left: coefficients
+  const bx = d3.scaleBand().domain(d3.range(shown)).range([20, 220]).padding(0.25), by = d3.scaleLinear().domain([0, d3.max(p) * 1.1]).range([H - 30, 20]);
+  d3.range(shown).forEach(n => {
+    svg.append("rect").attr("x", bx(n)).attr("width", bx.bandwidth()).attr("y", by(p[n])).attr("height", by(0) - by(p[n])).attr("fill", "#4e79a7");
+    svg.append("text").attr("x", bx(n) + bx.bandwidth() / 2).attr("y", H - 16).attr("text-anchor", "middle").style("font", "9px sans-serif").attr("fill", "#666").text(`z${n > 1 ? String(n).split("").map(c => "⁰¹²³⁴⁵⁶⁷⁸⁹"[c]).join("") : n === 1 ? "" : "⁰"}`);
+  });
+  svg.append("text").attr("x", 120).attr("y", 12).attr("text-anchor", "middle").style("font", "11px sans-serif").attr("fill", "#666").text("coefficients = P(X = n)");
+  // right: G(z) on [0, 1]
+  const zx = d3.scaleLinear().domain([0, 1]).range([260, 450]), zy = d3.scaleLinear().domain([0, 1.05]).range([H - 30, 20]);
+  [0, 0.5, 1].forEach(v => { svg.append("line").attr("x1", 260).attr("x2", 450).attr("y1", zy(v)).attr("y2", zy(v)).attr("stroke", "#eee");
+    svg.append("text").attr("x", 255).attr("y", zy(v)).attr("dy", "0.35em").attr("text-anchor", "end").style("font", "9px sans-serif").attr("fill", "#666").text(String(v)); });
+  [0, 0.5, 1].forEach(v => svg.append("text").attr("x", zx(v)).attr("y", H - 16).attr("text-anchor", "middle").style("font", "9px sans-serif").attr("fill", "#666").text(String(v)));
+  const z0 = Math.max(0, 1 - 0.95 / Math.max(G1, 1e-9));
+  svg.append("path").attr("d", d3.line().x(z => zx(z)).y(z => zy(1 + G1 * (z - 1)))([z0, 1])).attr("stroke", "#59a14f").attr("stroke-width", 1.5).attr("fill", "none");
+  svg.append("path").attr("d", d3.line().x(z => zx(z)).y(z => zy(G(z)))(d3.range(0, 1.0001, 0.01))).attr("stroke", "#f28e2b").attr("stroke-width", 2.5).attr("fill", "none");
+  svg.append("text").attr("x", 355).attr("y", 12).attr("text-anchor", "middle").style("font", "11px sans-serif").attr("fill", "#666").text("G(z), 0 ≤ z ≤ 1");
+  const fm = v => (+v.toFixed(4)).toLocaleString("en-GB", {maximumFractionDigits: 4});
+  return html`<div>${svg.node()}
+    <table class="ix-tbl">
+      <tr><td>G(0) = P(X = 0)</td><td>${fm(p[0])}</td></tr>
+      <tr><td>G′(1) = E(X)</td><td><b>${fm(G1)}</b></td></tr>
+      <tr><td>G″(1) = E(X(X − 1))</td><td>${fm(G2)}</td></tr>
+      <tr><td>Var(X) = G″(1) + G′(1) − G′(1)²</td><td><b>${fm(G2 + G1 - G1 * G1)}</b></td></tr>
+    </table></div>`;
+}
+```
+:::
+
+The "sum of two dice" option shows one more thing: its PGF is the **square** of the PGF of one die. Multiplying the polynomials, the coefficient of $z^7$ collects all the ways to get $a + b = 7$, namely $6/36$. In general, for **independent** $X$ and $Y$, $G_{X+Y} = G_X \cdot G_Y$. We will prove it once we define independence of random variables, in lecture 4.
+
+## A trick with complex numbers: how likely is X to be a multiple of m?
+
+Why define $G_X$ for complex $z$ at all? Here is an elegant result: if $\omega = e^{2\pi i/m}$ is a primitive $m$-th root of unity,
+
+$$P(m \text{ divides } X) = \frac{1}{m} \sum_{k=0}^{m-1} G_X(\omega^k).$$
+
+For $m = 4$ the roots are $1, i, -1, -i$, and the formula becomes
+
+$$P(4 \text{ divides } X) = \tfrac14\big(G_X(1) + G_X(i) + G_X(-1) + G_X(-i)\big).$$
+
+**Why it works.** Substituting the series,
+
+$$\frac1m \sum_k G_X(\omega^k) = \sum_n P(X = n) \cdot \frac1m \sum_k \omega^{kn}.$$
+
+The inner sum is a geometric progression: it equals $m$ when $m$ divides $n$ (every term is 1), and $0$ otherwise, because the $m$ roots cancel out around the circle. Only the terms with $n$ a multiple of $m$ remain.
+
+::: {.ix-panel}
+::: {.ix-title}
+Roots-of-unity filter
+:::
+
+```{ojs}
+//| echo: false
+viewof d310b = Inputs.select(pgfs310, {label: "Distribution"})
+viewof m310 = Inputs.radio([2, 3, 4, 5, 6], {label: "m", value: 4})
+```
+
+```{ojs}
+//| echo: false
+{
+  const p = d310b, m = m310;
+  // complex G(ω^k) by summing the series
+  const Gc = th => p.reduce(([re, im], q, n) => [re + q * Math.cos(n * th), im + q * Math.sin(n * th)], [0, 0]);
+  const vals = d3.range(m).map(k => Gc(2 * Math.PI * k / m));
+  const filt = d3.mean(vals, v => v[0]), direct = d3.sum(p, (q, n) => n % m === 0 ? q : 0);
+  const W = 460, H = 220, C = [110, 110], R0 = 85;
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H}`).style("width", "100%").style("max-width", "580px");
+  svg.append("circle").attr("cx", C[0]).attr("cy", C[1]).attr("r", R0).attr("fill", "none").attr("stroke", "#c9d3df").attr("stroke-width", 2);
+  svg.append("line").attr("x1", C[0] - R0 - 10).attr("x2", C[0] + R0 + 10).attr("y1", C[1]).attr("y2", C[1]).attr("stroke", "#eee");
+  svg.append("line").attr("x1", C[0]).attr("x2", C[0]).attr("y1", C[1] - R0 - 10).attr("y2", C[1] + R0 + 10).attr("stroke", "#eee");
+  // roots (orange) and the values G(ω^k) (blue)
+  vals.forEach((v, k) => {
+    const th = 2 * Math.PI * k / m;
+    svg.append("circle").attr("cx", C[0] + R0 * Math.cos(th)).attr("cy", C[1] - R0 * Math.sin(th)).attr("r", 6).attr("fill", "#f28e2b");
+    svg.append("line").attr("x1", C[0]).attr("y1", C[1]).attr("x2", C[0] + R0 * v[0]).attr("y2", C[1] - R0 * v[1]).attr("stroke", "#4e79a7").attr("stroke-width", 2.5);
+    svg.append("circle").attr("cx", C[0] + R0 * v[0]).attr("cy", C[1] - R0 * v[1]).attr("r", 3.5).attr("fill", "#4e79a7");
+  });
+  const tx = (y, t, c = "#333", w = 400) => svg.append("text").attr("x", 230).attr("y", y).style("font", `${w} 15px sans-serif`).attr("fill", c).text(t);
+  const fm = v => (Math.abs(v) < 5e-7 ? 0 : v).toLocaleString("en-GB", {minimumFractionDigits: 4, maximumFractionDigits: 4});
+  tx(40, "● roots ω^k", "#f28e2b"); tx(64, "— values G(ω^k)", "#4e79a7");
+  tx(115, `Filter: ${fm(filt)}`, "#333", 700);
+  tx(142, `Direct: ${fm(direct)}`);
+  return html`<div>${svg.node()}<div class="ix-note">“Filter”: (1/m) · Σ G(ω^k). “Direct”: the sum of P(X = n) over multiples n of m. The arrow of G(1) = 1 always points right, and the others cancel the remaining values.</div></div>`;
+}
+```
+:::
+
+For a die and $m = 2$ you get $1/2$ (an even outcome), and for $m = 4$ only the 4, that is $1/6$.
+
+## In R
+
+Multiplying polynomials is convolving their coefficients, so we can find the distribution of the sum of two dice by multiplying PGFs. R also does complex arithmetic, so we can check the roots-of-unity filter too:
+
+```{r}
+#| label: pgf-r
+die <- c(0, rep(1/6, 6))                     # coefficients of z^0, ..., z^6
+two <- convolve(die, rev(die), type = "open") # coefficients of G(z)^2
+round(two * 36, 6)                           # 36 · P(X + Y = n), n = 0, ..., 12
+# E(X) = G'(1) for one die
+sum((0:6) * die)
+# roots-of-unity filter: P(the die shows a multiple of 4)
+G <- function(z) sum(die * z^(0:6))
+w <- exp(2i * pi * (0:3) / 4)
+Re(mean(sapply(w, G)))
+```
+
+The last result is `r fmt(Re(mean(sapply(exp(2i * pi * (0:3) / 4), function(z) sum(c(0, rep(1/6, 6)) * z^(0:6))))), 4)`, that is $1/6$.
+
+## Summary
+
+- For $X$ with values $0, 1, 2, \ldots$: $G_X(z) = E(z^X) = \sum_n P(X = n) z^n$, which converges for $|z| \le 1$ with $G_X(1) = 1$.
+- $P(X = k) = G_X^{(k)}(0)/k!$, so $G_X$ determines the distribution.
+- $E(X) = G_X'(1)$ and $\operatorname{Var}(X) = G_X''(1) + G_X'(1) - G_X'(1)^2$.
+- $G_X(e^t) = M_X(t)$. For independent $X$, $Y$, $G_{X+Y} = G_X G_Y$.
+
+## Review questions
+
+**1. Quick quiz.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz310 = [
+  {q: "If G(z) = (1 + z)²/4, what is P(X = 1)?",
+   opts: ["1/2", "1/4", "1", "0"], ans: 0,
+   why: "(1 + z)²/4 = 1/4 + z/2 + z²/4: the coefficient of z is 1/2. It is the number of heads in two tosses."},
+  {q: "What is G(1), always?",
+   opts: ["1", "0", "E(X)", "P(X = 1)"], ans: 0,
+   why: "G(1) = Σ P(X = n) · 1 = 1."},
+  {q: "If G(z) = e^{2(z − 1)}, what is E(X)?",
+   opts: ["2", "1", "e²", "1/2"], ans: 0,
+   why: "G′(z) = 2e^{2(z − 1)}, so E(X) = G′(1) = 2. It is the Poisson with λ = 2."},
+  {q: "What is P(X = 0)?",
+   opts: ["G(0)", "G(1)", "G′(0)", "G′(1)"], ans: 0,
+   why: "At z = 0 every term vanishes except the constant one: G(0) = P(X = 0)."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz310.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz310.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** Find the PGF of $f(x) = (1/2)^x$, $x = 1, 2, \ldots$, and from it $E(X)$. Compare with the MGF of the [previous post](../moment-generating-function/index.qmd).
+
+**3.** Using the roots-of-unity filter, find the probability that the sum of two dice is even.
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. $G_X(z) = \sum_{x \ge 1} (z/2)^x = \dfrac{z}{2 - z}$ for $|z| < 2$. Then $G_X'(z) = \dfrac{2}{(2 - z)^2}$, so $E(X) = G_X'(1) = 2$. Also $G_X(e^t) = \dfrac{e^t}{2 - e^t} = M_X(t)$.
+3. $P(\text{even}) = \frac12\big(G(1) + G(-1)\big)$. For one die $G(-1) = \frac16(-1 + 1 - 1 + 1 - 1 + 1) = 0$, so for the sum $G(-1)^2 = 0$ and $P = \frac12$.
+:::
+
+---
+
+**Next post:** *Worked problems: random variables and distributions.*

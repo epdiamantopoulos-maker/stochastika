@@ -1,0 +1,273 @@
+---
+title: "Η πιθανογεννήτρια συνάρτηση: όλη η κατανομή σε μια δυναμοσειρά"
+description: "Η πιθανογεννήτρια συνάρτηση G(z) = E(z^X) μιας διακριτής τυχαίας μεταβλητής: πώς οι συντελεστές της είναι οι πιθανότητες, πώς δίνει μέση τιμή και διακύμανση, και πώς οι ρίζες της μονάδας «φιλτράρουν» πολλαπλάσια, με λυμένες ασκήσεις, διαδραστικά και R."
+date: 2027-02-17
+image: thumbnail.png
+categories: [Πιθανότητες, Τυχαίες μεταβλητές, R, Διαδραστικό]
+keywords: [πιθανογεννήτρια συνάρτηση, probability generating function, PGF, "G(z) = E(z^X)", δυναμοσειρά, παραγοντικές ροπές, ρίζες της μονάδας, άθροισμα ζαριών]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# ελληνικοί χαρακτήρες στα γραφήματα και σε locale "C"
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, decimal.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+Η [ροπογεννήτρια](../moment-generating-function/index.qmd) «κρύβει» τις ροπές μιας τυχαίας μεταβλητής στους συντελεστές μιας σειράς. Για τις τυχαίες μεταβλητές με τιμές $0, 1, 2, \ldots$, όπως ένα πλήθος, υπάρχει μια ακόμα πιο άμεση ιδέα: να γράψουμε **τις ίδιες τις πιθανότητες** ως συντελεστές μιας δυναμοσειράς. Αυτή είναι η **πιθανογεννήτρια** συνάρτηση.
+
+## Ορισμός
+
+Έστω $X$ μια διακριτή τυχαία μεταβλητή με τιμές $0, 1, 2, \ldots$ Η **πιθανογεννήτρια συνάρτηση** (probability-generating function, PGF) της $X$ είναι
+
+$$G_X(z) = E\big(z^X\big) = \sum_{n=0}^{\infty} P(X = n)\, z^n.$$
+
+Επειδή $\sum_n P(X = n)\,|z|^n \le 1$ όταν $|z| \le 1$, η σειρά συγκλίνει πάντα για **κάθε** $|z| \le 1$, και μάλιστα $G_X(1) = 1$. Μπορεί να συγκλίνει και σε μεγαλύτερο κύκλο, ακόμα και σε όλο το μιγαδικό επίπεδο, όπως όταν η $X$ έχει πεπερασμένο πλήθος τιμών και η $G_X$ είναι πολυώνυμο.
+
+Η πιθανογεννήτρια συνδέεται με τη ροπογεννήτρια με τη σχέση $G_X(e^t) = E(e^{tX}) = M_X(t)$.
+
+**Παράδειγμα.** Για ένα ζάρι, $G_X(z) = \frac16 (z + z^2 + z^3 + z^4 + z^5 + z^6)$. Ο συντελεστής του $z^n$ είναι η $P(X = n)$.
+
+## Από την G στις πιθανότητες
+
+Παραγωγίζοντας τη σειρά όρο προς όρο,
+
+$$G_X^{(k)}(z) = \sum_{n \ge k} \frac{n!}{(n - k)!}\, P(X = n)\, z^{n - k},$$
+
+και για $z = 0$ μένει μόνο ο όρος με $n = k$:
+
+$$P(X = k) = \frac{G_X^{(k)}(0)}{k!}.$$
+
+Η πιθανογεννήτρια λοιπόν **προσδιορίζει πλήρως** την κατανομή: αν $G_X = G_Y$, τότε $P(X = n) = P(Y = n)$ για κάθε $n$.
+
+## Από την G στη μέση τιμή και τη διακύμανση
+
+Για $z = 1$ αντί για $z = 0$, οι παράγωγοι δίνουν τις **παραγοντικές ροπές**:
+
+$$G_X'(1) = \sum_n n\,P(X = n) = E(X), \qquad G_X''(1) = E\big(X(X - 1)\big).$$
+
+Αν η σειρά δεν συγκλίνει πέρα από το $z = 1$, οι τιμές αυτές εννοούνται ως όρια για $z \to 1^-$. Επειδή $E(X^2) = E\big(X(X-1)\big) + E(X)$,
+
+$$\operatorname{Var}(X) = G_X''(1) + G_X'(1) - \big(G_X'(1)\big)^2.$$
+
+## Δύο λυμένες ασκήσεις
+
+**Άσκηση 1.** Η $X$ παίρνει τις τιμές 0, 1, 2 με $f(0) = 1/2$, $f(1) = 1/4$, $f(2) = 1/4$. Βρείτε την $G_X(z)$, την $E(X)$ και τη $\operatorname{Var}(X)$.
+
+Κατευθείαν από τον ορισμό, $G_X(z) = \frac12 + \frac14 z + \frac14 z^2$. Τότε $G_X'(z) = \frac14 + \frac12 z$ και $G_X''(z) = \frac12$, άρα
+
+$$E(X) = G_X'(1) = \frac34, \qquad \operatorname{Var}(X) = \frac12 + \frac34 - \frac{9}{16} = \frac{11}{16}.$$
+
+**Άσκηση 2.** Η $X$ παίρνει τιμές $0, 1, 2, \ldots$ και έχει πιθανογεννήτρια $G_X(z) = z(2 + 3z^2)/5$. Βρείτε την κατανομή της.
+
+Ο υπολογισμός των $G_X^{(n)}(0)/n!$ γίνεται αμέσως αν αναπτύξουμε: $G_X(z) = \frac25 z + \frac35 z^3$. Οι συντελεστές είναι οι πιθανότητες, άρα
+
+$$P(X = 1) = \frac25, \qquad P(X = 3) = \frac35,$$
+
+και $P(X = k) = 0$ για κάθε άλλο $k$. Επίσης $E(X) = G_X'(1) = \frac25 + \frac95 = \frac{11}{5}$.
+
+## Συντελεστές και κλίση
+
+Διαλέξτε μια κατανομή. Αριστερά βλέπετε τους συντελεστές της $G_X$, δηλαδή τις πιθανότητες, και δεξιά την καμπύλη $G_X(z)$ στο $[0, 1]$. Η καμπύλη ξεκινά από την $P(X = 0)$ στο $z = 0$ και καταλήγει στο 1 στο $z = 1$, με κλίση εκεί (πράσινη εφαπτομένη) ίση με $E(X)$.
+
+::: {.ix-panel}
+::: {.ix-title}
+Η πιθανογεννήτρια: συντελεστές και κλίση στο 1
+:::
+
+```{ojs}
+//| echo: false
+pgfs310 = new Map([
+  ["Ζάρι", d3.range(7).map(n => n ? 1 / 6 : 0)],
+  ["Άθροισμα δύο ζαριών: G(z)²", d3.range(13).map(n => n < 2 ? 0 : (6 - Math.abs(n - 7)) / 36)],
+  ["f(0) = 1/2, f(1) = 1/4, f(2) = 1/4 (Άσκηση 1)", [0.5, 0.25, 0.25]],
+  ["G(z) = z(2 + 3z²)/5 (Άσκηση 2)", [0, 0.4, 0, 0.6]],
+  ["f(x) = (1/2)^x, x = 1, 2, …", d3.range(40).map(n => n ? 0.5 ** n : 0)],
+  ["Poisson με λ = 2", d3.range(30).map(n => Math.exp(-2) * 2 ** n / d3.range(1, n + 1).reduce((a, b) => a * b, 1))]
+])
+viewof d310 = Inputs.select(pgfs310, {label: "Κατανομή"})
+```
+
+```{ojs}
+//| echo: false
+{
+  const p = d310, G = z => p.reduce((s, q, n) => s + q * z ** n, 0);
+  const G1 = p.reduce((s, q, n) => s + n * q, 0), G2 = p.reduce((s, q, n) => s + n * (n - 1) * q, 0);
+  const shown = Math.min(p.length, 13), W = 460, H = 230;
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H}`).style("width", "100%").style("max-width", "580px");
+  // αριστερά: συντελεστές
+  const bx = d3.scaleBand().domain(d3.range(shown)).range([20, 220]).padding(0.25), by = d3.scaleLinear().domain([0, d3.max(p) * 1.1]).range([H - 30, 20]);
+  d3.range(shown).forEach(n => {
+    svg.append("rect").attr("x", bx(n)).attr("width", bx.bandwidth()).attr("y", by(p[n])).attr("height", by(0) - by(p[n])).attr("fill", "#4e79a7");
+    svg.append("text").attr("x", bx(n) + bx.bandwidth() / 2).attr("y", H - 16).attr("text-anchor", "middle").style("font", "9px sans-serif").attr("fill", "#666").text(`z${n > 1 ? String(n).split("").map(c => "⁰¹²³⁴⁵⁶⁷⁸⁹"[c]).join("") : n === 1 ? "" : "⁰"}`);
+  });
+  svg.append("text").attr("x", 120).attr("y", 12).attr("text-anchor", "middle").style("font", "11px sans-serif").attr("fill", "#666").text("συντελεστές = P(X = n)");
+  // δεξιά: G(z) στο [0, 1]
+  const zx = d3.scaleLinear().domain([0, 1]).range([260, 450]), zy = d3.scaleLinear().domain([0, 1.05]).range([H - 30, 20]);
+  [0, 0.5, 1].forEach(v => { svg.append("line").attr("x1", 260).attr("x2", 450).attr("y1", zy(v)).attr("y2", zy(v)).attr("stroke", "#eee");
+    svg.append("text").attr("x", 255).attr("y", zy(v)).attr("dy", "0.35em").attr("text-anchor", "end").style("font", "9px sans-serif").attr("fill", "#666").text(String(v).replace(".", ",")); });
+  [0, 0.5, 1].forEach(v => svg.append("text").attr("x", zx(v)).attr("y", H - 16).attr("text-anchor", "middle").style("font", "9px sans-serif").attr("fill", "#666").text(String(v).replace(".", ",")));
+  const z0 = Math.max(0, 1 - 0.95 / Math.max(G1, 1e-9));
+  svg.append("path").attr("d", d3.line().x(z => zx(z)).y(z => zy(1 + G1 * (z - 1)))([z0, 1])).attr("stroke", "#59a14f").attr("stroke-width", 1.5).attr("fill", "none");
+  svg.append("path").attr("d", d3.line().x(z => zx(z)).y(z => zy(G(z)))(d3.range(0, 1.0001, 0.01))).attr("stroke", "#f28e2b").attr("stroke-width", 2.5).attr("fill", "none");
+  svg.append("text").attr("x", 355).attr("y", 12).attr("text-anchor", "middle").style("font", "11px sans-serif").attr("fill", "#666").text("G(z), 0 ≤ z ≤ 1");
+  const fm = v => (+v.toFixed(4)).toLocaleString("el-GR", {maximumFractionDigits: 4});
+  return html`<div>${svg.node()}
+    <table class="ix-tbl">
+      <tr><td>G(0) = P(X = 0)</td><td>${fm(p[0])}</td></tr>
+      <tr><td>G′(1) = E(X)</td><td><b>${fm(G1)}</b></td></tr>
+      <tr><td>G″(1) = E(X(X − 1))</td><td>${fm(G2)}</td></tr>
+      <tr><td>Var(X) = G″(1) + G′(1) − G′(1)²</td><td><b>${fm(G2 + G1 - G1 * G1)}</b></td></tr>
+    </table></div>`;
+}
+```
+:::
+
+Η επιλογή «άθροισμα δύο ζαριών» δείχνει κάτι ακόμα: η πιθανογεννήτριά του είναι το **τετράγωνο** της πιθανογεννήτριας ενός ζαριού. Πολλαπλασιάζοντας τα πολυώνυμα, ο συντελεστής του $z^7$ μαζεύει όλους τους τρόπους να γίνει $a + b = 7$, δηλαδή $6/36$. Γενικά, για **ανεξάρτητες** $X$ και $Y$ ισχύει $G_{X+Y} = G_X \cdot G_Y$. Θα το αποδείξουμε όταν ορίσουμε την ανεξαρτησία τυχαίων μεταβλητών, στο 4ο μάθημα.
+
+## Ένα κόλπο με μιγαδικούς: πόσο πιθανό είναι η X να είναι πολλαπλάσιο του m;
+
+Γιατί να ορίσουμε την $G_X$ και για μιγαδικά $z$; Ένα κομψό αποτέλεσμα: αν $\omega = e^{2\pi i/m}$ είναι μια πρωταρχική $m$-οστή ρίζα της μονάδας,
+
+$$P(m \text{ διαιρεί } X) = \frac{1}{m} \sum_{k=0}^{m-1} G_X(\omega^k).$$
+
+Για $m = 4$ οι ρίζες είναι οι $1, i, -1, -i$, και ο τύπος γίνεται
+
+$$P(4 \text{ διαιρεί } X) = \tfrac14\big(G_X(1) + G_X(i) + G_X(-1) + G_X(-i)\big).$$
+
+**Γιατί ισχύει.** Αντικαθιστώντας τη σειρά,
+
+$$\frac1m \sum_k G_X(\omega^k) = \sum_n P(X = n) \cdot \frac1m \sum_k \omega^{kn}.$$
+
+Το εσωτερικό άθροισμα είναι γεωμετρική πρόοδος: ισούται με $m$ όταν το $m$ διαιρεί το $n$ (όλοι οι όροι είναι 1), και με $0$ αλλιώς, γιατί οι $m$ ρίζες «ακυρώνονται» γύρω από τον κύκλο. Μένουν μόνο οι όροι με $n$ πολλαπλάσιο του $m$.
+
+::: {.ix-panel}
+::: {.ix-title}
+Φίλτρο ριζών της μονάδας
+:::
+
+```{ojs}
+//| echo: false
+viewof d310b = Inputs.select(pgfs310, {label: "Κατανομή"})
+viewof m310 = Inputs.radio([2, 3, 4, 5, 6], {label: "m", value: 4})
+```
+
+```{ojs}
+//| echo: false
+{
+  const p = d310b, m = m310;
+  // μιγαδική G(ω^k) με άθροισμα της σειράς
+  const Gc = th => p.reduce(([re, im], q, n) => [re + q * Math.cos(n * th), im + q * Math.sin(n * th)], [0, 0]);
+  const vals = d3.range(m).map(k => Gc(2 * Math.PI * k / m));
+  const filt = d3.mean(vals, v => v[0]), direct = d3.sum(p, (q, n) => n % m === 0 ? q : 0);
+  const W = 460, H = 220, C = [110, 110], R0 = 85;
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H}`).style("width", "100%").style("max-width", "580px");
+  svg.append("circle").attr("cx", C[0]).attr("cy", C[1]).attr("r", R0).attr("fill", "none").attr("stroke", "#c9d3df").attr("stroke-width", 2);
+  svg.append("line").attr("x1", C[0] - R0 - 10).attr("x2", C[0] + R0 + 10).attr("y1", C[1]).attr("y2", C[1]).attr("stroke", "#eee");
+  svg.append("line").attr("x1", C[0]).attr("x2", C[0]).attr("y1", C[1] - R0 - 10).attr("y2", C[1] + R0 + 10).attr("stroke", "#eee");
+  // ρίζες (πορτοκαλί) και οι τιμές G(ω^k) (μπλε)
+  vals.forEach((v, k) => {
+    const th = 2 * Math.PI * k / m;
+    svg.append("circle").attr("cx", C[0] + R0 * Math.cos(th)).attr("cy", C[1] - R0 * Math.sin(th)).attr("r", 6).attr("fill", "#f28e2b");
+    svg.append("line").attr("x1", C[0]).attr("y1", C[1]).attr("x2", C[0] + R0 * v[0]).attr("y2", C[1] - R0 * v[1]).attr("stroke", "#4e79a7").attr("stroke-width", 2.5);
+    svg.append("circle").attr("cx", C[0] + R0 * v[0]).attr("cy", C[1] - R0 * v[1]).attr("r", 3.5).attr("fill", "#4e79a7");
+  });
+  const tx = (y, t, c = "#333", w = 400) => svg.append("text").attr("x", 230).attr("y", y).style("font", `${w} 15px sans-serif`).attr("fill", c).text(t);
+  const fm = v => (Math.abs(v) < 5e-7 ? 0 : v).toLocaleString("el-GR", {minimumFractionDigits: 4, maximumFractionDigits: 4});
+  tx(40, "● ρίζες ω^k", "#f28e2b"); tx(64, "— τιμές G(ω^k)", "#4e79a7");
+  tx(115, `Φίλτρο: ${fm(filt)}`, "#333", 700);
+  tx(142, `Απευθείας: ${fm(direct)}`);
+  return html`<div>${svg.node()}<div class="ix-note">«Φίλτρο»: (1/m) · Σ G(ω^k). «Απευθείας»: το άθροισμα των P(X = n) για n πολλαπλάσιο του m. Το βέλος της G(1) = 1 δείχνει πάντα προς τα δεξιά, και τα υπόλοιπα «ακυρώνουν» τις άλλες τιμές.</div></div>`;
+}
+```
+:::
+
+Για ένα ζάρι και $m = 2$ παίρνετε $1/2$ (άρτιο αποτέλεσμα), και για $m = 4$ μόνο το 4, δηλαδή $1/6$.
+
+## Σε R
+
+Το γινόμενο πολυωνύμων είναι συνέλιξη των συντελεστών τους, οπότε μπορούμε να βρούμε την κατανομή του αθροίσματος δύο ζαριών πολλαπλασιάζοντας πιθανογεννήτριες. Η R κάνει και πράξεις με μιγαδικούς, οπότε ελέγχουμε και το φίλτρο ριζών:
+
+```{r}
+#| label: pgf-r
+die <- c(0, rep(1/6, 6))                     # συντελεστές των z^0, ..., z^6
+two <- convolve(die, rev(die), type = "open") # συντελεστές της G(z)^2
+round(two * 36, 6)                           # 36 · P(X + Y = n), n = 0, ..., 12
+# E(X) = G'(1) για ένα ζάρι
+sum((0:6) * die)
+# φίλτρο ριζών: P(το ζάρι είναι πολλαπλάσιο του 4)
+G <- function(z) sum(die * z^(0:6))
+w <- exp(2i * pi * (0:3) / 4)
+Re(mean(sapply(w, G)))
+```
+
+Το τελευταίο αποτέλεσμα είναι `r fmt(Re(mean(sapply(exp(2i * pi * (0:3) / 4), function(z) sum(c(0, rep(1/6, 6)) * z^(0:6))))), 4)`, δηλαδή $1/6$.
+
+## Σύνοψη
+
+- Για $X$ με τιμές $0, 1, 2, \ldots$: $G_X(z) = E(z^X) = \sum_n P(X = n) z^n$, που συγκλίνει για $|z| \le 1$ με $G_X(1) = 1$.
+- $P(X = k) = G_X^{(k)}(0)/k!$, άρα η $G_X$ ορίζει την κατανομή.
+- $E(X) = G_X'(1)$ και $\operatorname{Var}(X) = G_X''(1) + G_X'(1) - G_X'(1)^2$.
+- $G_X(e^t) = M_X(t)$. Για ανεξάρτητες $X$, $Y$, $G_{X+Y} = G_X G_Y$.
+
+## Ερωτήσεις εμπέδωσης
+
+**1. Γρήγορο κουίζ.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz310 = [
+  {q: "Αν G(z) = (1 + z)²/4, ποια είναι η P(X = 1);",
+   opts: ["1/2", "1/4", "1", "0"], ans: 0,
+   why: "(1 + z)²/4 = 1/4 + z/2 + z²/4: ο συντελεστής του z είναι 1/2. Είναι το πλήθος των Κορωνών σε δύο ρίψεις."},
+  {q: "Πόση είναι πάντα η G(1);",
+   opts: ["1", "0", "E(X)", "P(X = 1)"], ans: 0,
+   why: "G(1) = Σ P(X = n) · 1 = 1."},
+  {q: "Αν G(z) = e^{2(z − 1)}, πόση είναι η E(X);",
+   opts: ["2", "1", "e²", "1/2"], ans: 0,
+   why: "G′(z) = 2e^{2(z − 1)}, άρα E(X) = G′(1) = 2. Είναι η Poisson με λ = 2."},
+  {q: "Ποια είναι η P(X = 0);",
+   opts: ["G(0)", "G(1)", "G′(0)", "G′(1)"], ans: 0,
+   why: "Για z = 0 όλοι οι όροι μηδενίζονται εκτός από τον σταθερό: G(0) = P(X = 0)."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz310.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Σωστό.</span> ` : `<span class="ix-no">✗ Όχι ακριβώς.</span> `) + item.why;
+        score.innerHTML = `<b>Σωστές: ${[...done.values()].filter(x => x).length} από ${quiz310.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** Βρείτε την πιθανογεννήτρια της $f(x) = (1/2)^x$, $x = 1, 2, \ldots$, και από αυτήν την $E(X)$. Συγκρίνετε με τη ροπογεννήτρια του [προηγούμενου άρθρου](../moment-generating-function/index.qmd).
+
+**3.** Με το φίλτρο ριζών της μονάδας, βρείτε την πιθανότητα το άθροισμα δύο ζαριών να είναι άρτιο.
+
+::: {.callout-tip collapse="true"}
+## Απαντήσεις
+
+2. $G_X(z) = \sum_{x \ge 1} (z/2)^x = \dfrac{z}{2 - z}$ για $|z| < 2$. Τότε $G_X'(z) = \dfrac{2}{(2 - z)^2}$, άρα $E(X) = G_X'(1) = 2$. Επίσης $G_X(e^t) = \dfrac{e^t}{2 - e^t} = M_X(t)$.
+3. $P(\text{άρτιο}) = \frac12\big(G(1) + G(-1)\big)$. Για ένα ζάρι $G(-1) = \frac16(-1 + 1 - 1 + 1 - 1 + 1) = 0$, άρα για το άθροισμα $G(-1)^2 = 0$ και $P = \frac12$.
+:::
+
+---
+
+**Επόμενο άρθρο:** *Λυμένες ασκήσεις: τυχαίες μεταβλητές και κατανομές.*

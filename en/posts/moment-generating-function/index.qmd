@@ -1,0 +1,239 @@
+---
+title: "Moments and the moment-generating function"
+description: "Moments and central moments of a random variable, the moment-generating function M(t) = E(e^{tX}), why its derivatives at 0 give the moments, when it fails to exist, and three worked problems, with an interactive widget and R."
+date: 2027-02-15
+image: thumbnail.png
+categories: [Probability, Random variables, R, Interactive]
+keywords: [moments, central moments, moment-generating function, MGF, "M(t) = E(exp(tX))", Taylor expansion, uniqueness of the MGF, Cauchy distribution, lognormal]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# non-ASCII characters in plots under a "C" locale
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+The [expected value](../expected-value/index.qmd), the [variance](../variance/index.qmd), [skewness and kurtosis](../skewness-kurtosis/index.qmd) are all computed from expected values of powers of $X$: its **moments**. In this post we meet a function that "stores" all the moments at once and releases them by differentiation: the **moment-generating function**.
+
+## Moments and central moments
+
+The $n$-th **moment** of $X$ is
+
+$$\kappa_n = E(X^n),$$
+
+and, with $\mu = E(X)$, the $n$-th **central moment** is
+
+$$\mu_n = E\big[(X - \mu)^n\big].$$
+
+So $E(X) = \kappa_1$ and $\operatorname{Var}(X) = \mu_2 = \kappa_2 - \kappa_1^2$. Skewness is $\mu_3/\mu_2^{3/2}$ and kurtosis $\mu_4/\mu_2^2$.
+
+## Definition of the MGF
+
+The **moment-generating function** (MGF) of $X$, discrete or continuous, is
+
+$$M_X(t) = E\big(e^{tX}\big),$$
+
+for the values of $t$ at which the expectation is finite. Always $M_X(0) = E(1) = 1$. We say that $X$ **has an MGF** when $M_X(t)$ is finite on an open interval $(-h, h)$ around 0. It need not be defined for every $t \in \mathbb{R}$: in Problem 1 below it exists only for $t < \ln 2$.
+
+Why "moment-generating"? Expand $e^{tX}$ as a Taylor series:
+
+$$M_X(t) = E\left(1 + Xt + \frac{X^2}{2!}t^2 + \cdots\right) = 1 + E(X)\,t + \frac{E(X^2)}{2!}t^2 + \cdots = \sum_{n=0}^{\infty} \frac{\kappa_n}{n!}\, t^n.$$
+
+The moments are the coefficients of the expansion, so differentiating $n$ times at $t = 0$:
+
+$$M_X'(0) = E(X), \qquad M_X''(0) = E(X^2), \qquad \ldots, \qquad M_X^{(n)}(0) = E(X^n).$$
+
+The definition also gives the rule for linear transformations:
+
+$$M_{aX + b}(t) = E\big(e^{t(aX + b)}\big) = e^{bt}\, M_X(at).$$
+
+## The MGF determines the distribution
+
+**Theorem (uniqueness).** If $X$ and $Y$ have MGFs and $M_X(t) = M_Y(t)$ for every $t$ in an interval around 0, then $F_X = F_Y$: $X$ and $Y$ have the same distribution.
+
+So recognising an MGF is enough to know the distribution. We will use this many times in later sections, for example to find the distribution of a sum of independent random variables.
+
+**When it does not exist.** If $X$ has an MGF, it has moments of every order. The Cauchy distribution does not even have an expected value, so it has no MGF. The converse fails, however: the lognormal distribution has all its moments, yet $E(e^{tX}) = \infty$ for every $t > 0$. Having all moments is therefore necessary, not sufficient.
+
+## See the moments in the curve
+
+Choose a distribution. The blue curve is $M_X(t)$. It always passes through $(0, 1)$, and its slope there (green tangent) is $E(X)$. The orange dashed curve is the Taylor polynomial with the first $N$ moments: increase $N$ and watch it hug $M_X$ near 0. The vertical grey line, where present, is the limit beyond which $M_X(t) = \infty$.
+
+::: {.ix-panel}
+::: {.ix-title}
+The MGF and its moments
+:::
+
+```{ojs}
+//| echo: false
+mgfs39 = new Map([
+  ["Die", {M: t => d3.range(1, 7).reduce((s, x) => s + Math.exp(t * x) / 6, 0), mom: n => d3.range(1, 7).reduce((s, x) => s + x ** n / 6, 0), t: [-1, 0.6], tmax: Infinity}],
+  ["f(x) = (1/2)^x, x = 1, 2, … (Problem 1)", {M: t => t >= Math.log(2) ? Infinity : Math.exp(t) / (2 - Math.exp(t)), mom: n => d3.range(1, 400).reduce((s, x) => s + x ** n * 0.5 ** x, 0), t: [-1.5, 0.66], tmax: Math.log(2)}],
+  ["M(t) = exp(e^t − 1) (Problem 2)", {M: t => Math.exp(Math.exp(t) - 1), mom: n => [1, 1, 2, 5, 15, 52, 203, 877, 4140][n], t: [-1.5, 1.2], tmax: Infinity}],
+  ["f(x) = 2e^{−2(x−1)}, x > 1 (Problem 3, α = 1, θ = 2)", {M: t => t >= 2 ? Infinity : Math.exp(t) * 2 / (2 - t), mom: n => { /* X = 1 + Y, Y exponential with θ = 2: E(Y^k) = k!/2^k */ let s = 0, c = 1, f = 1; for (let k = 0; k <= n; k++) { if (k > 0) { c = c * (n - k + 1) / k; f *= k; } s += c * f / 2 ** k; } return s; }, t: [-1.5, 1.9], tmax: 2}],
+  ["Coin: X = 1 for heads", {M: t => (1 + Math.exp(t)) / 2, mom: n => n === 0 ? 1 : 0.5, t: [-3, 2], tmax: Infinity}]
+])
+viewof d39 = Inputs.select(mgfs39, {label: "Distribution"})
+viewof N39 = Inputs.range([1, 8], {step: 1, value: 2, label: "Taylor terms N"})
+```
+
+```{ojs}
+//| echo: false
+{
+  const {M, mom, t: [a, b], tmax} = d39;
+  const k = d3.range(0, 9).map(n => n === 0 ? 1 : mom(n));
+  const fact = n => n <= 1 ? 1 : n * fact(n - 1);
+  const taylor = t => d3.range(0, N39 + 1).reduce((s, n) => s + k[n] * t ** n / fact(n), 0);
+  const ts = d3.range(a, b, (b - a) / 300).concat([b]).filter(t => t < tmax - 1e-3);
+  const top = Math.min(8, d3.max(ts, M) * 1.1), W = 460, H = 280, L = 40, R = W - 12;
+  const xs = d3.scaleLinear().domain([a, b]).range([L, R]), ys = d3.scaleLinear().domain([0, top]).range([H - 24, 10]).clamp(true);
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H}`).style("width", "100%").style("max-width", "580px");
+  const num = v => String(+v.toFixed(2)).replace("-", "−");
+  ys.ticks(5).forEach(v => { svg.append("line").attr("x1", L).attr("x2", R).attr("y1", ys(v)).attr("y2", ys(v)).attr("stroke", "#eee");
+    svg.append("text").attr("x", L - 4).attr("y", ys(v)).attr("dy", "0.35em").attr("text-anchor", "end").style("font", "10px sans-serif").attr("fill", "#666").text(num(v)); });
+  xs.ticks(6).forEach(v => svg.append("text").attr("x", xs(v)).attr("y", H - 8).attr("text-anchor", "middle").style("font", "10px sans-serif").attr("fill", "#666").text(num(v)));
+  svg.append("line").attr("x1", xs(0)).attr("x2", xs(0)).attr("y1", 10).attr("y2", H - 24).attr("stroke", "#ccc");
+  if (Number.isFinite(tmax) && tmax < b + 0.5) svg.append("line").attr("x1", xs(tmax)).attr("x2", xs(tmax)).attr("y1", 10).attr("y2", H - 24).attr("stroke", "#999").attr("stroke-dasharray", "4 3");
+  const tp = d3.range(a, b, (b - a) / 300).concat([b]);
+  svg.append("path").attr("d", d3.line().defined(t => taylor(t) >= 0 && taylor(t) <= top).x(t => xs(t)).y(t => ys(taylor(t)))(tp)).attr("fill", "none").attr("stroke", "#f28e2b").attr("stroke-width", 2).attr("stroke-dasharray", "6 4");
+  // draw the tangent only where it stays inside the plot (the y scale clamps)
+  const ta = k[1] > 0 ? Math.max(a, -1 / k[1]) : a, tb = k[1] > 0 ? Math.min(b, (top - 1) / k[1]) : b;
+  svg.append("path").attr("d", d3.line().x(t => xs(t)).y(t => ys(1 + k[1] * t))([ta, tb])).attr("fill", "none").attr("stroke", "#59a14f").attr("stroke-width", 1.5);
+  svg.append("path").attr("d", d3.line().x(t => xs(t)).y(t => ys(M(t)))(ts)).attr("fill", "none").attr("stroke", "#4e79a7").attr("stroke-width", 2.5);
+  svg.append("circle").attr("cx", xs(0)).attr("cy", ys(1)).attr("r", 4).attr("fill", "#1f2d3d");
+  svg.append("text").attr("x", R).attr("y", 16).attr("text-anchor", "end").style("font", "11px sans-serif").attr("fill", "#666").text("t");
+  const fm = v => (+v.toFixed(4)).toLocaleString("en-GB", {maximumFractionDigits: 4});
+  return html`<div>${svg.node()}
+    <table class="ix-tbl">
+      <tr><td>M′(0) = E(X)</td><td><b>${fm(k[1])}</b></td></tr>
+      <tr><td>M″(0) = E(X²)</td><td>${fm(k[2])}</td></tr>
+      <tr><td>Var(X) = E(X²) − (E X)²</td><td><b>${fm(k[2] - k[1] ** 2)}</b></td></tr>
+      <tr><td>Defined for</td><td>${Number.isFinite(tmax) ? `t < ${fm(tmax)}` : "every t"}</td></tr>
+    </table></div>`;
+}
+```
+:::
+
+## Three worked problems
+
+**Problem 1.** The discrete random variable $X$ has pmf $f(x) = (1/2)^x$, $x = 1, 2, \ldots$ (a) Find its MGF $M_X(t)$. (b) Find the mean and the variance. (c) Find the MGF of $Y = 3X + 2$.
+
+(a) It is a geometric series with ratio $e^t/2$, which converges when $e^t < 2$, that is for $t < \ln 2$:
+
+$$M_X(t) = \sum_{x \ge 1} \left(\frac{e^t}{2}\right)^x = \frac{e^t/2}{1 - e^t/2} = \frac{e^t}{2 - e^t}, \qquad t < \ln 2.$$
+
+(b) Differentiating, $M_X'(t) = \dfrac{2e^t}{(2 - e^t)^2}$, so $E(X) = M_X'(0) = 2$. Again, $M_X''(t) = \dfrac{2e^t}{(2 - e^t)^2} + \dfrac{4e^{2t}}{(2 - e^t)^3}$, so $E(X^2) = 2 + 4 = 6$ and
+
+$$\operatorname{Var}(X) = 6 - 2^2 = 2.$$
+
+(c) By the rule for linear transformations,
+
+$$M_Y(t) = e^{2t} M_X(3t) = \frac{e^{5t}}{2 - e^{3t}}, \qquad t < \tfrac{\ln 2}{3}.$$
+
+**Problem 2.** $X$ has MGF $M_X(t) = \exp(e^t - 1)$. Find $E(X)$ and $\operatorname{Var}(X)$.
+
+By the chain rule, $M_X'(t) = e^t M_X(t)$, so $E(X) = M_X'(0) = 1 \cdot 1 = 1$. Again, $M_X''(t) = e^t M_X(t) + e^{2t} M_X(t)$, so $E(X^2) = 2$ and $\operatorname{Var}(X) = 2 - 1 = 1$. We will see in a later post that this is the MGF of the Poisson distribution with parameter 1, and by uniqueness $X$ has exactly that distribution.
+
+**Problem 3.** $X$ has pdf $f_X(x) = \theta e^{-\theta(x - \alpha)}$ for $x > \alpha$, with $\alpha, \theta > 0$. Find $F_X(x)$, $M_X(t)$, $E(X)$ and $\operatorname{Var}(X)$.
+
+For $x > \alpha$, $F_X(x) = \int_\alpha^x \theta e^{-\theta(s - \alpha)}\,ds = 1 - e^{-\theta(x - \alpha)}$, and $F_X(x) = 0$ for $x \le \alpha$. For $t < \theta$,
+
+$$M_X(t) = \int_\alpha^\infty e^{tx}\,\theta e^{-\theta(x - \alpha)}\,dx = \theta e^{\theta\alpha} \int_\alpha^\infty e^{-(\theta - t)x}\,dx = \frac{\theta\, e^{\alpha t}}{\theta - t}.$$
+
+For $t \ge \theta$ the integral diverges. Writing $\ln M_X(t) = \alpha t + \ln\theta - \ln(\theta - t)$ and differentiating, $M_X'(0) = \alpha + \frac1\theta$. One more derivative gives $E(X^2) = \left(\alpha + \frac1\theta\right)^2 + \frac{1}{\theta^2}$. Hence
+
+$$E(X) = \alpha + \frac{1}{\theta}, \qquad \operatorname{Var}(X) = \frac{1}{\theta^2}.$$
+
+The shift by $\alpha$ moves the mean but leaves the variance unchanged, as the [properties of the variance](../variance/index.qmd) predict.
+
+## In R
+
+R differentiates symbolically with `D()`, so we can check Problem 1 without doing the algebra by hand:
+
+```{r}
+#| label: mgf-r
+M  <- expression(exp(t) / (2 - exp(t)))
+M1 <- D(M[[1]], "t")
+M2 <- D(M1, "t")
+EX  <- eval(M1, list(t = 0))
+EX2 <- eval(M2, list(t = 0))
+c(EX = EX, EX2 = EX2, Var = EX2 - EX^2)
+# check by simulation: X = number of tosses until the first head
+x <- rgeom(1e5, 0.5) + 1
+c(mean = mean(x), var = var(x))
+```
+
+The simulation gives mean `r fmt(mean(x), 3)` and variance `r fmt(var(x), 3)`, close to 2 and 2.
+
+## Summary
+
+- Moments $\kappa_n = E(X^n)$, central moments $\mu_n = E(X - \mu)^n$. The mean is $\kappa_1$ and the variance is $\mu_2$.
+- The MGF $M_X(t) = E(e^{tX})$ exists when it is finite on an interval around 0, and then $M_X^{(n)}(0) = E(X^n)$.
+- $M_{aX + b}(t) = e^{bt} M_X(at)$.
+- The same MGF means the same distribution. Not every distribution has an MGF, even if it has all its moments.
+
+## Review questions
+
+**1. Quick quiz.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz39 = [
+  {q: "What is the value of every MGF at t = 0?",
+   opts: ["1", "0", "E(X)", "It depends on the distribution"], ans: 0,
+   why: "M(0) = E(e⁰) = E(1) = 1, for every random variable."},
+  {q: "If M(t) = (1 + e^t)/2, what is E(X²)?",
+   opts: ["1/2", "1/4", "1", "2"], ans: 0,
+   why: "M″(t) = e^t/2, so E(X²) = M″(0) = 1/2. It is the coin with X = 0 or 1, where X² = X."},
+  {q: "If M_X(t) = e^{t²/2}, what is the MGF of Y = 2X + 1?",
+   opts: ["e^t · e^{2t²}", "2e^{t²/2} + 1", "e^{t²} · e^t", "e^{(2t+1)²/2}"], ans: 0,
+   why: "M_Y(t) = e^t·M_X(2t) = e^t · e^{(2t)²/2} = e^t · e^{2t²}."},
+  {q: "X has all its moments finite. Does it necessarily have an MGF?",
+   opts: ["No, e.g. the lognormal", "Yes, always", "Only if it is discrete"], ans: 0,
+   why: "The lognormal has all its moments, but E(e^{tX}) = ∞ for every t > 0."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz39.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Correct.</span> ` : `<span class="ix-no">✗ Not quite.</span> `) + item.why;
+        score.innerHTML = `<b>Correct: ${[...done.values()].filter(x => x).length} of ${quiz39.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** Find the MGF of a die and, by differentiation, recover $E(X) = 3.5$.
+
+**3.** $X$ has MGF $M_X(t) = \dfrac{1}{1 - 2t}$ for $t < 1/2$. Find $E(X)$ and $\operatorname{Var}(X)$.
+
+**4.** Using the expansion $M_X(t) = \sum_n \kappa_n t^n / n!$, find $E(X^3)$ for $M_X(t) = \dfrac{1}{1 - 2t}$.
+
+::: {.callout-tip collapse="true"}
+## Answers
+
+2. $M_X(t) = \frac16 (e^t + e^{2t} + \cdots + e^{6t})$, so $M_X'(0) = \frac16 (1 + 2 + \cdots + 6) = 3.5$.
+3. $M_X'(t) = \dfrac{2}{(1 - 2t)^2}$ and $M_X''(t) = \dfrac{8}{(1 - 2t)^3}$, so $E(X) = 2$, $E(X^2) = 8$ and $\operatorname{Var}(X) = 4$.
+4. $\dfrac{1}{1 - 2t} = \sum_n 2^n t^n$, so $\kappa_n / n! = 2^n$ and $E(X^3) = 3! \cdot 2^3 = 48$.
+:::
+
+---
+
+**Next post:** *The probability-generating function: a whole distribution in one power series.*
