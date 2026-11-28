@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="el"><head><meta charset="utf-8">
+<link rel="stylesheet" href="common.css">
+<style>
+  .cell { position: absolute; width: 118px; height: 76px; border-radius: 10px; background: #fff; box-shadow: 0 0 0 2px #c9d3df; font-weight: 700; font-size: 32px; text-align: center; line-height: 76px; color: #4a5a6b; }
+  .on { background: #f28e2b; color: #fff; box-shadow: none; }
+</style></head>
+<body>
+<div class="scene" id="s1">
+  <div class="tag">Πιθανότητες σε 30″</div>
+  <div class="mid" style="top:290px">Ρίχνεις δύο ζάρια. Τα δυνατά αθροίσματα είναι <span class="blue" style="font-weight:800">11</span>:</div>
+  <div class="mid blue" style="top:520px;font-weight:800">2, 3, 4, …, 12</div>
+  <div id="s1q"><div class="big" style="top:720px">Άρα P(7) = <span class="hl">1/11</span>;</div>
+  <div class="small" style="top:860px">P(7): η πιθανότητα αθροίσματος 7</div></div>
+</div>
+<div class="scene" id="s2">
+  <div class="big" style="top:380px"><span class="red">Όχι.</span></div>
+  <div class="mid" style="top:560px">Τα 11 αθροίσματα <b>δεν</b> είναι ισοπίθανα.</div>
+  <div class="mid" style="top:780px">Ισοπίθανα είναι τα <span class="blue" style="font-weight:800">36</span> ζεύγη (1ο ζάρι, 2ο ζάρι).</div>
+</div>
+<div class="scene" id="s3">
+  <div class="mid" style="top:260px;font-size:54px"><span class="hl" style="font-weight:800" id="cnt7">0</span> από τα 36 ζεύγη δίνουν άθροισμα 7</div>
+  <div id="grid"></div>
+  <div class="big" id="res7" style="top:1230px;font-size:84px">P(7) = 6/36 = <span class="hl">1/6</span></div>
+</div>
+<div class="scene" id="s4">
+  <div class="mid" style="top:260px;font-size:54px">Πιθανότητα κάθε αθροίσματος</div>
+  <svg id="bars" width="1080" height="900" style="position:absolute;left:0;top:400px"></svg>
+</div>
+<div class="scene" id="s5">
+  <div class="big" style="top:340px">Πρώτα <span class="hl">ισοπίθανα</span>, μετά μέτρημα.</div>
+  <div class="mid" style="top:680px">Ο τύπος «ευνοϊκές / δυνατές» ισχύει μόνο όταν οι περιπτώσεις είναι ισοπίθανες.</div>
+</div>
+<div class="brand" id="brand">stochastika.com</div>
+<script src="common.js"></script>
+<script>
+endCard("s6", "Δες τη σχετική συχνότητα να σταθεροποιείται, στον προσομοιωτή του άρθρου:");
+// πλέγμα 6×6 με τα ζεύγη
+const grid = document.getElementById("grid"), cells = [];
+for (let a = 1; a <= 6; a++) for (let b = 1; b <= 6; b++) {
+  const d = document.createElement("div"); d.className = "cell"; d.textContent = `${a},${b}`;
+  d.style.left = (80 + (b - 1) * 136) + "px"; d.style.top = (470 + (a - 1) * 120) + "px";
+  grid.appendChild(d); cells.push({d, a, b});
+}
+const sevens = cells.filter(c => c.a + c.b === 7);
+// ραβδόγραμμα αθροισμάτων με τη λανθασμένη γραμμή 1/11
+const sums = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], L = 110, R = 930, T = 40, B = 720, bw = (R - L) / 11;
+const Y = p => B - (B - T) * p / 0.2;
+let svg = sums.map((s, i) => `<rect id="r${s}" x="${L + i * bw + bw * 0.14}" width="${bw * 0.72}" y="${B}" height="0" fill="${s === 7 ? "#f28e2b" : "#9ecae1"}"/>
+  <text x="${L + (i + 0.5) * bw}" y="${B + 50}" text-anchor="middle" font-size="34" fill="#4a5a6b">${s}</text>`).join("");
+svg += `<line x1="${L}" x2="${R}" y1="${B}" y2="${B}" stroke="#4a5a6b" stroke-width="3"/>`;
+svg += `<g id="wrong"><line x1="${L}" x2="${R}" y1="${Y(1 / 11)}" y2="${Y(1 / 11)}" stroke="#c62828" stroke-width="5" stroke-dasharray="16 10"/>
+  <text x="${L}" y="${Y(1 / 11) - 16}" text-anchor="start" font-size="34" font-weight="800" fill="#c62828">λάθος: 1/11</text></g>`;
+svg += `<text id="right" x="${L + 5.5 * bw}" y="${Y(1 / 6) - 20}" text-anchor="middle" font-size="44" font-weight="800" fill="#f28e2b">1/6</text>`;
+document.getElementById("bars").innerHTML = svg;
+
+const scenes = [["s1", 0, 5.5], ["s2", 5.5, 10], ["s3", 10, 17.5], ["s4", 17.5, 23.5], ["s5", 23.5, 27.5], ["s6", 27.5, 32]];
+window.render = t => {
+  showScenes(t, scenes);
+  document.getElementById("brand").style.opacity = t < 27.5 ? 1 : 0;
+  document.getElementById("s1q").style.opacity = fadeIn(t, 2.2);
+  cells.forEach((c, i) => c.d.style.opacity = fadeIn(t, 10.2 + i * 0.03, 0.2));
+  let n = 0;
+  sevens.forEach((c, i) => { const on = t >= 12 + i * 0.5; c.d.className = "cell" + (on ? " on" : ""); n += on; });
+  document.getElementById("cnt7").textContent = n;
+  document.getElementById("res7").style.opacity = fadeIn(t, 15.3);
+  sums.forEach((s, i) => { const p = (6 - Math.abs(s - 7)) / 36 * ease((t - 18 - i * 0.15) / 0.8), r = document.getElementById("r" + s); r.setAttribute("y", Y(p)); r.setAttribute("height", B - Y(p)); });
+  document.getElementById("wrong").style.opacity = fadeIn(t, 20.5);
+  document.getElementById("right").style.opacity = fadeIn(t, 21.3);
+};
+render(0);
+</script>
+</body></html>

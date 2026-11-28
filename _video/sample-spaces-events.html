@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="el"><head><meta charset="utf-8">
+<link rel="stylesheet" href="common.css">
+<style>
+  .card { position: absolute; width: 56px; height: 80px; border-radius: 8px; background: #fff; box-shadow: 0 0 0 2px #c9d3df; font-weight: 800; font-size: 24px; text-align: center; line-height: 1.05; padding-top: 10px; box-sizing: border-box; }
+  .box { position: absolute; border: 4px solid #4e79a7; border-radius: 14px; }
+  .r { color: #c62828; } .k { color: #1f2d3d; }
+</style></head>
+<body>
+<div class="scene" id="s1">
+  <div class="tag">Πιθανότητες σε 30″</div>
+  <div class="big" style="top:300px">Τραβάς ένα χαρτί από την τράπουλα.</div>
+  <div class="mid" style="top:690px">Πόσα στοιχεία έχει ο δειγματικός χώρος <b>Ω</b>;</div>
+  <div class="big hl" style="top:930px">52; 2; 4; 13;</div>
+</div>
+<div class="scene" id="s2">
+  <div class="mid" id="mode" style="top:260px;font-size:50px;right:100px"></div>
+  <div class="big" style="top:400px;font-size:84px">|Ω| = <span class="hl" id="omega">52</span></div>
+  <div id="deck"></div>
+</div>
+<div class="scene" id="s3">
+  <div class="big" style="top:340px">Ο δειγματικός χώρος <span class="hl">δεν είναι μοναδικός</span>.</div>
+  <div class="mid" style="top:720px">Εξαρτάται από το τι επιλέγεις να καταγράψεις.</div>
+  <div class="small" style="top:950px">Ίδια 52 φύλλα, τέσσερις διαφορετικοί δειγματικοί χώροι.</div>
+</div>
+<div class="brand" id="brand">stochastika.com</div>
+<script src="common.js"></script>
+<script>
+endCard("s4", "Δειγματικοί χώροι και ενδεχόμενα, με διαδραστικά διαγράμματα:");
+const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+const suits = [["♥", "r"], ["♦", "r"], ["♠", "k"], ["♣", "k"]];
+const deck = document.getElementById("deck");
+const cards = [];
+suits.forEach(([s, c], si) => ranks.forEach((r, ri) => {
+  const d = document.createElement("div"); d.className = `card ${c}`; d.innerHTML = `${r}<br>${s}`;
+  deck.appendChild(d); cards.push({d, si, ri});
+}));
+// τρόποι καταγραφής: κενά ανάμεσα σε γραμμές/στήλες και ομάδες (πλαίσια)
+const W = 56, H = 80, top0 = 620;
+const modes = [
+  {label: "Καταγράφεις <b>το φύλλο</b>", n: 52, rowGap: [8, 8, 8], colGap: 6, boxes: "none"},
+  {label: "Καταγράφεις μόνο <b>το χρώμα</b>", n: 2, rowGap: [8, 70, 8], colGap: 6, boxes: "color"},
+  {label: "Καταγράφεις <b>τη σειρά</b> (♥ ♦ ♠ ♣)", n: 4, rowGap: [50, 50, 50], colGap: 6, boxes: "suit"},
+  {label: "Καταγράφεις <b>την αξία</b>", n: 13, rowGap: [8, 8, 8], colGap: 10, boxes: "rank"}
+];
+function layout(m) {
+  const ys = [top0]; for (let i = 0; i < 3; i++) ys.push(ys[i] + H + m.rowGap[i]);
+  const totalW = 13 * W + 12 * m.colGap, x0 = 80 + (840 - totalW) / 2;
+  return {x: ri => x0 + ri * (W + m.colGap), y: si => ys[si]};
+}
+const boxesFor = (m, L) => {
+  const p = 10, xr = [L.x(0) - p, L.x(12) + W + p];
+  if (m.boxes === "color") return [[0, 1], [2, 3]].map(([a, b]) => [xr[0], L.y(a) - p, xr[1], L.y(b) + H + p]);
+  if (m.boxes === "suit") return [0, 1, 2, 3].map(a => [xr[0], L.y(a) - p, xr[1], L.y(a) + H + p]);
+  if (m.boxes === "rank") return ranks.map((_, ri) => [L.x(ri) - 4, L.y(0) - p, L.x(ri) + W + 4, L.y(3) + H + p]);
+  return [];
+};
+const boxLayer = document.createElement("div"); deck.appendChild(boxLayer);
+const lerp = (a, b, u) => a + (b - a) * u;
+
+const scenes = [["s1", 0, 5], ["s2", 5, 22], ["s3", 22, 27], ["s4", 27, 31]];
+const times = [5, 9, 13, 17];   // αρχή κάθε τρόπου καταγραφής
+window.render = t => {
+  showScenes(t, scenes);
+  document.getElementById("brand").style.opacity = (t < 22 || (t > 22.3 && t < 27)) ? 1 : 0;
+  let k = 0; for (let i = 0; i < 4; i++) if (t >= times[i]) k = i;
+  const u = ease((t - times[k]) / 0.9), prev = modes[Math.max(0, k - 1)], cur = modes[k];
+  const Lp = layout(prev), Lc = layout(cur);
+  for (const {d, si, ri} of cards) {
+    d.style.left = lerp(Lp.x(ri), Lc.x(ri), u) + "px"; d.style.top = lerp(Lp.y(si), Lc.y(si), u) + "px";
+  }
+  document.getElementById("mode").innerHTML = cur.label;
+  document.getElementById("omega").textContent = cur.n;
+  boxLayer.innerHTML = boxesFor(cur, Lc).map(([x1, y1, x2, y2]) =>
+    `<div class="box" style="left:${x1}px;top:${y1}px;width:${x2 - x1}px;height:${y2 - y1}px;opacity:${ease((t - times[k] - 0.7) / 0.4)}"></div>`).join("");
+};
+render(0);
+</script>
+</body></html>
