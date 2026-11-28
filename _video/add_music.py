@@ -4,7 +4,7 @@
 (σταθερός σπόρος) και τα άρθρα, με τη σειρά της ημερομηνίας τους, τα
 παίρνουν κυκλικά. Έτσι κάθε άρθρο έχει πάντα την ίδια μουσική και δύο
 διαδοχικά άρθρα δεν έχουν ποτέ την ίδια. Κομμάτια μικρότερα από το βίντεο
-παραλείπονται.
+δεν χρησιμοποιούνται.
 
 Χρήση: python3 _video/add_music.py <βίντεο.mp4> <slug> <έξοδος.mp4>
 """
@@ -33,10 +33,10 @@ for q in (ROOT / "el" / "posts").glob("*/index.qmd"):
 order = sorted(dates, key=lambda s: (dates[s], s))
 D = duration(video)
 k = order.index(slug) if slug in order else 0
-for j in range(len(tracks)):
-    track = tracks[(k + j) % len(tracks)]
-    if duration(track) >= D:
-        break
+# κυκλικά μόνο ανάμεσα στα κομμάτια που φτάνουν για όλο το βίντεο, ώστε
+# δύο διαδοχικά άρθρα να μην πάρουν ποτέ το ίδιο
+eligible = [t for t in tracks if duration(t) >= D]
+track = eligible[k % len(eligible)]
 print(f"add_music: {slug} -> {track.name}")
 fade_out = max(0.0, D - 2.5)
 af = (f"[1:a]atrim=0:{D},asetpts=N/SR/TB,afade=t=in:d=1,afade=t=out:st={fade_out}:d=2.5,"
