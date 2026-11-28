@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="el"><head><meta charset="utf-8">
+<link rel="stylesheet" href="common.css">
+<style>
+  .row { position: absolute; left: 80px; width: 840px; }
+  .row .k { font-size: 44px; font-weight: 700; }
+  .row .f { font-size: 40px; color: #4a5a6b; margin-top: 4px; }
+  .bar { height: 30px; border-radius: 15px; margin-top: 12px; background: #4e79a7; }
+  .row .tm { font-size: 44px; font-weight: 800; color: #f28e2b; margin-top: 8px; }
+</style></head>
+<body>
+<div class="scene" id="s1">
+  <div class="tag">Πιθανότητες σε 30″</div>
+  <div class="big" style="top:300px">Πόσο γρήγορα σπάει ο κωδικός σου;</div>
+  <div class="mid" style="top:640px">Αν κάποιος δοκιμάζει <span class="blue" style="font-weight:800">1 δισεκατομμύριο</span> κωδικούς το δευτερόλεπτο…</div>
+</div>
+<div class="scene" id="s2">
+  <div class="row" id="r0" style="top:250px"><div class="k">PIN 4 ψηφίων</div><div class="f">10⁴ = 10.000 κωδικοί</div><div class="bar" id="b0"></div><div class="tm">αμέσως</div></div>
+  <div class="row" id="r1" style="top:510px"><div class="k">8 πεζά γράμματα</div><div class="f">26⁸ ≈ 2,1 · 10¹¹</div><div class="bar" id="b1"></div><div class="tm">≈ 3,5 λεπτά</div></div>
+  <div class="row" id="r2" style="top:770px"><div class="k">8 χαρακτήρες: πεζά, κεφαλαία, ψηφία</div><div class="f">62⁸ ≈ 2,2 · 10¹⁴</div><div class="bar" id="b2"></div><div class="tm">≈ 2,5 ημέρες</div></div>
+  <div class="row" id="r3" style="top:1090px"><div class="k">12 τέτοιοι χαρακτήρες</div><div class="f">62¹² ≈ 3,2 · 10²¹</div><div class="bar" id="b3"></div><div class="tm">≈ 100.000 χρόνια</div></div>
+</div>
+<div class="scene" id="s3">
+  <div class="tag">Βασική αρχή απαρίθμησης</div>
+  <div class="big" style="top:300px">Κάθε θέση <span class="hl">πολλαπλασιάζει</span>.</div>
+  <div class="big" style="top:560px;font-size:64px">62 × 62 × … × 62 = 62¹²</div>
+  <div class="mid" style="top:780px">Γι' αυτό το μήκος του κωδικού μετράει περισσότερο από όλα.</div>
+</div>
+<div class="brand" id="brand">stochastika.com</div>
+<script src="common.js"></script>
+<script>
+endCard("s4", "Υπολόγισε πόσες εκδοχές έχει το δικό σου μοτίβο κωδικού:");
+// μήκος μπάρας ανάλογο του log10(πλήθους κωδικών), έως 10^22
+const logs = [4, Math.log10(Math.pow(26, 8)), Math.log10(Math.pow(62, 8)), Math.log10(Math.pow(62, 12))];
+const scenes = [["s1", 0, 5], ["s2", 5, 20], ["s3", 20, 26.5], ["s4", 26.5, 30.5]];
+window.render = t => {
+  showScenes(t, scenes);
+  document.getElementById("brand").style.opacity = (t < 5 || (t > 20.2 && t < 26.5)) ? 1 : 0;
+  logs.forEach((l, i) => {
+    const a = 5.5 + i * 3.3;
+    document.getElementById("r" + i).style.opacity = fadeIn(t, a);
+    document.getElementById("b" + i).style.width = (840 * l / 22 * ease((t - a - 0.3) / 1.4)) + "px";
+    document.getElementById("b" + i).style.background = i === 3 ? "#3b8f3b" : "#4e79a7";
+  });
+};
+render(0);
+</script>
+</body></html>

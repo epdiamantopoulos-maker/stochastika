@@ -3,6 +3,7 @@
 *_files/
 *.html
 !assets/*.html
+!_video/*.html
 deploy.json
 .Rhistory
 .DS_Store

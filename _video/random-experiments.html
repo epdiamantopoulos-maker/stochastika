@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="el"><head><meta charset="utf-8">
+<link rel="stylesheet" href="common.css">
+<style>
+  .seq { position: absolute; left: 80px; width: 860px; display: grid; grid-template-columns: repeat(10, 80px); row-gap: 14px; }
+  .coin { width: 66px; height: 66px; border-radius: 50%; text-align: center; line-height: 66px; font-weight: 800; font-size: 32px; }
+  .K { background: #4e79a7; color: #fff; }
+  .G { background: #fff; color: #4e79a7; box-shadow: inset 0 0 0 4px #4e79a7; }
+  .run { outline: 6px solid #f28e2b; outline-offset: 2px; }
+  .lab { position: absolute; left: 80px; font-weight: 800; font-size: 56px; }
+</style></head>
+<body>
+<div class="scene" id="s1">
+  <div class="tag">Πιθανότητες σε 30″</div>
+  <div class="big" style="top:290px;font-size:84px">Ποια ακολουθία την έγραψε <span class="hl">άνθρωπος</span>;</div>
+  <div class="lab" style="top:530px">Α</div><div class="seq" id="seqA" style="top:610px"></div>
+  <div class="lab" style="top:880px">Β</div><div class="seq" id="seqB" style="top:960px"></div>
+  <div class="small" style="top:1240px">Κ = κορώνα, Γ = γράμματα, 30 ρίψεις</div>
+</div>
+<div class="scene" id="s2">
+  <div class="big" style="top:300px">Η <span class="hl">Α</span>.</div>
+  <div class="mid" style="top:440px">Οι άνθρωποι εναλλάσσουν συνέχεια Κ και Γ και αποφεύγουν τα μεγάλα σερί.</div>
+  <div class="seq" id="seqB2" style="top:760px"></div>
+  <div class="mid" style="top:1050px">Η Β έχει <span class="hl" id="runTxt">6</span> ίδια στη σειρά. Και είναι τυχαία.</div>
+</div>
+<div class="scene" id="s3">
+  <div class="tag">Προσομοίωση</div>
+  <div class="mid" style="top:290px;font-size:54px">Το μεγαλύτερο σερί σε 100 ρίψεις, σε <span class="blue" id="nsim" style="font-weight:800">0</span> ακολουθίες:</div>
+  <svg id="hist" width="1080" height="760" style="position:absolute;left:0;top:500px"></svg>
+  <div class="mid" style="top:1300px;font-size:52px">μέσος όρος: <span class="blue" id="mean" style="font-weight:800">–</span> · σερί ≥ 5: <span class="hl" id="ge5" style="font-weight:800">–</span></div>
+</div>
+<div class="scene" id="s4">
+  <div class="big" style="top:340px">Το τυχαίο έχει <span class="hl">σερί</span>.</div>
+  <div class="mid" style="top:620px">Μια ακολουθία με ύποπτα λίγα σερί μάλλον την έφτιαξε άνθρωπος.</div>
+  <div class="small" style="top:950px">Το κέρμα δεν «θυμάται» τι έφερε πριν, οπότε δεν προσπαθεί να εναλλάσσει.</div>
+</div>
+<div class="brand" id="brand">stochastika.com</div>
+<script src="common.js"></script>
+<script>
+endCard("s5", "Γράψε τη δική σου «τυχαία» ακολουθία και δες αν περνά το τεστ:");
+const longest = s => { let m = 1, c = 1; for (let i = 1; i < s.length; i++) { c = s[i] === s[i - 1] ? c + 1 : 1; m = Math.max(m, c); } return m; };
+// Α: «ανθρώπινη», με συχνές εναλλαγές και σερί έως 2
+const A = "ΚΓΚΓΓΚΓΚΚΓΚΓΓΚΓΚΓΚΚΓΓΚΓΚΓΚΓΓΚΓ".split("");
+// Β: πραγματικά τυχαία· ο πρώτος σπόρος με μέγιστο σερί 6 και 14–16 κορώνες
+let B, seed = 1;
+for (;; seed++) { const r = rng(seed); B = Array.from({length: 30}, () => r() < 0.5 ? "Κ" : "Γ"); const k = B.filter(c => c === "Κ").length; if (longest(B) === 6 && k >= 14 && k <= 16) break; }
+let runStart = 0; { let c = 1; for (let i = 1; i < 30; i++) { c = B[i] === B[i - 1] ? c + 1 : 1; if (c === 6) runStart = i - 5; } }
+const coins = (seq, run) => seq.map((c, i) => `<span class="coin ${c === "Κ" ? "K" : "G"} ${run && i >= runStart && i < runStart + 6 ? "run" : ""}">${c}</span>`).join("");
+document.getElementById("seqA").innerHTML = coins(A, false);
+document.getElementById("seqB").innerHTML = coins(B, false);
+document.getElementById("seqB2").innerHTML = coins(B, true);
+// προσομοίωση: μέγιστο σερί σε 10.000 ακολουθίες των 100 ρίψεων
+const NS = 10000, r2 = rng(2026), sims = [];
+for (let k = 0; k < NS; k++) { let m = 1, c = 1, prev = r2() < 0.5; for (let i = 1; i < 100; i++) { const x = r2() < 0.5; c = x === prev ? c + 1 : 1; m = Math.max(m, c); prev = x; } sims.push(m); }
+const vals = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
+const finalMax = Math.max(...vals.map(v => sims.filter(s => s === v).length));
+const L = 120, R = 940, T = 20, BOT = 660, bw = (R - L) / vals.length;
+const X = v => L + (vals.indexOf(v) + 0.5) * bw, Y = c => BOT - (BOT - T) * c / finalMax;
+let g = vals.map(v => `<rect id="b${v}" x="${X(v) - bw * 0.38}" width="${bw * 0.76}" y="${BOT}" height="0" fill="${v >= 5 ? "#f28e2b" : "#9ecae1"}"/>
+  <text x="${X(v)}" y="${BOT + 50}" text-anchor="middle" font-size="34" fill="#4a5a6b">${v === 14 ? "14+" : v}</text>`).join("");
+g += `<line x1="${L}" x2="${R}" y1="${BOT}" y2="${BOT}" stroke="#4a5a6b" stroke-width="3"/>`;
+document.getElementById("hist").innerHTML = g;
+
+const scenes = [["s1", 0, 6], ["s2", 6, 11.5], ["s3", 11.5, 23.5], ["s4", 23.5, 27.5], ["s5", 27.5, 32]];
+window.render = t => {
+  showScenes(t, scenes);
+  document.getElementById("brand").style.opacity = (t < 11.3 || (t > 23.7 && t < 27.5)) ? 1 : 0;
+  [...document.querySelectorAll("#seqA .coin")].forEach((c, i) => c.style.opacity = fadeIn(t, 0.6 + i * 0.04, 0.15));
+  [...document.querySelectorAll("#seqB .coin")].forEach((c, i) => c.style.opacity = fadeIn(t, 2.0 + i * 0.04, 0.15));
+  const n = Math.round(NS * ease((t - 12.2) / 10));
+  const shown = sims.slice(0, n);
+  for (const v of vals) {
+    const cnt = shown.filter(s => v === 14 ? s >= 14 : s === v).length, b = document.getElementById("b" + v);
+    b.setAttribute("y", Y(cnt)); b.setAttribute("height", BOT - Y(cnt));
+  }
+  document.getElementById("nsim").textContent = n.toLocaleString("el-GR");
+  document.getElementById("mean").textContent = n ? (shown.reduce((a, b) => a + b, 0) / n).toLocaleString("el-GR", {maximumFractionDigits: 1, minimumFractionDigits: 1}) : "–";
+  document.getElementById("ge5").textContent = n ? Math.round(100 * shown.filter(s => s >= 5).length / n) + "%" : "–";
+};
+render(0);
+</script>
+</body></html>
