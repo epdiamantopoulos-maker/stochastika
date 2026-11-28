@@ -1,0 +1,239 @@
+---
+title: "Ροπές και ροπογεννήτρια συνάρτηση"
+description: "Οι ροπές και οι κεντρικές ροπές μιας τυχαίας μεταβλητής, η ροπογεννήτρια συνάρτηση M(t) = E(e^{tX}), γιατί οι παράγωγοί της στο 0 δίνουν τις ροπές, πότε δεν υπάρχει, και τρεις λυμένες ασκήσεις, με διαδραστικό και R."
+date: 2027-02-15
+image: thumbnail.png
+categories: [Πιθανότητες, Τυχαίες μεταβλητές, R, Διαδραστικό]
+keywords: [ροπές, κεντρικές ροπές, ροπογεννήτρια συνάρτηση, moment generating function, MGF, "M(t) = E(exp(tX))", ανάπτυγμα Taylor, μοναδικότητα ροπογεννήτριας, Cauchy]
+---
+
+```{r}
+#| label: setup
+#| include: false
+set.seed(2026)
+# ελληνικοί χαρακτήρες στα γραφήματα και σε locale "C"
+invisible(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+fmt <- function(x, d = 2) formatC(x, format = "f", digits = d, decimal.mark = ",")
+pct <- function(x, d = 1) paste0(fmt(100 * x, d), "%")
+```
+
+Η [αναμενόμενη τιμή](../expected-value/index.qmd), η [διακύμανση](../variance/index.qmd), η [ασυμμετρία και η κύρτωση](../skewness-kurtosis/index.qmd) υπολογίζονται όλες από αναμενόμενες τιμές δυνάμεων της $X$: τις **ροπές** της. Σε αυτό το άρθρο βλέπουμε μια συνάρτηση που «κρύβει» όλες τις ροπές μαζί και τις αποδίδει με παραγώγιση: τη **ροπογεννήτρια**.
+
+## Ροπές και κεντρικές ροπές
+
+Η $n$-οστή **ροπή** (moment) της $X$ είναι
+
+$$\kappa_n = E(X^n),$$
+
+και, με $\mu = E(X)$, η $n$-οστή **κεντρική ροπή** είναι
+
+$$\mu_n = E\big[(X - \mu)^n\big].$$
+
+Έτσι $E(X) = \kappa_1$ και $\operatorname{Var}(X) = \mu_2 = \kappa_2 - \kappa_1^2$. Η ασυμμετρία είναι $\mu_3/\mu_2^{3/2}$ και η κύρτωση $\mu_4/\mu_2^2$.
+
+## Ορισμός της ροπογεννήτριας
+
+Η **ροπογεννήτρια συνάρτηση** (moment-generating function, MGF) της $X$, διακριτής ή συνεχούς, είναι
+
+$$M_X(t) = E\big(e^{tX}\big),$$
+
+για τα $t$ στα οποία η αναμενόμενη τιμή είναι πεπερασμένη. Πάντα $M_X(0) = E(1) = 1$. Λέμε ότι η $X$ **έχει ροπογεννήτρια** όταν η $M_X(t)$ είναι πεπερασμένη σε ένα ανοιχτό διάστημα $(-h, h)$ γύρω από το 0. Δεν χρειάζεται να ορίζεται για κάθε $t \in \mathbb{R}$: στην Άσκηση 1 παρακάτω ορίζεται μόνο για $t < \ln 2$.
+
+Γιατί «ροπογεννήτρια»; Αναπτύσσουμε την $e^{tX}$ σε σειρά Taylor:
+
+$$M_X(t) = E\left(1 + Xt + \frac{X^2}{2!}t^2 + \cdots\right) = 1 + E(X)\,t + \frac{E(X^2)}{2!}t^2 + \cdots = \sum_{n=0}^{\infty} \frac{\kappa_n}{n!}\, t^n.$$
+
+Οι ροπές είναι οι συντελεστές του αναπτύγματος, άρα παραγωγίζοντας $n$ φορές στο $t = 0$:
+
+$$M_X'(0) = E(X), \qquad M_X''(0) = E(X^2), \qquad \ldots, \qquad M_X^{(n)}(0) = E(X^n).$$
+
+Από τον ορισμό προκύπτει επίσης ο κανόνας για γραμμικούς μετασχηματισμούς:
+
+$$M_{aX + b}(t) = E\big(e^{t(aX + b)}\big) = e^{bt}\, M_X(at).$$
+
+## Η ροπογεννήτρια ορίζει την κατανομή
+
+**Θεώρημα (μοναδικότητα).** Αν οι $X$ και $Y$ έχουν ροπογεννήτριες και $M_X(t) = M_Y(t)$ για κάθε $t$ σε ένα διάστημα γύρω από το 0, τότε $F_X = F_Y$: οι $X$, $Y$ έχουν την ίδια κατανομή.
+
+Αρκεί λοιπόν να αναγνωρίσουμε μια ροπογεννήτρια για να ξέρουμε την κατανομή. Αυτό θα το χρησιμοποιήσουμε πολλές φορές στις επόμενες ενότητες, π.χ. για να βρούμε την κατανομή ενός αθροίσματος ανεξάρτητων τυχαίων μεταβλητών.
+
+**Πότε δεν υπάρχει.** Αν η $X$ έχει ροπογεννήτρια, τότε έχει ροπές κάθε τάξης. Η κατανομή Cauchy δεν έχει ούτε αναμενόμενη τιμή, οπότε δεν έχει ροπογεννήτρια. Το αντίστροφο όμως δεν ισχύει: η λογαριθμοκανονική κατανομή έχει όλες τις ροπές, αλλά $E(e^{tX}) = \infty$ για κάθε $t > 0$. Η ύπαρξη όλων των ροπών είναι λοιπόν αναγκαία, όχι ικανή.
+
+## Δείτε τις ροπές στην καμπύλη
+
+Διαλέξτε μια κατανομή. Η μπλε καμπύλη είναι η $M_X(t)$. Περνά πάντα από το $(0, 1)$, και η κλίση της εκεί (πράσινη εφαπτομένη) είναι η $E(X)$. Η πορτοκαλί διακεκομμένη είναι το πολυώνυμο Taylor με τις πρώτες $N$ ροπές: αυξήστε το $N$ και δείτε το να «κολλάει» στην $M_X$ γύρω από το 0. Η κάθετη γκρι γραμμή, όπου υπάρχει, είναι το όριο πέρα από το οποίο η $M_X(t) = \infty$.
+
+::: {.ix-panel}
+::: {.ix-title}
+Η ροπογεννήτρια και οι ροπές της
+:::
+
+```{ojs}
+//| echo: false
+mgfs39 = new Map([
+  ["Ζάρι", {M: t => d3.range(1, 7).reduce((s, x) => s + Math.exp(t * x) / 6, 0), mom: n => d3.range(1, 7).reduce((s, x) => s + x ** n / 6, 0), t: [-1, 0.6], tmax: Infinity}],
+  ["f(x) = (1/2)^x, x = 1, 2, … (Άσκηση 1)", {M: t => t >= Math.log(2) ? Infinity : Math.exp(t) / (2 - Math.exp(t)), mom: n => d3.range(1, 400).reduce((s, x) => s + x ** n * 0.5 ** x, 0), t: [-1.5, 0.66], tmax: Math.log(2)}],
+  ["M(t) = exp(e^t − 1) (Άσκηση 2)", {M: t => Math.exp(Math.exp(t) - 1), mom: n => [1, 1, 2, 5, 15, 52, 203, 877, 4140][n], t: [-1.5, 1.2], tmax: Infinity}],
+  ["f(x) = 2e^{−2(x−1)}, x > 1 (Άσκηση 3, α = 1, θ = 2)", {M: t => t >= 2 ? Infinity : Math.exp(t) * 2 / (2 - t), mom: n => { /* X = 1 + Y, Y εκθετική με θ = 2: E(Y^k) = k!/2^k */ let s = 0, c = 1, f = 1; for (let k = 0; k <= n; k++) { if (k > 0) { c = c * (n - k + 1) / k; f *= k; } s += c * f / 2 ** k; } return s; }, t: [-1.5, 1.9], tmax: 2}],
+  ["Κέρμα: X = 1 για Κορώνα", {M: t => (1 + Math.exp(t)) / 2, mom: n => n === 0 ? 1 : 0.5, t: [-3, 2], tmax: Infinity}]
+])
+viewof d39 = Inputs.select(mgfs39, {label: "Κατανομή"})
+viewof N39 = Inputs.range([1, 8], {step: 1, value: 2, label: "Όροι Taylor N"})
+```
+
+```{ojs}
+//| echo: false
+{
+  const {M, mom, t: [a, b], tmax} = d39;
+  const k = d3.range(0, 9).map(n => n === 0 ? 1 : mom(n));
+  const fact = n => n <= 1 ? 1 : n * fact(n - 1);
+  const taylor = t => d3.range(0, N39 + 1).reduce((s, n) => s + k[n] * t ** n / fact(n), 0);
+  const ts = d3.range(a, b, (b - a) / 300).concat([b]).filter(t => t < tmax - 1e-3);
+  const top = Math.min(8, d3.max(ts, M) * 1.1), W = 460, H = 280, L = 40, R = W - 12;
+  const xs = d3.scaleLinear().domain([a, b]).range([L, R]), ys = d3.scaleLinear().domain([0, top]).range([H - 24, 10]).clamp(true);
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H}`).style("width", "100%").style("max-width", "580px");
+  const num = v => String(+v.toFixed(2)).replace(".", ",").replace("-", "−");
+  ys.ticks(5).forEach(v => { svg.append("line").attr("x1", L).attr("x2", R).attr("y1", ys(v)).attr("y2", ys(v)).attr("stroke", "#eee");
+    svg.append("text").attr("x", L - 4).attr("y", ys(v)).attr("dy", "0.35em").attr("text-anchor", "end").style("font", "10px sans-serif").attr("fill", "#666").text(num(v)); });
+  xs.ticks(6).forEach(v => svg.append("text").attr("x", xs(v)).attr("y", H - 8).attr("text-anchor", "middle").style("font", "10px sans-serif").attr("fill", "#666").text(num(v)));
+  svg.append("line").attr("x1", xs(0)).attr("x2", xs(0)).attr("y1", 10).attr("y2", H - 24).attr("stroke", "#ccc");
+  if (Number.isFinite(tmax) && tmax < b + 0.5) svg.append("line").attr("x1", xs(tmax)).attr("x2", xs(tmax)).attr("y1", 10).attr("y2", H - 24).attr("stroke", "#999").attr("stroke-dasharray", "4 3");
+  const tp = d3.range(a, b, (b - a) / 300).concat([b]);
+  svg.append("path").attr("d", d3.line().defined(t => taylor(t) >= 0 && taylor(t) <= top).x(t => xs(t)).y(t => ys(taylor(t)))(tp)).attr("fill", "none").attr("stroke", "#f28e2b").attr("stroke-width", 2).attr("stroke-dasharray", "6 4");
+  // η εφαπτομένη μόνο όπου μένει μέσα στο γράφημα (η κλίμακα y κόβει τα άκρα)
+  const ta = k[1] > 0 ? Math.max(a, -1 / k[1]) : a, tb = k[1] > 0 ? Math.min(b, (top - 1) / k[1]) : b;
+  svg.append("path").attr("d", d3.line().x(t => xs(t)).y(t => ys(1 + k[1] * t))([ta, tb])).attr("fill", "none").attr("stroke", "#59a14f").attr("stroke-width", 1.5);
+  svg.append("path").attr("d", d3.line().x(t => xs(t)).y(t => ys(M(t)))(ts)).attr("fill", "none").attr("stroke", "#4e79a7").attr("stroke-width", 2.5);
+  svg.append("circle").attr("cx", xs(0)).attr("cy", ys(1)).attr("r", 4).attr("fill", "#1f2d3d");
+  svg.append("text").attr("x", R).attr("y", 16).attr("text-anchor", "end").style("font", "11px sans-serif").attr("fill", "#666").text("t");
+  const fm = v => (+v.toFixed(4)).toLocaleString("el-GR", {maximumFractionDigits: 4});
+  return html`<div>${svg.node()}
+    <table class="ix-tbl">
+      <tr><td>M′(0) = E(X)</td><td><b>${fm(k[1])}</b></td></tr>
+      <tr><td>M″(0) = E(X²)</td><td>${fm(k[2])}</td></tr>
+      <tr><td>Var(X) = E(X²) − (E X)²</td><td><b>${fm(k[2] - k[1] ** 2)}</b></td></tr>
+      <tr><td>Ορίζεται για</td><td>${Number.isFinite(tmax) ? `t < ${fm(tmax)}` : "κάθε t"}</td></tr>
+    </table></div>`;
+}
+```
+:::
+
+## Τρεις λυμένες ασκήσεις
+
+**Άσκηση 1.** Η διακριτή τ.μ. $X$ έχει σ.μ.π. $f(x) = (1/2)^x$, $x = 1, 2, \ldots$ (α) Βρείτε τη ροπογεννήτρια $M_X(t)$. (β) Βρείτε τη μέση τιμή και τη διακύμανση. (γ) Βρείτε τη ροπογεννήτρια της $Y = 3X + 2$.
+
+(α) Είναι γεωμετρική σειρά με λόγο $e^t/2$, που συγκλίνει όταν $e^t < 2$, δηλαδή για $t < \ln 2$:
+
+$$M_X(t) = \sum_{x \ge 1} \left(\frac{e^t}{2}\right)^x = \frac{e^t/2}{1 - e^t/2} = \frac{e^t}{2 - e^t}, \qquad t < \ln 2.$$
+
+(β) Παραγωγίζοντας, $M_X'(t) = \dfrac{2e^t}{(2 - e^t)^2}$, άρα $E(X) = M_X'(0) = 2$. Ξανά, $M_X''(t) = \dfrac{2e^t}{(2 - e^t)^2} + \dfrac{4e^{2t}}{(2 - e^t)^3}$, άρα $E(X^2) = 2 + 4 = 6$ και
+
+$$\operatorname{Var}(X) = 6 - 2^2 = 2.$$
+
+(γ) Από τον κανόνα των γραμμικών μετασχηματισμών,
+
+$$M_Y(t) = e^{2t} M_X(3t) = \frac{e^{5t}}{2 - e^{3t}}, \qquad t < \tfrac{\ln 2}{3}.$$
+
+**Άσκηση 2.** Η $X$ έχει ροπογεννήτρια $M_X(t) = \exp(e^t - 1)$. Βρείτε τις $E(X)$ και $\operatorname{Var}(X)$.
+
+Με τον κανόνα της αλυσίδας, $M_X'(t) = e^t M_X(t)$, άρα $E(X) = M_X'(0) = 1 \cdot 1 = 1$. Ξανά, $M_X''(t) = e^t M_X(t) + e^{2t} M_X(t)$, άρα $E(X^2) = 2$ και $\operatorname{Var}(X) = 2 - 1 = 1$. Θα δούμε σε επόμενο άρθρο ότι αυτή είναι η ροπογεννήτρια της κατανομής Poisson με παράμετρο 1, και από τη μοναδικότητα η $X$ ακολουθεί αυτήν ακριβώς την κατανομή.
+
+**Άσκηση 3.** Η $X$ έχει σ.π.π. $f_X(x) = \theta e^{-\theta(x - \alpha)}$ για $x > \alpha$, με $\alpha, \theta > 0$. Βρείτε τις $F_X(x)$, $M_X(t)$, $E(X)$ και $\operatorname{Var}(X)$.
+
+Για $x > \alpha$, $F_X(x) = \int_\alpha^x \theta e^{-\theta(s - \alpha)}\,ds = 1 - e^{-\theta(x - \alpha)}$, και $F_X(x) = 0$ για $x \le \alpha$. Για $t < \theta$,
+
+$$M_X(t) = \int_\alpha^\infty e^{tx}\,\theta e^{-\theta(x - \alpha)}\,dx = \theta e^{\theta\alpha} \int_\alpha^\infty e^{-(\theta - t)x}\,dx = \frac{\theta\, e^{\alpha t}}{\theta - t}.$$
+
+Για $t \ge \theta$ το ολοκλήρωμα αποκλίνει. Γράφοντας $\ln M_X(t) = \alpha t + \ln\theta - \ln(\theta - t)$ και παραγωγίζοντας, $M_X'(0) = \alpha + \frac1\theta$. Με μια ακόμα παραγώγιση, $E(X^2) = \left(\alpha + \frac1\theta\right)^2 + \frac{1}{\theta^2}$. Άρα
+
+$$E(X) = \alpha + \frac{1}{\theta}, \qquad \operatorname{Var}(X) = \frac{1}{\theta^2}.$$
+
+Η μετατόπιση κατά $\alpha$ μετακινεί τη μέση τιμή, αλλά δεν αλλάζει τη διακύμανση, όπως περιμέναμε από τις [ιδιότητες της διακύμανσης](../variance/index.qmd).
+
+## Σε R
+
+Η R παραγωγίζει συμβολικά με τη `D()`. Έτσι μπορούμε να ελέγξουμε την Άσκηση 1 χωρίς πράξεις με το χέρι:
+
+```{r}
+#| label: mgf-r
+M  <- expression(exp(t) / (2 - exp(t)))
+M1 <- D(M[[1]], "t")
+M2 <- D(M1, "t")
+EX  <- eval(M1, list(t = 0))
+EX2 <- eval(M2, list(t = 0))
+c(EX = EX, EX2 = EX2, Var = EX2 - EX^2)
+# επαλήθευση με προσομοίωση: X = πλήθος ρίψεων μέχρι την πρώτη Κορώνα
+x <- rgeom(1e5, 0.5) + 1
+c(mean = mean(x), var = var(x))
+```
+
+Η προσομοίωση δίνει μέση τιμή `r fmt(mean(x), 3)` και διακύμανση `r fmt(var(x), 3)`, κοντά στα 2 και 2.
+
+## Σύνοψη
+
+- Ροπές $\kappa_n = E(X^n)$, κεντρικές ροπές $\mu_n = E(X - \mu)^n$. Η μέση τιμή είναι η $\kappa_1$ και η διακύμανση η $\mu_2$.
+- Η ροπογεννήτρια $M_X(t) = E(e^{tX})$ υπάρχει όταν είναι πεπερασμένη σε ένα διάστημα γύρω από το 0, και τότε $M_X^{(n)}(0) = E(X^n)$.
+- $M_{aX + b}(t) = e^{bt} M_X(at)$.
+- Ίδια ροπογεννήτρια σημαίνει ίδια κατανομή. Δεν έχουν όλες οι κατανομές ροπογεννήτρια, ακόμα κι αν έχουν όλες τις ροπές.
+
+## Ερωτήσεις εμπέδωσης
+
+**1. Γρήγορο κουίζ.**
+
+::: {.ix-panel}
+```{ojs}
+//| echo: false
+quiz39 = [
+  {q: "Ποια τιμή έχει κάθε ροπογεννήτρια στο t = 0;",
+   opts: ["1", "0", "E(X)", "Εξαρτάται από την κατανομή"], ans: 0,
+   why: "M(0) = E(e⁰) = E(1) = 1, για κάθε τυχαία μεταβλητή."},
+  {q: "Αν M(t) = (1 + e^t)/2, πόση είναι η E(X²);",
+   opts: ["1/2", "1/4", "1", "2"], ans: 0,
+   why: "M″(t) = e^t/2, άρα E(X²) = M″(0) = 1/2. Είναι το κέρμα με X = 0 ή 1, όπου X² = X."},
+  {q: "Αν M_X(t) = e^{t²/2}, ποια είναι η ροπογεννήτρια της Y = 2X + 1;",
+   opts: ["e^t · e^{2t²}", "2e^{t²/2} + 1", "e^{t²} · e^t", "e^{(2t+1)²/2}"], ans: 0,
+   why: "M_Y(t) = e^{t}·M_X(2t) = e^t · e^{(2t)²/2} = e^t · e^{2t²}."},
+  {q: "Η X έχει όλες τις ροπές πεπερασμένες. Έχει σίγουρα ροπογεννήτρια;",
+   opts: ["Όχι, π.χ. η λογαριθμοκανονική", "Ναι, πάντα", "Μόνο αν είναι διακριτή"], ans: 0,
+   why: "Η λογαριθμοκανονική έχει όλες τις ροπές, αλλά E(e^{tX}) = ∞ για κάθε t > 0."}
+]
+{
+  const root = html`<div></div>`, score = html`<div class="ix-note"></div>`, done = new Map();
+  quiz39.forEach((item, k) => {
+    const fb = html`<div class="ix-note"></div>`;
+    const btns = item.opts.map(o => html`<button>${o}</button>`);
+    const opts = html`<div style="margin:4px 0 0 6px">${btns.map((b, j) => {
+      b.onclick = () => {
+        const ok = j === item.ans; done.set(k, ok);
+        btns.forEach(x => x.className = "");
+        b.className = ok ? "ix-picked-ok" : "ix-picked-no";
+        fb.innerHTML = (ok ? `<span class="ix-ok">✓ Σωστό.</span> ` : `<span class="ix-no">✗ Όχι ακριβώς.</span> `) + item.why;
+        score.innerHTML = `<b>Σωστές: ${[...done.values()].filter(x => x).length} από ${quiz39.length}</b>`;
+      };
+      return b;
+    })}</div>`;
+    root.append(html`<div style="margin:12px 0"><div>${k + 1}. ${item.q}</div>${opts}${fb}</div>`);
+  });
+  root.append(score);
+  return root;
+}
+```
+:::
+
+**2.** Βρείτε τη ροπογεννήτρια ενός ζαριού και, με παραγώγιση, ξαναβρείτε την $E(X) = 3{,}5$.
+
+**3.** Η $X$ έχει ροπογεννήτρια $M_X(t) = \dfrac{1}{1 - 2t}$ για $t < 1/2$. Βρείτε τις $E(X)$ και $\operatorname{Var}(X)$.
+
+**4.** Χρησιμοποιώντας το ανάπτυγμα $M_X(t) = \sum_n \kappa_n t^n / n!$, βρείτε την $E(X^3)$ για τη $M_X(t) = \dfrac{1}{1 - 2t}$.
+
+::: {.callout-tip collapse="true"}
+## Απαντήσεις
+
+2. $M_X(t) = \frac16 (e^t + e^{2t} + \cdots + e^{6t})$, άρα $M_X'(0) = \frac16 (1 + 2 + \cdots + 6) = 3{,}5$.
+3. $M_X'(t) = \dfrac{2}{(1 - 2t)^2}$ και $M_X''(t) = \dfrac{8}{(1 - 2t)^3}$, άρα $E(X) = 2$, $E(X^2) = 8$ και $\operatorname{Var}(X) = 4$.
+4. $\dfrac{1}{1 - 2t} = \sum_n 2^n t^n$, άρα $\kappa_n / n! = 2^n$ και $E(X^3) = 3! \cdot 2^3 = 48$.
+:::
+
+---
+
+**Επόμενο άρθρο:** *Η πιθανογεννήτρια συνάρτηση: όλη η κατανομή σε μια δυναμοσειρά.*
